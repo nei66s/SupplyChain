@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'SupplyChainFlow',
-  description: 'Efficiently manage your supply chain from order to delivery.',
+  description: 'Gerencie eficientemente sua cadeia de suprimentos, do pedido à entrega.',
 };
 
 export default function RootLayout({

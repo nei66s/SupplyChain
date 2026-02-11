@@ -10,14 +10,14 @@ export default function PickingPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Picking</CardTitle>
+        <CardTitle>Separação</CardTitle>
         <CardDescription>
-          This is a placeholder for the Picking page. Order picking tasks will be managed here.
+          Esta é uma página de exemplo para a Separação. As tarefas de separação de pedidos serão gerenciadas aqui.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground">Picking Interface Coming Soon</p>
+            <p className="text-muted-foreground">Interface de Separação em Breve</p>
         </div>
       </CardContent>
     </Card>

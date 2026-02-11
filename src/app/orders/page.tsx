@@ -17,14 +17,14 @@ export default function OrdersPage() {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>Orders</CardTitle>
+            <CardTitle>Pedidos</CardTitle>
             <CardDescription>
-              Manage customer orders and view their status.
+              Gerencie os pedidos dos clientes e veja o status deles.
             </CardDescription>
           </div>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Order
+            Novo Pedido
           </Button>
         </div>
       </CardHeader>
@@ -33,7 +33,7 @@ export default function OrdersPage() {
           columns={columns}
           data={mockOrders}
           filterColumn="customerName"
-          filterPlaceholder="Filter by customer..."
+          filterPlaceholder="Filtrar por cliente..."
         />
       </CardContent>
     </Card>

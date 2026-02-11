@@ -12,10 +12,9 @@ export default function PredictivePage() {
     <div className="grid gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Predictive Stock Management</CardTitle>
+          <CardTitle>Gestão Preditiva de Estoque</CardTitle>
           <CardDescription>
-            Use historical data and AI to get optimal stock level suggestions.
-            Enter material details below to generate a recommendation.
+            Use dados históricos e IA para obter sugestões de níveis ótimos de estoque. Insira os detalhes do material abaixo para gerar uma recomendação.
           </CardDescription>
         </CardHeader>
         <CardContent>

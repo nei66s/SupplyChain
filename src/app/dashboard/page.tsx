@@ -30,17 +30,17 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 const chartData = [
-  { month: 'January', orders: 186 },
-  { month: 'February', orders: 305 },
-  { month: 'March', orders: 237 },
-  { month: 'April', orders: 273 },
-  { month: 'May', orders: 209 },
-  { month: 'June', orders: 214 },
+  { month: 'Janeiro', orders: 186 },
+  { month: 'Fevereiro', orders: 305 },
+  { month: 'Março', orders: 237 },
+  { month: 'Abril', orders: 273 },
+  { month: 'Maio', orders: 209 },
+  { month: 'Junho', orders: 214 },
 ];
 
 const chartConfig = {
   orders: {
-    label: 'Orders',
+    label: 'Pedidos',
     color: 'hsl(var(--primary))',
   },
 };
@@ -51,53 +51,53 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Pedidos</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">45,231</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              +20.1% do último mês
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Pending Production
+              Produção Pendente
             </CardTitle>
             <Factory className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+2,350</div>
             <p className="text-xs text-muted-foreground">
-              +180.1% from last month
+              +180.1% do último mês
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Items to Pick
+              Itens para Separação
             </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+1,234</div>
             <p className="text-xs text-muted-foreground">
-              +19% from last month
+              +19% do último mês
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium">Alertas de Estoque</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">5</div>
             <p className="text-xs text-muted-foreground">
-              Items below minimum stock
+              Itens abaixo do estoque mínimo
             </p>
           </CardContent>
         </Card>
@@ -105,9 +105,9 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Orders Overview</CardTitle>
+            <CardTitle>Visão Geral de Pedidos</CardTitle>
             <CardDescription>
-              A summary of your recent monthly orders.
+              Um resumo dos seus pedidos mensais recentes.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -133,20 +133,20 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
+            <CardTitle>Pedidos Recentes</CardTitle>
             <CardDescription>
-              A list of the most recent customer orders.
+              Uma lista dos pedidos de clientes mais recentes.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead className="hidden sm:table-cell">
                     Status
                   </TableHead>
-                  <TableHead className="text-right">Date</TableHead>
+                  <TableHead className="text-right">Data</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Badge variant="outline">Shipped</Badge>
+                    <Badge variant="outline">Enviado</Badge>
                   </TableCell>
                   <TableCell className="text-right">2023-06-23</TableCell>
                 </TableRow>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Badge variant="secondary">Picking</Badge>
+                    <Badge variant="secondary">Em Separação</Badge>
                   </TableCell>
                   <TableCell className="text-right">2023-06-24</TableCell>
                 </TableRow>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Badge variant="outline">Shipped</Badge>
+                    <Badge variant="outline">Enviado</Badge>
                   </TableCell>
                   <TableCell className="text-right">2023-06-25</TableCell>
                 </TableRow>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <Badge variant="destructive">Cancelled</Badge>
+                    <Badge variant="destructive">Cancelado</Badge>
                   </TableCell>
                   <TableCell className="text-right">2023-06-26</TableCell>
                 </TableRow>

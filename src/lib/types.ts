@@ -3,14 +3,14 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string;
-  role: 'Admin' | 'Manager' | 'Seller' | 'Input Operator' | 'Production Operator' | 'Picker';
+  role: 'Administrador' | 'Gerente' | 'Vendedor' | 'Operador de Entrada' | 'Operador de Produção' | 'Separador';
 };
 
 export type Order = {
   id: string;
   customerName: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'Draft' | 'Confirmed' | 'In Production' | 'Picking' | 'Shipped' | 'Cancelled';
+  priority: 'Baixa' | 'Média' | 'Alta' | 'Urgente';
+  status: 'Rascunho' | 'Confirmado' | 'Em Produção' | 'Em Separação' | 'Enviado' | 'Cancelado';
   orderDate: string;
 };
 

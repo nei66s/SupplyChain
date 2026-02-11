@@ -32,10 +32,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SuggestOptimalStockLevelsOutput } from '@/ai/flows/suggest-optimal-stock-levels';
 
 const formSchema = z.object({
-  materialId: z.string().min(1, { message: 'Please select a material.' }),
-  historicalData: z.string().min(10, { message: 'Please provide historical data.' }),
-  leadTimeDays: z.coerce.number().min(0, { message: 'Lead time must be a positive number.' }),
-  openOrdersQuantity: z.coerce.number().min(0, { message: 'Open orders must be a positive number.' }),
+  materialId: z.string().min(1, { message: 'Por favor, selecione um material.' }),
+  historicalData: z.string().min(10, { message: 'Por favor, forneça dados históricos.' }),
+  leadTimeDays: z.coerce.number().min(0, { message: 'O tempo de entrega deve ser um número positivo.' }),
+  openOrdersQuantity: z.coerce.number().min(0, { message: 'Os pedidos em aberto devem ser um número positivo.' }),
 });
 
 const initialState = {
@@ -65,13 +65,13 @@ export function SuggestionForm() {
     if (formState.success) {
       setSuggestion(formState.data);
       toast({
-        title: 'Suggestion generated!',
-        description: 'The AI has provided new stock level recommendations.',
+        title: 'Sugestão gerada!',
+        description: 'A IA forneceu novas recomendações de nível de estoque.',
       });
     } else if (formState.error) {
       toast({
         variant: 'destructive',
-        title: 'An error occurred.',
+        title: 'Ocorreu um erro.',
         description: formState.error,
       });
     }
@@ -99,7 +99,7 @@ export function SuggestionForm() {
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a material to analyze" />
+                        <SelectValue placeholder="Selecione um material para analisar" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -120,7 +120,7 @@ export function SuggestionForm() {
                 name="leadTimeDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lead Time (Days)</FormLabel>
+                    <FormLabel>Tempo de Entrega (Dias)</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -133,7 +133,7 @@ export function SuggestionForm() {
                 name="openOrdersQuantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Open Orders Qty</FormLabel>
+                    <FormLabel>Qtd. Pedidos Abertos</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -149,13 +149,12 @@ export function SuggestionForm() {
             name="historicalData"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Historical Data (JSON)</FormLabel>
+                <FormLabel>Dados Históricos (JSON)</FormLabel>
                 <FormControl>
                   <Textarea rows={5} {...field} />
                 </FormControl>
                 <FormDescription>
-                  Provide historical stock data, including sales and
-                  seasonality.
+                  Forneça dados históricos de estoque, incluindo vendas e sazonalidade.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -164,48 +163,48 @@ export function SuggestionForm() {
 
           <Button type="submit" disabled={pending}>
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Generate Suggestion
+            Gerar Sugestão
           </Button>
         </form>
       </Form>
       {suggestion && (
         <div className="mt-12">
-            <h3 className="text-2xl font-headline font-semibold mb-4">AI-Powered Suggestions</h3>
+            <h3 className="text-2xl font-headline font-semibold mb-4">Sugestões via IA</h3>
              <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Reorder Point</CardTitle>
+                        <CardTitle className="text-sm font-medium">Ponto de Ressuprimento</CardTitle>
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-primary">{suggestion.suggestedReorderPoint}</div>
-                        <p className="text-xs text-muted-foreground">Place new order at this stock level.</p>
+                        <p className="text-xs text-muted-foreground">Faça um novo pedido neste nível de estoque.</p>
                     </CardContent>
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Minimum Stock</CardTitle>
+                        <CardTitle className="text-sm font-medium">Estoque Mínimo</CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-amber-600">{suggestion.suggestedMinStock}</div>
-                        <p className="text-xs text-muted-foreground">Safety stock to avoid stockouts.</p>
+                        <p className="text-xs text-muted-foreground">Estoque de segurança para evitar rupturas.</p>
                     </CardContent>
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Reorder Quantity</CardTitle>
+                        <CardTitle className="text-sm font-medium">Quantidade de Ressuprimento</CardTitle>
                         <MoveDown className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold">{suggestion.suggestedQuantity}</div>
-                        <p className="text-xs text-muted-foreground">Optimal quantity for the next order.</p>
+                        <p className="text-xs text-muted-foreground">Quantidade ideal para o próximo pedido.</p>
                     </CardContent>
                 </Card>
             </div>
             <div className="mt-4 flex gap-2">
-                <Button>Apply Suggestions</Button>
-                <Button variant="outline">Discard</Button>
+                <Button>Aplicar Sugestões</Button>
+                <Button variant="outline">Descartar</Button>
             </div>
         </div>
       )}

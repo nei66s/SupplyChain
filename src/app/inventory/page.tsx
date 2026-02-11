@@ -20,21 +20,21 @@ export default function InventoryPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Inventory</CardTitle>
+        <CardTitle>Estoque</CardTitle>
         <CardDescription>
-          Monitor and manage your material stock levels.
+          Monitore e gerencie os níveis de estoque de seus materiais.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Material ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>UoM</TableHead>
-              <TableHead className="text-right">On Hand</TableHead>
-              <TableHead className="text-right">Reserved</TableHead>
-              <TableHead className="text-right">Available</TableHead>
+              <TableHead>ID do Material</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>Unid. Medida</TableHead>
+              <TableHead className="text-right">Em Mãos</TableHead>
+              <TableHead className="text-right">Reservado</TableHead>
+              <TableHead className="text-right">Disponível</TableHead>
                <TableHead className="text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -49,7 +49,7 @@ export default function InventoryPage() {
                 <TableCell className="text-right font-bold">{material.available}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={material.available > 100 ? 'secondary' : 'destructive'}>
-                    {material.available > 100 ? 'In Stock' : 'Low Stock'}
+                    {material.available > 100 ? 'Em Estoque' : 'Estoque Baixo'}
                   </Badge>
                 </TableCell>
               </TableRow>

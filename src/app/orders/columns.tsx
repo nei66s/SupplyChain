@@ -17,19 +17,19 @@ import { Badge } from '@/components/ui/badge';
 import { Order } from '@/lib/types';
 
 const statusVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
-  Draft: 'outline',
-  Confirmed: 'secondary',
-  'In Production': 'default',
-  Picking: 'default',
-  Shipped: 'secondary',
-  Cancelled: 'destructive',
+  Rascunho: 'outline',
+  Confirmado: 'secondary',
+  'Em Produção': 'default',
+  'Em Separação': 'default',
+  Enviado: 'secondary',
+  Cancelado: 'destructive',
 };
 
 const priorityVariantMap: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
-  Low: 'outline',
-  Medium: 'secondary',
-  High: 'default',
-  Urgent: 'destructive',
+  Baixa: 'outline',
+  Média: 'secondary',
+  Alta: 'default',
+  Urgente: 'destructive',
 };
 
 
@@ -43,14 +43,14 @@ export const columns: ColumnDef<Order>[] = [
           (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
+        aria-label="Selecionar tudo"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
+        aria-label="Selecionar linha"
       />
     ),
     enableSorting: false,
@@ -58,7 +58,7 @@ export const columns: ColumnDef<Order>[] = [
   },
   {
     accessorKey: 'id',
-    header: 'Order ID',
+    header: 'ID do Pedido',
     cell: ({ row }) => <div className="font-mono">{row.getValue('id')}</div>,
   },
   {
@@ -69,7 +69,7 @@ export const columns: ColumnDef<Order>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Customer
+          Cliente
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -86,7 +86,7 @@ export const columns: ColumnDef<Order>[] = [
   },
   {
     accessorKey: 'priority',
-    header: 'Priority',
+    header: 'Prioridade',
     cell: ({ row }) => {
         const priority = row.getValue('priority') as string;
         return <Badge variant={priorityVariantMap[priority] || 'outline'}>{priority}</Badge>
@@ -100,7 +100,7 @@ export const columns: ColumnDef<Order>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Date
+          Data
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -117,20 +117,20 @@ export const columns: ColumnDef<Order>[] = [
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">Abrir menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => navigator.clipboard.writeText(order.id)}
               >
-                Copy order ID
+                Copiar ID do pedido
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>View details</DropdownMenuItem>
-              <DropdownMenuItem>Edit order</DropdownMenuItem>
+              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+              <DropdownMenuItem>Editar pedido</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

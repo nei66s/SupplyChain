@@ -42,13 +42,13 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { mockUsers } from '@/lib/data';
 
 const navItems = [
-  { href: '/dashboard', icon: AreaChart, label: 'Dashboard' },
-  { href: '/orders', icon: ShoppingCart, label: 'Orders' },
-  { href: '/inventory', icon: Warehouse, label: 'Inventory' },
-  { href: '/production', icon: Factory, label: 'Production' },
-  { href: '/picking', icon: PackageCheck, label: 'Picking' },
-  { href: '/predictive', icon: Bot, label: 'Predictive' },
-  { href: '/admin', icon: Shield, label: 'Admin' },
+  { href: '/dashboard', icon: AreaChart, label: 'Painel' },
+  { href: '/orders', icon: ShoppingCart, label: 'Pedidos' },
+  { href: '/inventory', icon: Warehouse, label: 'Estoque' },
+  { href: '/production', icon: Factory, label: 'Produção' },
+  { href: '/picking', icon: PackageCheck, label: 'Separação' },
+  { href: '/predictive', icon: Bot, label: 'Preditivo' },
+  { href: '/admin', icon: Shield, label: 'Administração' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -102,21 +102,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mb-2" side="top" align="start">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <span>Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/">
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <span>Sair</span>
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
