@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -20,24 +21,19 @@ export default function LoginPage() {
   );
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center">
-            <Logo className="mx-auto" />
-            <h1 className="text-3xl font-bold font-headline mt-4">Login</h1>
-            <p className="text-balance text-muted-foreground">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <Logo className="mx-auto mb-2" />
+            <CardTitle className="font-headline text-3xl">Login</CardTitle>
+            <CardDescription>
               Enter your email below to login to your account
-            </p>
-          </div>
-          <div className="grid gap-4">
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-              />
+              <Input id="email" type="email" placeholder="m@example.com" required />
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
@@ -57,14 +53,16 @@ export default function LoginPage() {
             <Button variant="outline" className="w-full">
               Login with Google
             </Button>
-          </div>
-          <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{' '}
-            <Link href="#" className="underline">
-              Sign up
-            </Link>
-          </div>
-        </div>
+          </CardContent>
+          <CardFooter>
+            <div className="text-center text-sm w-full">
+              Don&apos;t have an account?{' '}
+              <Link href="#" className="underline">
+                Sign up
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
       <div className="hidden bg-muted lg:block relative">
         {loginBg && (
