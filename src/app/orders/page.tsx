@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
 import { ClipboardList, PackageSearch, PlusCircle, Save, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,12 +44,22 @@ export default function OrdersPage() {
 
   const currentUserId = usePilotStore((state) => state.currentUserId);
 
-  const searchParams = useSearchParams();
-  const initialMainView = (searchParams?.get('view') as 'open' | 'finalized') ?? 'open';
-  const initialSubView = (searchParams?.get('sub') as 'mine' | 'all') ?? 'mine';
+  const [mainView, setMainView] = React.useState<'open' | 'finalized'>('open');
+  const [subView, setSubView] = React.useState<'mine' | 'all'>('mine');
 
-  const [mainView, setMainView] = React.useState<'open' | 'finalized'>(initialMainView);
-  const [subView, setSubView] = React.useState<'mine' | 'all'>(initialSubView);
+  // Read URL search params only on the client after mount to avoid
+  // Next.js prerender/runtime errors related to `useSearchParams()`.
+  React.useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const v = sp.get('view') as 'open' | 'finalized' | null;
+      const sv = sp.get('sub') as 'mine' | 'all' | null;
+      if (v) setMainView(v);
+      if (sv) setSubView(sv);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const filteredOrders = React.useMemo(() => {
     return db.orders.filter((order) => {

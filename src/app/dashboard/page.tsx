@@ -363,7 +363,7 @@ export default function DashboardPage() {
         </div>
       </div>
       {/* router for drilldowns */}
-      {/* eslint-disable-next-line react-hooks/rules-of-hooks */}
+      { }
       {null}
       {/* end */}
       

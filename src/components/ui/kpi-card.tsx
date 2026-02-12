@@ -52,6 +52,9 @@ export function KpiCard({
   }
 
   const [mounted, setMounted] = useState(false);
+  // Calling setState synchronously here is intentional to mark the
+  // component as mounted for client-only rendering of certain UI.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   const parsed = parseTrend(trend);

@@ -743,6 +743,9 @@ const SidebarMenuSkeleton = React.forwardRef<
     return `${Math.floor(Math.random() * 40) + 50}%`
   }, [])
 
+  const id = React.useId().replace(/:/g, "-")
+  const classNameForWidth = `skeleton-${id}`
+
   return (
     <div
       ref={ref}
@@ -756,23 +759,17 @@ const SidebarMenuSkeleton = React.forwardRef<
           data-sidebar="menu-skeleton-icon"
         />
       )}
-      {(() => {
-        const id = React.useId().replace(/:/g, "-")
-        const classNameForWidth = `skeleton-${id}`
-        return (
-          <>
-            <style
-              dangerouslySetInnerHTML={{
-                __html: `.${classNameForWidth} { --skeleton-width: ${width}; }`,
-              }}
-            />
-            <Skeleton
-              className={`h-4 flex-1 max-w-[--skeleton-width] ${classNameForWidth}`}
-              data-sidebar="menu-skeleton-text"
-            />
-          </>
-        )
-      })()}
+      <>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `.${classNameForWidth} { --skeleton-width: ${width}; }`,
+          }}
+        />
+        <Skeleton
+          className={`h-4 flex-1 max-w-[--skeleton-width] ${classNameForWidth}`}
+          data-sidebar="menu-skeleton-text"
+        />
+      </>
     </div>
   )
 })
