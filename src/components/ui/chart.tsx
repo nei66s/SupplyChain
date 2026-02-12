@@ -206,24 +206,21 @@ const ChartTooltipContent = React.forwardRef<
                       <itemConfig.icon />
                     ) : (
                       !hideIndicator && (
-                        <div
+                        <svg
                           className={cn(
-                            "shrink-0 rounded-[2px] border-[--color-border] bg-[--color-bg]",
+                            "shrink-0",
                             {
-                              "h-2.5 w-2.5": indicator === "dot",
+                              "h-2.5 w-2.5 rounded-[2px]": indicator === "dot",
                               "w-1": indicator === "line",
-                              "w-0 border-[1.5px] border-dashed bg-transparent":
-                                indicator === "dashed",
+                              "w-0": indicator === "dashed",
                               "my-0.5": nestLabel && indicator === "dashed",
                             }
                           )}
-                          style={
-                            {
-                              "--color-bg": indicatorColor,
-                              "--color-border": indicatorColor,
-                            } as React.CSSProperties
-                          }
-                        />
+                          viewBox="0 0 10 10"
+                          aria-hidden
+                        >
+                          <rect width="10" height="10" rx="2" fill={indicatorColor} stroke={indicatorColor} />
+                        </svg>
                       )
                     )}
                     <div
@@ -290,24 +287,21 @@ const ChartLegendContent = React.forwardRef<
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
 
           return (
-            <div
-              key={item.value}
-              className={cn(
-                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
-              )}
-            >
-              {itemConfig?.icon && !hideIcon ? (
-                <itemConfig.icon />
-              ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
-                />
-              )}
-              {itemConfig?.label}
-            </div>
+                  key={item.value}
+                  className={cn(
+                    "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+                  )}
+                >
+                  {itemConfig?.icon && !hideIcon ? (
+                    <itemConfig.icon />
+                  ) : (
+                    <svg className="h-2 w-2 shrink-0" viewBox="0 0 8 8" aria-hidden>
+                      <rect width="8" height="8" rx="2" fill={item.color} />
+                    </svg>
+                  )}
+                  {itemConfig?.label}
+                </div>
           )
         })}
       </div>

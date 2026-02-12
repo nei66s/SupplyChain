@@ -23,7 +23,7 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3.5rem"
+const SIDEBAR_WIDTH_ICON = "4.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContext = {
@@ -73,7 +73,98 @@ const SidebarProvider = React.forwardRef<
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(defaultOpen)
-    const open = openProp ?? _open
+    // Hover state: when hovering the sidebar area on desktop we show it temporarily
+    const [hoverOpen, setHoverOpen] = React.useState(false)
+    // Timer ref to debounce mouse leave so sidebar doesn't disappear immediately
+    const leaveTimerRef = React.useRef<number | null>(null)
+    // Cleanup timer on unmount
+    React.useEffect(() => {
+      return () => {
+        if (leaveTimerRef.current) {
+          window.clearTimeout(leaveTimerRef.current)
+          leaveTimerRef.current = null
+        }
+      }
+    }, [])
+
+    // Track pointer movements to determine if the cursor is over the sidebar element itself.
+    React.useEffect(() => {
+      if (isMobile) return
+
+      // Determine which side the sidebar is on (default left)
+      let sidebarSide: "left" | "right" = "left"
+      try {
+        const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
+        const sideEl = sidebarEl?.closest("[data-side]") as HTMLElement | null
+        const attr = sideEl?.getAttribute("data-side")
+        if (attr === "right") sidebarSide = "right"
+      } catch {
+        // ignore
+      }
+
+      const EDGE_THRESHOLD = 32
+
+      const onMove = (e: MouseEvent) => {
+        const target = e.target as Element | null
+        const overSidebar = target?.closest('[data-sidebar="sidebar"]') != null
+
+        if (overSidebar) {
+          if (leaveTimerRef.current) {
+            window.clearTimeout(leaveTimerRef.current)
+            leaveTimerRef.current = null
+          }
+          setHoverOpen(true)
+          return
+        }
+
+        // Open when cursor is near the configured edge
+        const cx = e.clientX
+        const atLeftEdge = cx <= EDGE_THRESHOLD
+        const atRightEdge = cx >= window.innerWidth - EDGE_THRESHOLD
+
+        if ((sidebarSide === "left" && atLeftEdge) || (sidebarSide === "right" && atRightEdge)) {
+          if (leaveTimerRef.current) {
+            window.clearTimeout(leaveTimerRef.current)
+            leaveTimerRef.current = null
+          }
+          setHoverOpen(true)
+          return
+        }
+
+        if (leaveTimerRef.current) {
+          window.clearTimeout(leaveTimerRef.current)
+        }
+        // Hide immediately when cursor leaves sidebar/edge trigger area
+        leaveTimerRef.current = window.setTimeout(() => {
+          setHoverOpen(false)
+          leaveTimerRef.current = null
+        }, 0)
+      }
+
+      const onOut = (e: MouseEvent) => {
+        // If relatedTarget is null, the pointer left the window.
+        if (!e.relatedTarget) {
+          if (leaveTimerRef.current) {
+            window.clearTimeout(leaveTimerRef.current)
+            leaveTimerRef.current = null
+          }
+          setHoverOpen(false)
+        }
+      }
+
+      document.addEventListener("mousemove", onMove)
+      window.addEventListener("mouseout", onOut)
+
+      return () => {
+        document.removeEventListener("mousemove", onMove)
+        window.removeEventListener("mouseout", onOut)
+        if (leaveTimerRef.current) {
+          window.clearTimeout(leaveTimerRef.current)
+          leaveTimerRef.current = null
+        }
+      }
+    }, [isMobile])
+    const open = openProp ?? (_open || hoverOpen)
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
@@ -133,15 +224,8 @@ const SidebarProvider = React.forwardRef<
       <SidebarContext.Provider value={contextValue}>
         <TooltipProvider delayDuration={0}>
           <div
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH,
-                "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-                ...style,
-              } as React.CSSProperties
-            }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+              "sidebar-root group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-transparent",
               className
             )}
             ref={ref}
@@ -199,11 +283,6 @@ const Sidebar = React.forwardRef<
             data-sidebar="sidebar"
             data-mobile="true"
             className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-              } as React.CSSProperties
-            }
             side={side}
           >
             <div className="flex h-full w-full flex-col">{children}</div>
@@ -221,11 +300,10 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
       >
-        {/* This is what handles the sidebar gap on desktop */}
+        {/* Spacer removed so sidebar overlays content instead of pushing it */}
         <div
           className={cn(
-            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
-            "group-data-[collapsible=offcanvas]:w-0",
+            "duration-200 relative h-svh w-0 bg-transparent transition-[width] ease-linear",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
@@ -248,7 +326,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col rounded-xl border border-sidebar-border/80 bg-sidebar shadow-[0_16px_32px_rgba(15,23,42,0.08)]"
           >
             {children}
           </div>
@@ -271,7 +349,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-9 w-9 rounded-lg border border-transparent hover:border-border", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
@@ -358,7 +436,11 @@ const SidebarHeader = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-3", className)}
+      className={cn(
+        "flex flex-col gap-2 p-4",
+        "border-b border-sidebar-border/70",
+        className
+      )}
       {...props}
     />
   )
@@ -373,7 +455,12 @@ const SidebarFooter = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-3 mt-auto", className)}
+      className={cn(
+        "mt-auto flex flex-col gap-3 p-4",
+        "border-t border-sidebar-border/70",
+        "bg-white/0",
+        className
+      )}
       {...props}
     />
   )
@@ -404,7 +491,7 @@ const SidebarContent = React.forwardRef<
       ref={ref}
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden p-3",
+        "flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 group-data-[collapsible=icon]:overflow-hidden",
         className
       )}
       {...props}
@@ -421,7 +508,7 @@ const SidebarGroup = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="group"
-      className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
+      className={cn("relative flex w-full min-w-0 flex-col p-1.5", className)}
       {...props}
     />
   )
@@ -439,8 +526,9 @@ const SidebarGroupLabel = React.forwardRef<
       ref={ref}
       data-sidebar="group-label"
       className={cn(
-        "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "duration-200 flex h-8 shrink-0 items-center rounded-md px-2.5 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/65 outline-none ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        "tracking-[0.01em]",
         className
       )}
       {...props}
@@ -492,7 +580,7 @@ const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1.5 py-1.5", className)}
     {...props}
   />
 ))
@@ -512,7 +600,7 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md text-left outline-none ring-sidebar-ring transition-colors focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 border-l-4 border-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:border-primary data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-l-0 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:data-[active=true]:bg-primary/20 [&>span:last-child]:truncate [&>svg]:size-5 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-lg border-l-2 border-transparent text-left outline-none ring-sidebar-ring transition-all duration-150 ease-in-out focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-[active=true]:border-primary data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-l-0 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:data-[active=true]:bg-primary/20 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -668,15 +756,23 @@ const SidebarMenuSkeleton = React.forwardRef<
           data-sidebar="menu-skeleton-icon"
         />
       )}
-      <Skeleton
-        className="h-4 flex-1 max-w-[--skeleton-width]"
-        data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as React.CSSProperties
-        }
-      />
+      {(() => {
+        const id = React.useId().replace(/:/g, "-")
+        const classNameForWidth = `skeleton-${id}`
+        return (
+          <>
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `.${classNameForWidth} { --skeleton-width: ${width}; }`,
+              }}
+            />
+            <Skeleton
+              className={`h-4 flex-1 max-w-[--skeleton-width] ${classNameForWidth}`}
+              data-sidebar="menu-skeleton-text"
+            />
+          </>
+        )
+      })()}
     </div>
   )
 })
@@ -761,3 +857,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+

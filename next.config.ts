@@ -1,13 +1,7 @@
 import type {NextConfig} from 'next';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -30,6 +24,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  outputFileTracingRoot: path.resolve(__dirname),
 };
 
 export default nextConfig;

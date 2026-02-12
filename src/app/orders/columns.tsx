@@ -1,140 +1,58 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
-
+import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { Order } from '@/lib/types';
+import { Order } from '@/lib/pilot/types';
+import { readinessLabel } from '@/lib/pilot/i18n';
+import { formatDate } from '@/lib/utils';
 
-const statusVariantMap: { [key: string]: BadgeProps['variant'] } = {
-  Rascunho: 'outline',
-  Confirmado: 'secondary',
-  'Em Produção': 'default',
-  'Em Separação': 'default',
-  Enviado: 'positive',
-  Cancelado: 'destructive',
+const statusVariantMap: Record<string, BadgeProps['variant']> = {
+  RASCUNHO: 'outline',
+  ABERTO: 'secondary',
+  EM_PICKING: 'default',
+  SAIDA_CONCLUIDA: 'warning',
+  FINALIZADO: 'positive',
+  CANCELADO: 'destructive',
 };
 
-const priorityVariantMap: { [key: string]: BadgeProps['variant'] } = {
-  Baixa: 'outline',
-  Média: 'secondary',
-  Alta: 'default',
-  Urgente: 'destructive',
+const readinessVariantMap: Record<string, BadgeProps['variant']> = {
+  READY_FULL: 'positive',
+  READY_PARTIAL: 'warning',
+  NOT_READY: 'outline',
 };
-
 
 export const columns: ColumnDef<Order>[] = [
   {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Selecionar tudo"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Selecionar linha"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
+    accessorKey: 'orderNumber',
+    header: 'Pedido',
+    cell: ({ row }) => <div className="font-mono">{row.getValue('orderNumber')}</div>,
   },
   {
-    accessorKey: 'id',
-    header: 'ID do Pedido',
-    cell: ({ row }) => <div className="font-mono">{row.getValue('id')}</div>,
-  },
-  {
-    accessorKey: 'customerName',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Cliente
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue('customerName')}</div>,
+    accessorKey: 'clientName',
+    header: ({ column }) => (
+      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+        Cliente
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
   },
   {
     accessorKey: 'status',
     header: 'Status',
-    cell: ({ row }) => {
-        const status = row.getValue('status') as string;
-        return <Badge variant={statusVariantMap[status] || 'outline'}>{status}</Badge>
-    },
+    cell: ({ row }) => <Badge variant={statusVariantMap[row.getValue('status') as string] ?? 'outline'}>{String(row.getValue('status'))}</Badge>,
   },
   {
-    accessorKey: 'priority',
-    header: 'Prioridade',
-    cell: ({ row }) => {
-        const priority = row.getValue('priority') as string;
-        return <Badge variant={priorityVariantMap[priority] || 'outline'}>{priority}</Badge>
-    },
+    accessorKey: 'readiness',
+    header: 'Pronto',
+    cell: ({ row }) => (
+      <Badge variant={readinessVariantMap[row.getValue('readiness') as string] ?? 'outline'}>{readinessLabel(row.getValue('readiness') as string)}</Badge>
+    ),
   },
   {
     accessorKey: 'orderDate',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Data
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{row.getValue('orderDate')}</div>,
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-      const order = row.original;
-      return (
-        <div className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Abrir menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(order.id)}
-              >
-                Copiar ID do pedido
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-              <DropdownMenuItem>Editar pedido</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    },
+    header: 'Data',
+    cell: ({ row }) => <div>{formatDate(row.getValue('orderDate') as string)}</div>,
   },
 ];

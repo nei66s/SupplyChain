@@ -31,6 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Search, TableProperties } from "lucide-react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -73,16 +75,19 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4 gap-4">
-        <Input
-          placeholder={filterPlaceholder}
-          value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn(filterColumn)?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+    <div className="w-full space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={filterPlaceholder}
+            value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn(filterColumn)?.setFilterValue(event.target.value)
+            }
+            className="pl-9"
+          />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -110,7 +115,7 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
+      <div>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -151,9 +156,14 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="border-none py-8"
                 >
-                  Nenhum resultado.
+                  <EmptyState
+                    icon={TableProperties}
+                    title="Nenhum resultado encontrado"
+                    description="Ajuste os filtros para visualizar registros."
+                    className="min-h-[120px]"
+                  />
                 </TableCell>
               </TableRow>
             )}
@@ -180,7 +190,7 @@ export function DataTable<TData, TValue>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Próxima
+            Proxima
           </Button>
         </div>
       </div>

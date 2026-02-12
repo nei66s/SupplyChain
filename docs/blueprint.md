@@ -1,4 +1,4 @@
-# **App Name**: SupplyChainFlow
+# **App Name**: Empresa
 
 ## Core Features:
 
