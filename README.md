@@ -1,6 +1,6 @@
-# Empresa Pilot (Frontend-only)
+# Inventário Ágil
 
-Piloto de Supply Chain com UX completa e regras operacionais simuladas no frontend.
+Piloto de Inventário Ágil com UX completa e regras operacionais simuladas no frontend.
 
 ## Escopo
 

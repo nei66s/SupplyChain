@@ -169,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="md:hidden" />
 
           <h1 className="text-lg font-semibold font-headline">
-            {navItems.find((item) => pathname.startsWith(item.href))?.label ?? 'Empresa'}
+            {navItems.find((item) => pathname.startsWith(item.href))?.label ?? 'São José Cordas'}
           </h1>
 
           <div className="hidden flex-1 md:flex md:justify-center">

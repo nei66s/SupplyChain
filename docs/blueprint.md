@@ -1,4 +1,4 @@
-# **App Name**: Empresa
+# **App Name**: São José Cordas
 
 ## Core Features:
 

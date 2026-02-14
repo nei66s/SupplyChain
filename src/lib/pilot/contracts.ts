@@ -6,4 +6,4 @@ export interface PilotRepository {
   reset(): PilotDb;
 }
 
-export const PILOT_STORAGE_KEY = 'supplychain-pilot-db-v1';
+export const PILOT_STORAGE_KEY = 'inventario-agil-pilot-db-v1';

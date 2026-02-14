@@ -15,7 +15,7 @@ export function Logo({ className }: { className?: string }) {
         <Factory className="h-5 w-5" />
       </div>
       <div className="leading-tight">
-        <span className="block text-base font-bold font-headline">Empresa</span>
+        <span className="block text-base font-bold font-headline">São José Cordas</span>
         <span className="block text-[11px] uppercase tracking-wide text-muted-foreground">Plataforma de Operacoes</span>
       </div>
     </div>
