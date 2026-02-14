@@ -41,6 +41,7 @@ export default function OrdersPage() {
   const onQtyBlurReserve = usePilotStore((state) => state.onQtyBlurReserve);
   const saveOrder = usePilotStore((state) => state.saveOrder);
   const heartbeatOrder = usePilotStore((state) => state.heartbeatOrder);
+  const removeOrderItem = usePilotStore((state) => state.removeOrderItem);
 
   const currentUserId = usePilotStore((state) => state.currentUserId);
 
@@ -63,6 +64,7 @@ export default function OrdersPage() {
 
   const filteredOrders = React.useMemo(() => {
     return db.orders.filter((order) => {
+      if (order.trashedAt) return false;
       const isFinalized = order.status === 'FINALIZADO';
       if (mainView === 'open' && isFinalized) return false;
       if (mainView === 'finalized' && !isFinalized) return false;
@@ -143,7 +145,9 @@ export default function OrdersPage() {
                     selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
-                  <p className="font-medium">{order.orderNumber}</p>
+                  <p className="font-medium">
+                    {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
+                  </p>
                   <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
                   <div className="mt-2 flex gap-2">
                     <Badge variant="outline">{order.status}</Badge>
@@ -164,7 +168,9 @@ export default function OrdersPage() {
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <CardTitle>{selectedOrder.orderNumber}</CardTitle>
+                  <CardTitle>
+                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                  </CardTitle>
                   <CardDescription>
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
@@ -174,7 +180,7 @@ export default function OrdersPage() {
                     <Trash2 className="mr-2 h-4 w-4" />Excluir
                   </Button>
                   <Button onClick={() => saveOrder(selectedOrder.id)}>
-                    <Save className="mr-2 h-4 w-4" />Salvar e recalcular
+                    <Save className="mr-2 h-4 w-4" />Criar pedido
                   </Button>
                 </div>
               </div>
@@ -236,12 +242,13 @@ export default function OrdersPage() {
                       <TableHead className="text-right">Disponivel</TableHead>
                       <TableHead className="text-right">Qtd. reservada (estoque)</TableHead>
                       <TableHead className="text-right">Qtd. para produzir</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedOrder.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-20 text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="h-20 text-center text-muted-foreground">
                           Adicione itens para iniciar a reserva.
                         </TableCell>
                       </TableRow>
@@ -283,9 +290,14 @@ export default function OrdersPage() {
                               <TableCell className="text-right">{stock.available}</TableCell>
                               <TableCell className="text-right font-semibold text-primary">{item.qtyReservedFromStock}</TableCell>
                               <TableCell className="text-right font-semibold text-amber-600">{item.qtyToProduce}</TableCell>
+                              <TableCell className="text-center">
+                                <Button variant="ghost" onClick={() => removeOrderItem(selectedOrder.id, item.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell colSpan={8} className="bg-muted/30">
+                              <TableCell colSpan={9} className="bg-muted/30">
                                 <div className="grid gap-3 md:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>Condicao especifica do item</Label>

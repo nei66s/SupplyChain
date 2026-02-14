@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Sun,
   Warehouse,
+  Trash2,
 } from 'lucide-react';
 
 import {
@@ -52,6 +53,7 @@ import { roleLabel } from '@/lib/pilot/i18n';
 const navItems = [
   { href: '/dashboard', icon: AreaChart, label: 'Painel' },
   { href: '/orders', icon: ShoppingCart, label: 'Pedidos' },
+  { href: '/orders/trash', icon: Trash2, label: 'Lixeira' },
   { href: '/materials', icon: Bot, label: 'Materiais' },
   { href: '/inventory', icon: Warehouse, label: 'Estoque' },
   { href: '/production', icon: Factory, label: 'Producao' },
@@ -152,7 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <div className="flex items-center gap-3 rounded-xl border border-sidebar-border/70 bg-sidebar-accent/35 p-3">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+              <AvatarImage src={user?.avatarUrl ?? '/logo.png'} alt={user?.name} />
               <AvatarFallback>{user?.name?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -195,7 +197,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                  <AvatarImage src={user?.avatarUrl ?? '/logo.png'} alt={user?.name} />
                   <AvatarFallback>{user?.name?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
                 </Avatar>
               </Button>

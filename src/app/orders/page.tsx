@@ -41,11 +41,17 @@ export default function OrdersPage() {
   const onQtyBlurReserve = usePilotStore((state) => state.onQtyBlurReserve);
   const saveOrder = usePilotStore((state) => state.saveOrder);
   const heartbeatOrder = usePilotStore((state) => state.heartbeatOrder);
+  const removeOrderItem = usePilotStore((state) => state.removeOrderItem);
 
   const currentUserId = usePilotStore((state) => state.currentUserId);
 
   const [mainView, setMainView] = React.useState<'open' | 'finalized'>('open');
   const [subView, setSubView] = React.useState<'mine' | 'all'>('mine');
+  const [hydrated, setHydrated] = React.useState(false);
+
+  React.useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   // Read URL search params only on the client after mount to avoid
   // Next.js prerender/runtime errors related to `useSearchParams()`.
@@ -55,7 +61,12 @@ export default function OrdersPage() {
       const v = sp.get('view') as 'open' | 'finalized' | null;
       const sv = sp.get('sub') as 'mine' | 'all' | null;
       if (v) setMainView(v);
+      // prefer query param, otherwise load last used from localStorage
       if (sv) setSubView(sv);
+      else {
+        const saved = window.localStorage.getItem('orders.subView');
+        if (saved === 'mine' || saved === 'all') setSubView(saved);
+      }
     } catch {
       // ignore
     }
@@ -63,6 +74,7 @@ export default function OrdersPage() {
 
   const filteredOrders = React.useMemo(() => {
     return db.orders.filter((order) => {
+      if (order.trashedAt) return false;
       const isFinalized = order.status === 'FINALIZADO';
       if (mainView === 'open' && isFinalized) return false;
       if (mainView === 'finalized' && !isFinalized) return false;
@@ -99,6 +111,8 @@ export default function OrdersPage() {
     setSelectedOrderId(id);
   };
 
+  if (!hydrated) return <div className="min-h-[420px]" />;
+
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
       <Card>
@@ -109,7 +123,7 @@ export default function OrdersPage() {
                 <Button variant={mainView === 'open' ? undefined : 'ghost'} size="sm" onClick={() => setMainView('open')}>Pedidos</Button>
                 <Button variant={mainView === 'finalized' ? undefined : 'ghost'} size="sm" onClick={() => setMainView('finalized')}>Pedidos finalizados</Button>
                 <div className="ml-0">
-                  <Select value={subView} onValueChange={(v) => setSubView(v as 'mine' | 'all')}>
+                  <Select value={subView} onValueChange={(v) => { setSubView(v as 'mine' | 'all'); try { window.localStorage.setItem('orders.subView', v); } catch {} }}>
                     <SelectTrigger className="w-36">
                       <SelectValue placeholder="Filtrar" />
                     </SelectTrigger>
@@ -143,7 +157,9 @@ export default function OrdersPage() {
                     selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
-                  <p className="font-medium">{order.orderNumber}</p>
+                  <p className="font-medium">
+                    {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
+                  </p>
                   <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
                   <div className="mt-2 flex gap-2">
                     <Badge variant="outline">{order.status}</Badge>
@@ -164,18 +180,20 @@ export default function OrdersPage() {
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <CardTitle>{selectedOrder.orderNumber}</CardTitle>
+                  <CardTitle>
+                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                  </CardTitle>
                   <CardDescription>
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => { deleteOrder(selectedOrder.id); setSelectedOrderId(null); }}>
-                    <Trash2 className="mr-2 h-4 w-4" />Excluir
-                  </Button>
-                  <Button onClick={() => saveOrder(selectedOrder.id)}>
-                    <Save className="mr-2 h-4 w-4" />Salvar e recalcular
-                  </Button>
+                    <Button variant="outline" onClick={() => { deleteOrder(selectedOrder.id); setSelectedOrderId(null); }}>
+                      <Trash2 className="mr-2 h-4 w-4" />Enviar para lixeira
+                    </Button>
+                    <Button onClick={() => saveOrder(selectedOrder.id)}>
+                      <Save className="mr-2 h-4 w-4" />Criar pedido
+                    </Button>
                 </div>
               </div>
             </CardHeader>
@@ -195,6 +213,7 @@ export default function OrdersPage() {
                     type="date"
                     value={selectedOrder.dueDate.slice(0, 10)}
                     onChange={(e) => updateOrderMeta(selectedOrder.id, { dueDate: `${e.target.value}T12:00:00.000Z` })}
+                    className="w-40"
                   />
                 </div>
                 <div>
@@ -203,7 +222,8 @@ export default function OrdersPage() {
                     type="number"
                     min={1}
                     value={selectedOrder.volumeCount}
-                    onChange={(e) => updateOrderMeta(selectedOrder.id, { volumeCount: Number(e.target.value) })}
+                    readOnly
+                    className="w-24"
                   />
                 </div>
               </div>
@@ -236,6 +256,7 @@ export default function OrdersPage() {
                       <TableHead className="text-right">Disponivel</TableHead>
                       <TableHead className="text-right">Qtd. reservada (estoque)</TableHead>
                       <TableHead className="text-right">Qtd. para produzir</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -283,6 +304,11 @@ export default function OrdersPage() {
                               <TableCell className="text-right">{stock.available}</TableCell>
                               <TableCell className="text-right font-semibold text-primary">{item.qtyReservedFromStock}</TableCell>
                               <TableCell className="text-right font-semibold text-amber-600">{item.qtyToProduce}</TableCell>
+                              <TableCell className="text-center">
+                                <Button variant="ghost" onClick={() => removeOrderItem(selectedOrder.id, item.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell colSpan={8} className="bg-muted/30">

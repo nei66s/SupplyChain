@@ -7,7 +7,7 @@ export function readinessLabel(flag: ReadinessFlag | string): string {
     case 'READY_PARTIAL':
       return 'Parcial';
     case 'NOT_READY':
-      return 'Nao pronto';
+      return 'Não pronto';
     default:
       return String(flag);
   }
@@ -16,7 +16,7 @@ export function readinessLabel(flag: ReadinessFlag | string): string {
 export const readinessTabLabel: Record<string, string> = {
   READY_FULL: 'Completo',
   READY_PARTIAL: 'Parcial',
-  NOT_READY: 'Nao pronto',
+  NOT_READY: 'Não pronto',
 };
 
 export function roleLabel(role: string): string {

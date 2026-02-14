@@ -515,12 +515,47 @@ export function addItemToOrder(state: PilotDb, orderId: string, materialId: stri
   };
 
   order.items.push(item);
+  // Auto-adjust volumes to number of items
+  order.volumeCount = Math.max(1, order.items.length);
+}
+
+export function removeOrderItem(state: PilotDb, orderId: string, itemId: string): void {
+  const order = state.orders.find((o) => o.id === orderId);
+  if (!order) return;
+
+  const item = order.items.find((it) => it.id === itemId);
+  if (!item) return;
+
+  // Release reservations for this item
+  removeOrderMaterialReservation(state, orderId, item.materialId);
+
+  order.items = order.items.filter((it) => it.id !== itemId);
+  // Recalculate volumes
+  order.volumeCount = Math.max(1, order.items.length);
 }
 
 export function removeOrder(state: PilotDb, orderId: string): void {
   const order = state.orders.find((item) => item.id === orderId);
   if (!order) return;
 
+  // Release reservations for the order's items and mark the order as trashed
+  order.items.forEach((item) => {
+    removeOrderMaterialReservation(state, orderId, item.materialId);
+  });
+
+  // Remove any production tasks related to this order
+  state.productionTasks = state.productionTasks.filter((task) => task.orderId !== orderId);
+
+  order.status = 'CANCELADO';
+  order.trashedAt = toIso();
+}
+
+export function purgeOrder(state: PilotDb, orderId: string): void {
+  // Permanently remove an order (used by trash UI)
+  const order = state.orders.find((item) => item.id === orderId);
+  if (!order) return;
+
+  // Ensure reservations released
   order.items.forEach((item) => {
     removeOrderMaterialReservation(state, orderId, item.materialId);
   });

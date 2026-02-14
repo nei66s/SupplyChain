@@ -121,6 +121,7 @@ export type Order = {
   createdBy: string;
   pickerId?: string;
   volumeCount: number;
+  trashedAt?: string;
   items: OrderItem[];
   auditTrail: AuditEvent[];
   labelPrintCount: number;

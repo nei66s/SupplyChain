@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge, BadgeProps } from '@/components/ui/badge';
 import { Order } from '@/lib/pilot/types';
 import { readinessLabel } from '@/lib/pilot/i18n';
+import { usePilotStore } from '@/lib/pilot/store';
 import { formatDate } from '@/lib/utils';
 
 const statusVariantMap: Record<string, BadgeProps['variant']> = {
@@ -27,7 +28,17 @@ export const columns: ColumnDef<Order>[] = [
   {
     accessorKey: 'orderNumber',
     header: 'Pedido',
-    cell: ({ row }) => <div className="font-mono">{row.getValue('orderNumber')}</div>,
+    cell: ({ row }) => {
+      const db = usePilotStore((s) => s.db);
+      const order = row.original as Order;
+      const creatorName = db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy;
+      return (
+        <div>
+          <div className="font-mono">{row.getValue('orderNumber')}</div>
+          <div className="text-sm text-muted-foreground">{creatorName}</div>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'clientName',

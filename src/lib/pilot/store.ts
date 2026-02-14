@@ -19,6 +19,8 @@ import {
   markNotificationRead,
   postReceipt,
   removeOrder,
+  purgeOrder,
+  removeOrderItem,
   registerLabelPrint,
   saveOrderAndRecalculate,
   updatePickingQuantity,
@@ -43,7 +45,10 @@ type PilotState = {
   resetDemoData: () => void;
   createDraftOrder: () => string;
   deleteOrder: (orderId: string) => void;
+  purgeOrder: (orderId: string) => void;
+  restoreOrder: (orderId: string) => void;
   addItem: (orderId: string, materialId: string) => void;
+  removeOrderItem: (orderId: string, itemId: string) => void;
   updateOrderMeta: (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number }) => void;
   updateOrderItemField: (
     orderId: string,
@@ -129,9 +134,30 @@ export const usePilotStore = create<PilotState>((set, get) => ({
     setDb(get, db);
     set({ db });
   },
+  purgeOrder: (orderId) => {
+    const db = structuredClone(get().db);
+    purgeOrder(db, orderId);
+    setDb(get, db);
+    set({ db });
+  },
+  restoreOrder: (orderId) => {
+    const db = structuredClone(get().db);
+    const order = db.orders.find((o) => o.id === orderId);
+    if (!order) return;
+    order.trashedAt = undefined;
+    order.status = 'RASCUNHO';
+    persist(db);
+    set({ db });
+  },
   addItem: (orderId, materialId) => {
     const db = structuredClone(get().db);
     addItemToOrder(db, orderId, materialId);
+    persist(db);
+    set({ db });
+  },
+  removeOrderItem: (orderId, itemId) => {
+    const db = structuredClone(get().db);
+    removeOrderItem(db, orderId, itemId);
     persist(db);
     set({ db });
   },
