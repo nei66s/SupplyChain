@@ -1,0 +1,1344 @@
+2026-02-14T16:45:47: PM2 log: ===============================================================================
+2026-02-14T16:45:47: PM2 log: --- New PM2 Daemon started ----------------------------------------------------
+2026-02-14T16:45:47: PM2 log: Time                 : Sat Feb 14 2026 16:45:47 GMT-0300 (Horário Padrão de Brasília)
+2026-02-14T16:45:47: PM2 log: PM2 version          : 5.4.3
+2026-02-14T16:45:47: PM2 log: Node.js version      : 18.20.8
+2026-02-14T16:45:47: PM2 log: Current arch         : x64
+2026-02-14T16:45:47: PM2 log: PM2 home             : Yes
+2026-02-14T16:45:47: PM2 log: PM2 PID file         : C:\Users\neiol\OneDrive\Desktop\SupplyChain\Yes\pm2.pid
+2026-02-14T16:45:47: PM2 log: RPC socket file      : \\.\pipe\rpc.sock
+2026-02-14T16:45:47: PM2 log: BUS socket file      : \\.\pipe\pub.sock
+2026-02-14T16:45:47: PM2 log: Application log path : C:\Users\neiol\OneDrive\Desktop\SupplyChain\Yes\logs
+2026-02-14T16:45:47: PM2 log: Worker Interval      : 30000
+2026-02-14T16:45:47: PM2 log: Process dump file    : C:\Users\neiol\OneDrive\Desktop\SupplyChain\Yes\dump.pm2
+2026-02-14T16:45:47: PM2 log: Concurrent actions   : 2
+2026-02-14T16:45:47: PM2 log: SIGTERM timeout      : 1600
+2026-02-14T16:45:47: PM2 log: ===============================================================================
+2026-02-14T16:45:48: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:0] online
+2026-02-14T16:45:48: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:1] online
+2026-02-14T16:45:48: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:2] online
+2026-02-14T16:45:48: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:3] online
+2026-02-14T16:45:48: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:0] online
+2026-02-14T16:45:48: PM2 log: App [nextn:4] online
+2026-02-14T16:45:48: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:1] online
+2026-02-14T16:45:48: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:5] online
+2026-02-14T16:45:48: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:2] online
+2026-02-14T16:45:48: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App [nextn:6] online
+2026-02-14T16:45:48: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:48: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:48: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:48: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:3] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:0] online
+2026-02-14T16:45:49: PM2 log: App [nextn:7] online
+2026-02-14T16:45:49: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:4] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:1] online
+2026-02-14T16:45:49: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:8] online
+2026-02-14T16:45:49: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:5] online
+2026-02-14T16:45:49: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:2] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:9] online
+2026-02-14T16:45:49: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:6] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:3] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:10] online
+2026-02-14T16:45:49: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:0] online
+2026-02-14T16:45:49: PM2 log: App [nextn:7] online
+2026-02-14T16:45:49: PM2 log: App [nextn:4] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:1] online
+2026-02-14T16:45:49: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:11] online
+2026-02-14T16:45:49: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:8] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:5] online
+2026-02-14T16:45:49: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:2] online
+2026-02-14T16:45:49: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App [nextn:12] online
+2026-02-14T16:45:49: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:9] online
+2026-02-14T16:45:49: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:49: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:49: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:49: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:6] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:3] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:13] online
+2026-02-14T16:45:50: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:10] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:0] online
+2026-02-14T16:45:50: PM2 log: App [nextn:7] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:4] online
+2026-02-14T16:45:50: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:14] online
+2026-02-14T16:45:50: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:1] online
+2026-02-14T16:45:50: PM2 log: App [nextn:11] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:8] online
+2026-02-14T16:45:50: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:5] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:2] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:15] online
+2026-02-14T16:45:50: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:12] online
+2026-02-14T16:45:50: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:9] online
+2026-02-14T16:45:50: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:6] online
+2026-02-14T16:45:50: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:50: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:3] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:16] online
+2026-02-14T16:45:50: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:13] online
+2026-02-14T16:45:50: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:10] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App [nextn:0] online
+2026-02-14T16:45:50: PM2 log: App [nextn:7] online
+2026-02-14T16:45:50: PM2 log: App [nextn:4] online
+2026-02-14T16:45:50: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:50: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:50: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:50: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:14] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:17] online
+2026-02-14T16:45:51: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:1] online
+2026-02-14T16:45:51: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:11] online
+2026-02-14T16:45:51: PM2 log: App [nextn:8] online
+2026-02-14T16:45:51: PM2 log: App [nextn:5] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:2] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:15] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:12] online
+2026-02-14T16:45:51: PM2 log: App [nextn:9] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:18] online
+2026-02-14T16:45:51: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:6] online
+2026-02-14T16:45:51: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:3] online
+2026-02-14T16:45:51: PM2 log: App [nextn:16] online
+2026-02-14T16:45:51: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:13] online
+2026-02-14T16:45:51: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:19] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:10] online
+2026-02-14T16:45:51: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:0] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:7] online
+2026-02-14T16:45:51: PM2 log: App [nextn:4] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:14] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:17] online
+2026-02-14T16:45:51: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:1] online
+2026-02-14T16:45:51: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:51: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:51: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:51: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:51: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:5] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:8] online
+2026-02-14T16:45:52: PM2 log: App [nextn:11] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:2] online
+2026-02-14T16:45:52: PM2 log: App [nextn:15] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:52: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:12] online
+2026-02-14T16:45:52: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:52: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:9] online
+2026-02-14T16:45:52: PM2 log: App [nextn:18] online
+2026-02-14T16:45:52: PM2 log: App [nextn:6] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:3] online
+2026-02-14T16:45:52: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:16] online
+2026-02-14T16:45:52: PM2 log: App [nextn:13] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:19] online
+2026-02-14T16:45:52: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:0] online
+2026-02-14T16:45:52: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:10] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:14] online
+2026-02-14T16:45:52: PM2 log: App [nextn:7] online
+2026-02-14T16:45:52: PM2 log: App [nextn:4] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:17] online
+2026-02-14T16:45:52: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:1] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:5] online
+2026-02-14T16:45:52: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:52: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:8] online
+2026-02-14T16:45:52: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:52: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:52: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:52: PM2 log: App [nextn:11] online
+2026-02-14T16:45:52: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:2] online
+2026-02-14T16:45:53: PM2 log: App [nextn:15] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:12] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:53: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:9] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:6] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:16] online
+2026-02-14T16:45:53: PM2 log: App [nextn:18] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:3] online
+2026-02-14T16:45:53: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:13] online
+2026-02-14T16:45:53: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:19] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:53: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:0] online
+2026-02-14T16:45:53: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:10] online
+2026-02-14T16:45:53: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:7] online
+2026-02-14T16:45:53: PM2 log: App [nextn:14] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:4] online
+2026-02-14T16:45:53: PM2 log: App [nextn:1] online
+2026-02-14T16:45:53: PM2 log: App [nextn:17] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:5] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:8] online
+2026-02-14T16:45:53: PM2 log: App [nextn:11] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:53: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:2] online
+2026-02-14T16:45:53: PM2 log: App [nextn:15] online
+2026-02-14T16:45:53: PM2 log: App [nextn:12] online
+2026-02-14T16:45:53: PM2 log: App [nextn:9] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:6] online
+2026-02-14T16:45:53: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:53: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:53: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:53: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:54: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:16] online
+2026-02-14T16:45:54: PM2 log: App [nextn:18] online
+2026-02-14T16:45:54: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:3] online
+2026-02-14T16:45:54: PM2 log: App [nextn:13] online
+2026-02-14T16:45:54: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:0] online
+2026-02-14T16:45:54: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:10] online
+2026-02-14T16:45:54: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:19] online
+2026-02-14T16:45:54: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:14] online
+2026-02-14T16:45:54: PM2 log: App [nextn:7] online
+2026-02-14T16:45:54: PM2 log: App [nextn:4] online
+2026-02-14T16:45:54: PM2 log: App [nextn:17] online
+2026-02-14T16:45:54: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:54: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:1] online
+2026-02-14T16:45:54: PM2 log: App [nextn:5] online
+2026-02-14T16:45:54: PM2 log: App [nextn:8] online
+2026-02-14T16:45:54: PM2 log: App [nextn:11] online
+2026-02-14T16:45:54: PM2 log: App [nextn:2] online
+2026-02-14T16:45:54: PM2 log: App [nextn:15] online
+2026-02-14T16:45:54: PM2 log: App [nextn:12] online
+2026-02-14T16:45:54: PM2 log: App [nextn:6] online
+2026-02-14T16:45:54: PM2 log: App [nextn:9] online
+2026-02-14T16:45:54: PM2 log: App [nextn:18] online
+2026-02-14T16:45:54: PM2 log: App [nextn:16] online
+2026-02-14T16:45:54: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:54: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:54: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:54: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:54: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:13] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:55: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:3] online
+2026-02-14T16:45:55: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:0] online
+2026-02-14T16:45:55: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:55: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:10] online
+2026-02-14T16:45:55: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:19] online
+2026-02-14T16:45:55: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:55: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:14] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:4] online
+2026-02-14T16:45:55: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:7] online
+2026-02-14T16:45:55: PM2 log: App [nextn:17] online
+2026-02-14T16:45:55: PM2 log: App [nextn:1] online
+2026-02-14T16:45:55: PM2 log: App [nextn:8] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:5] online
+2026-02-14T16:45:55: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:11] online
+2026-02-14T16:45:55: PM2 log: App [nextn:12] online
+2026-02-14T16:45:55: PM2 log: App [nextn:2] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:55: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:15] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:9] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:18] online
+2026-02-14T16:45:55: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:6] online
+2026-02-14T16:45:55: PM2 log: App [nextn:16] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:55: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:13] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App [nextn:3] online
+2026-02-14T16:45:55: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:55: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:55: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:55: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:0] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:10] online
+2026-02-14T16:45:56: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:19] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:14] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:4] online
+2026-02-14T16:45:56: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:17] online
+2026-02-14T16:45:56: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:7] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:56: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:1] online
+2026-02-14T16:45:56: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:8] online
+2026-02-14T16:45:56: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:5] online
+2026-02-14T16:45:56: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:11] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:12] online
+2026-02-14T16:45:56: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:2] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:56: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:56: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:9] online
+2026-02-14T16:45:56: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:15] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:6] online
+2026-02-14T16:45:56: PM2 log: App [nextn:16] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:18] online
+2026-02-14T16:45:56: PM2 log: App [nextn:13] online
+2026-02-14T16:45:56: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:3] online
+2026-02-14T16:45:56: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:0] online
+2026-02-14T16:45:56: PM2 log: App [nextn:10] online
+2026-02-14T16:45:56: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:56: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:56: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:56: PM2 log: App [nextn:19] online
+2026-02-14T16:45:56: PM2 log: App [nextn:14] online
+2026-02-14T16:45:56: PM2 log: App [nextn:4] online
+2026-02-14T16:45:57: PM2 log: App [nextn:17] online
+2026-02-14T16:45:57: PM2 log: App [nextn:7] online
+2026-02-14T16:45:57: PM2 log: App [nextn:1] online
+2026-02-14T16:45:57: PM2 log: App [nextn:8] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:5] online
+2026-02-14T16:45:57: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:11] online
+2026-02-14T16:45:57: PM2 log: App [nextn:12] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:2] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:9] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:57: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:15] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:57: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:57: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:57: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:16] online
+2026-02-14T16:45:57: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:6] online
+2026-02-14T16:45:57: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:13] online
+2026-02-14T16:45:57: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:3] online
+2026-02-14T16:45:57: PM2 log: App [nextn:18] online
+2026-02-14T16:45:57: PM2 log: App [nextn:10] online
+2026-02-14T16:45:57: PM2 log: App [nextn:0] online
+2026-02-14T16:45:57: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:19] online
+2026-02-14T16:45:57: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:57: PM2 log: App [nextn:14] online
+2026-02-14T16:45:57: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:57: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:57: PM2 log: App [nextn:17] online
+2026-02-14T16:45:57: PM2 log: App [nextn:4] online
+2026-02-14T16:45:57: PM2 log: App [nextn:7] online
+2026-02-14T16:45:57: PM2 log: App [nextn:8] online
+2026-02-14T16:45:57: PM2 log: App [nextn:1] online
+2026-02-14T16:45:57: PM2 log: App [nextn:5] online
+2026-02-14T16:45:57: PM2 log: App [nextn:12] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:2] online
+2026-02-14T16:45:58: PM2 log: App [nextn:11] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:9] online
+2026-02-14T16:45:58: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:15] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:16] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:6] online
+2026-02-14T16:45:58: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:13] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:18] online
+2026-02-14T16:45:58: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:10] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:58: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:3] online
+2026-02-14T16:45:58: PM2 log: App [nextn:0] online
+2026-02-14T16:45:58: PM2 log: App [nextn:19] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:14] online
+2026-02-14T16:45:58: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:17] online
+2026-02-14T16:45:58: PM2 log: App [nextn:4] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:7] online
+2026-02-14T16:45:58: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:8] online
+2026-02-14T16:45:58: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:5] online
+2026-02-14T16:45:58: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App [nextn:1] online
+2026-02-14T16:45:58: PM2 log: App [nextn:12] online
+2026-02-14T16:45:58: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:11] online
+2026-02-14T16:45:58: PM2 log: App [nextn:2] online
+2026-02-14T16:45:58: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:58: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:58: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:58: PM2 log: App [nextn:9] online
+2026-02-14T16:45:58: PM2 log: App [nextn:15] online
+2026-02-14T16:45:59: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:16] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:59: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:0] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:6] online
+2026-02-14T16:45:59: PM2 log: App [nextn:13] online
+2026-02-14T16:45:59: PM2 log: App [nextn:18] online
+2026-02-14T16:45:59: PM2 log: App [nextn:10] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:3] online
+2026-02-14T16:45:59: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:0] online
+2026-02-14T16:45:59: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:19] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:14] online
+2026-02-14T16:45:59: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:1] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:45:59: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:45:59: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:2] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:17] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:4] online
+2026-02-14T16:45:59: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:45:59: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:8] online
+2026-02-14T16:45:59: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:7] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:1] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:5] online
+2026-02-14T16:45:59: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App name:nextn id:0 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:0] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:45:59: PM2 log: App [nextn:11] online
+2026-02-14T16:45:59: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:45:59: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:45:59: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:45:59: PM2 log: App [nextn:12] online
+2026-02-14T16:46:00: PM2 log: App [nextn:2] online
+2026-02-14T16:46:00: PM2 log: App [nextn:15] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:9] online
+2026-02-14T16:46:00: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:16] online
+2026-02-14T16:46:00: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:4] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:13] online
+2026-02-14T16:46:00: PM2 log: App [nextn:6] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:10] online
+2026-02-14T16:46:00: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:18] online
+2026-02-14T16:46:00: PM2 log: App [nextn:3] online
+2026-02-14T16:46:00: PM2 log: App [nextn:14] online
+2026-02-14T16:46:00: PM2 log: App [nextn:19] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:1 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:1] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:00: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:4] online
+2026-02-14T16:46:00: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:5] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:17] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:8] online
+2026-02-14T16:46:00: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:7] online
+2026-02-14T16:46:00: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:2 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:2] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:00: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:5] online
+2026-02-14T16:46:00: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:46:00: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:6] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:11] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:12] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:46:00: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:00: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:15] online
+2026-02-14T16:46:00: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:3] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:9] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:4 disconnected
+2026-02-14T16:46:00: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:4] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:00: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:00: PM2 log: App [nextn:8] starting in -cluster mode-
+2026-02-14T16:46:00: PM2 log: App [nextn:16] online
+2026-02-14T16:46:00: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:46:00: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:6] online
+2026-02-14T16:46:01: PM2 log: App [nextn:7] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:13] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:5 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:5] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:01: PM2 log: App [nextn:10] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:14] online
+2026-02-14T16:46:01: PM2 log: App [nextn:18] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:19] online
+2026-02-14T16:46:01: PM2 log: App [nextn:3] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:17] online
+2026-02-14T16:46:01: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:8] online
+2026-02-14T16:46:01: PM2 log: App [nextn:7] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:11] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:12] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:6 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:6] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:01: PM2 log: App [nextn:15] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:9] online
+2026-02-14T16:46:01: PM2 log: App [nextn:10] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:16] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:46:01: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:13] online
+2026-02-14T16:46:01: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:3 disconnected
+2026-02-14T16:46:01: PM2 log: App name:nextn id:7 disconnected
+2026-02-14T16:46:01: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:3] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:01: PM2 log: App [nextn:7] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:01: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:8 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:8] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:01: PM2 log: App [nextn:10] online
+2026-02-14T16:46:01: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:11] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:46:01: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:01: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:46:01: PM2 log: App [nextn:18] online
+2026-02-14T16:46:01: PM2 log: App [nextn:14] online
+2026-02-14T16:46:01: PM2 log: App [nextn:19] online
+2026-02-14T16:46:01: PM2 log: App [nextn:17] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:9] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:11] online
+2026-02-14T16:46:02: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:12] online
+2026-02-14T16:46:02: PM2 log: App [nextn:15] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:9] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:10 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:10] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App [nextn:16] online
+2026-02-14T16:46:02: PM2 log: App [nextn:13] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:46:02: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:14] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:11 disconnected
+2026-02-14T16:46:02: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:11] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:12] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:15] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:18] online
+2026-02-14T16:46:02: PM2 log: App [nextn:14] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:9 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:19] online
+2026-02-14T16:46:02: PM2 log: App [nextn:9] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App [nextn:17] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:12] online
+2026-02-14T16:46:02: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:16] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:15] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:13] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:16] online
+2026-02-14T16:46:02: PM2 log: App [nextn:13] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:14 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:14] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App [nextn:17] starting in -cluster mode-
+2026-02-14T16:46:02: PM2 log: App name:nextn id:12 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:12] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App name:nextn id:15 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:15] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App [nextn:18] online
+2026-02-14T16:46:02: PM2 log: App [nextn:19] online
+2026-02-14T16:46:02: PM2 log: App [nextn:17] online
+2026-02-14T16:46:02: PM2 log: App name:nextn id:16 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:16] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:02: PM2 log: App name:nextn id:13 disconnected
+2026-02-14T16:46:02: PM2 log: App [nextn:13] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:02: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:03: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:03: PM2 log: App name:nextn id:17 disconnected
+2026-02-14T16:46:03: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:17] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:03: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:03: PM2 log: App [nextn:18] online
+2026-02-14T16:46:03: PM2 log: App [nextn:19] online
+2026-02-14T16:46:03: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:03: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: App [nextn:19] starting in -cluster mode-
+2026-02-14T16:46:03: PM2 log: App [nextn:18] online
+2026-02-14T16:46:03: PM2 log: App [nextn:19] online
+2026-02-14T16:46:03: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: App [nextn:18] starting in -cluster mode-
+2026-02-14T16:46:03: PM2 log: App name:nextn id:19 disconnected
+2026-02-14T16:46:03: PM2 log: App [nextn:19] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:03: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"
+2026-02-14T16:46:04: PM2 log: App [nextn:18] online
+2026-02-14T16:46:04: PM2 log: App name:nextn id:18 disconnected
+2026-02-14T16:46:04: PM2 log: App [nextn:18] exited with code [0] via signal [SIGINT]
+2026-02-14T16:46:04: PM2 log: Script C:\NVM4W\NODEJS\NPM.CMD had too many unstable restarts (16). Stopped. "errored"

@@ -28,17 +28,7 @@ export const columns: ColumnDef<Order>[] = [
   {
     accessorKey: 'orderNumber',
     header: 'Pedido',
-    cell: ({ row }) => {
-      const db = usePilotStore((s) => s.db);
-      const order = row.original as Order;
-      const creatorName = db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy;
-      return (
-        <div>
-          <div className="font-mono">{row.getValue('orderNumber')}</div>
-          <div className="text-sm text-muted-foreground">{creatorName}</div>
-        </div>
-      );
-    },
+    cell: OrderNumberCell,
   },
   {
     accessorKey: 'clientName',
@@ -67,3 +57,17 @@ export const columns: ColumnDef<Order>[] = [
     cell: ({ row }) => <div>{formatDate(row.getValue('orderDate') as string)}</div>,
   },
 ];
+
+type RowLike = { original: Order; getValue: (key: string) => unknown };
+
+function OrderNumberCell({ row }: { row: RowLike }) {
+  const db = usePilotStore((s) => s.db);
+  const order = row.original as Order;
+  const creatorName = db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy;
+  return (
+    <div>
+      <div className="font-mono">{String(row.getValue('orderNumber'))}</div>
+      <div className="text-sm text-muted-foreground">{creatorName}</div>
+    </div>
+  );
+}

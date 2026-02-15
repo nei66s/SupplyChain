@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePilotDerived, usePilotStore } from '@/lib/pilot/store';
+import dynamic from 'next/dynamic';
+const MrpPanel = dynamic(() => import('@/components/mrp-panel'), { ssr: false });
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { notificationTypeLabel, receiptStatusLabel } from '@/lib/pilot/i18n';
@@ -42,6 +44,7 @@ export default function InventoryPage() {
         <TabsTrigger value="receipts">Recebimentos</TabsTrigger>
         <TabsTrigger value="reservations">Reservas</TabsTrigger>
         <TabsTrigger value="inbox" id="inbox">Inbox</TabsTrigger>
+        <TabsTrigger value="mrp">MRP</TabsTrigger>
       </TabsList>
 
       <TabsContent value="stock">
@@ -220,6 +223,13 @@ export default function InventoryPage() {
             )}
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="mrp">
+        {/* Lazy-loaded MRP panel */}
+        <div>
+          <MrpPanel />
+        </div>
       </TabsContent>
     </Tabs>
   );

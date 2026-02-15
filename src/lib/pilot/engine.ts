@@ -101,11 +101,24 @@ function removeOrderMaterialReservation(state: PilotDb, orderId: string, materia
 
   const balance = getBalance(state, materialId);
   balance.reservedTotal = Math.max(0, balance.reservedTotal - releasedQty);
+  // Also update the order item to reflect released reservations
+  const order = state.orders.find((o) => o.id === orderId);
+  if (order) {
+    const orderItem = order.items.find((it) => it.materialId === materialId);
+    if (orderItem) {
+      orderItem.qtyReservedFromStock = 0;
+      orderItem.qtyToProduce = orderItem.qtyRequested;
+      orderItem.qtySeparated = 0;
+    }
+  }
   return releasedQty;
 }
 
 function upsertProductionTasksForOrder(state: PilotDb, order: Order): void {
   const nowIso = toIso();
+
+  // Do not create production tasks for trashed orders
+  if (order.trashedAt) return;
 
   order.items.forEach((item) => {
     const id = `pt-${order.id}-${item.materialId}`;
@@ -203,6 +216,9 @@ export function applyReservationOnQtyBlur(
   const user = state.users.find((item) => item.id === userId);
   if (!order || !user) return;
 
+  // Prevent reserving stock for trashed orders
+  if (order.trashedAt) return;
+
   const orderItem = order.items.find((item) => item.id === itemId);
   if (!orderItem) return;
 
@@ -281,6 +297,9 @@ export function cleanupExpiredReservations(state: PilotDb): number {
 export function saveOrderAndRecalculate(state: PilotDb, orderId: string, actorName: string): void {
   const order = state.orders.find((item) => item.id === orderId);
   if (!order) return;
+
+  // Do not recalculate or create production tasks for trashed orders
+  if (order.trashedAt) return;
 
   order.items.forEach((item) => {
     item.qtyToProduce = Math.max(0, item.qtyRequested - item.qtyReservedFromStock);

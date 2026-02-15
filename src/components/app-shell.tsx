@@ -112,13 +112,64 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <Logo className="px-1 py-1" />
         </SidebarHeader>
-
         <SidebarContent>
+          {/* Painel group with quick indicators */}
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              Painel
+              <span className="ml-2 inline-flex items-center gap-2">
+                <Badge variant="secondary">{db.orders.length}</Badge>
+                {expiringSoon > 0 ? <Badge variant="warning">{expiringSoon}</Badge> : null}
+              </span>
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem key="/dashboard">
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard')} tooltip="Painel">
+                  <Link href="/dashboard">
+                    <AreaChart />
+                    <span>Painel</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem key="/orders">
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/orders')} tooltip="Pedidos">
+                  <Link href="/orders">
+                    <ShoppingCart />
+                    <span>Pedidos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem key="/orders/trash">
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/orders/trash')} tooltip="Lixeira">
+                  <Link href="/orders/trash">
+                    <Trash2 />
+                    <span>Lixeira</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem key="/mrp">
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/mrp')} tooltip="MRP">
+                  <Link href="/mrp">
+                    <AreaChart />
+                    <span>MRP</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+
           <SidebarGroup>
             <SidebarGroupLabel>Operacoes</SidebarGroupLabel>
             <SidebarMenu>
               {navItems
-                .filter((i) => i.href !== '/materials' && i.href !== '/admin')
+                .filter((i) => i.href !== '/materials' && i.href !== '/admin' && i.href !== '/orders' && i.href !== '/orders/trash')
                 .map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
