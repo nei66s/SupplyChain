@@ -8,12 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useToast } from '@/hooks/use-toast';
-import { usePilotStore } from '@/lib/pilot/store';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const setCurrentUser = usePilotStore((state) => state.setCurrentUser);
 
   const [email, setEmail] = useState('seller@supplyflow.local');
   const [password, setPassword] = useState('demo');
@@ -41,7 +39,6 @@ export default function LoginPage() {
         return;
       }
 
-      setCurrentUser(result.user.id);
       toast({
         title: 'Sessao iniciada',
         description: `Perfil ativo: ${result.user.name} (${result.user.role}).`,

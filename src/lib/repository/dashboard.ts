@@ -13,7 +13,7 @@ import {
   StockBalance,
   StockReservation,
   User,
-} from '../pilot/types'
+} from '../domain/types'
 
 const statusMap: Record<string, OrderStatus> = {
   draft: 'RASCUNHO',
@@ -61,13 +61,29 @@ type OrderRow = {
   status: string | null
   total: string | number | null
   created_at: Date | string
+  due_date: Date | string | null
   trashed_at: Date | string | null
+  client_id: number | null
+  client_name: string | null
+  created_by: string | null
+  picker_id: string | null
+  volume_count: number | null
+  label_print_count: number | null
   item_id: number | null
   material_id: number | null
   quantity: string | number | null
   unit_price: string | number | null
   material_name: string | null
   material_unit: string | null
+  color: string | null
+  shortage_action: string | null
+  qty_reserved_from_stock: string | number | null
+  qty_to_produce: string | number | null
+  qty_separated: string | number | null
+  separated_weight: string | number | null
+  item_condition: string | null
+  condition_template_name: string | null
+  conditions?: any | null
 }
 
 type ProductionTaskRow = {
@@ -106,6 +122,50 @@ type UserRow = {
   avatar_url: string | null
 }
 
+type StockReservationRow = {
+  id: number
+  material_id: number
+  order_id: number
+  user_id: string | null
+  user_name: string | null
+  qty: string | number
+  expires_at: string
+  updated_at: string
+  created_at: string
+}
+
+type InventoryReceiptRow = {
+  id: number
+  type: string
+  status: string
+  source_ref: string | null
+  created_at: string
+  posted_at: string | null
+  posted_by: string | null
+  auto_allocated: boolean | null
+}
+
+type InventoryReceiptItemRow = {
+  receipt_id: number
+  material_id: number
+  qty: string | number
+  uom: string | null
+  material_name: string | null
+}
+
+type NotificationRow = {
+  id: number
+  type: Notification['type']
+  title: string
+  message: string | null
+  created_at: string
+  read_at: string | null
+  role_target: Notification['roleTarget'] | null
+  order_id: number | null
+  material_id: number | null
+  dedupe_key: string | null
+}
+
 export type DashboardData = {
   orders: Order[]
   productionTasks: ProductionTask[]
@@ -125,11 +185,27 @@ async function loadOrders(): Promise<{ items: Order[]; queryMs: number }> {
        o.status,
        o.total,
        o.created_at,
+       o.due_date,
        o.trashed_at,
+       o.client_id,
+       o.client_name,
+       o.created_by,
+       o.picker_id,
+       o.volume_count,
+       o.label_print_count,
        oi.id AS item_id,
        oi.material_id,
        oi.quantity,
+       oi.conditions,
        oi.unit_price,
+       oi.color,
+       oi.shortage_action,
+       oi.qty_reserved_from_stock,
+       oi.qty_to_produce,
+       oi.qty_separated,
+       oi.separated_weight,
+       oi.item_condition,
+       oi.condition_template_name,
        m.name AS material_name,
        m.unit AS material_unit
      FROM orders o
@@ -163,37 +239,42 @@ async function loadOrders(): Promise<{ items: Order[]; queryMs: number }> {
       map.set(oid, {
         id: `O-${oid}`,
         orderNumber,
-        clientId: '',
-        clientName: '',
+        clientId: row.client_id ? `C-${row.client_id}` : '',
+        clientName: row.client_name ?? '',
         status: normalizedStatus,
         readiness: 'NOT_READY',
         orderDate: created.toISOString(),
-        dueDate: created.toISOString(),
-        createdBy: '',
-        volumeCount: 1,
+        dueDate: row.due_date ? new Date(row.due_date).toISOString() : created.toISOString(),
+        createdBy: row.created_by ?? '',
+        pickerId: row.picker_id ?? undefined,
+        volumeCount: Number(row.volume_count ?? 1),
         items: [],
         auditTrail: [],
-        labelPrintCount: 0,
+        labelPrintCount: Number(row.label_print_count ?? 0),
         total: Number(row.total ?? 0),
-        trashedAt: row.trashed_at ? (new Date(row.trashed_at).toISOString?.() ?? String(row.trashed_at)) : null,
+        trashedAt: row.trashed_at ? (row.trashed_at instanceof Date ? row.trashed_at.toISOString() : String(row.trashed_at)) : null,
       })
     }
     if (row.item_id) {
       const order = map.get(oid)!
       const qtyRequested = Number(row.quantity ?? 0)
-      const qtyToProduce = 0
-      const qtyReservedFromStock = Math.max(0, qtyRequested - qtyToProduce)
+      const qtyReservedFromStock = Math.max(0, Number(row.qty_reserved_from_stock ?? 0))
+      const qtyToProduce = Math.max(0, Number(row.qty_to_produce ?? 0))
       order.items.push({
         id: `itm-${row.item_id}`,
         materialId: row.material_id ? `M-${row.material_id}` : `M-${row.item_id}`,
         materialName: row.material_name || '',
         uom: row.material_unit || 'EA',
-        color: '',
+        color: row.color ?? '',
+        shortageAction: (String(row.shortage_action ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'),
         qtyRequested,
         qtyReservedFromStock,
         qtyToProduce,
-        qtySeparated: 0,
-        conditions: [],
+        qtySeparated: Number(row.qty_separated ?? 0),
+        separatedWeight: row.separated_weight ? Number(row.separated_weight) : undefined,
+        itemCondition: row.item_condition ?? undefined,
+        conditionTemplateName: row.condition_template_name ?? undefined,
+        conditions: parseJson(row.conditions, []),
       })
     }
   }
@@ -257,21 +338,12 @@ async function loadMaterialsWithStock(): Promise<{ materials: Material[]; stockB
        m.color_options,
        m.metadata,
        COALESCE((
-         SELECT SUM(
-           GREATEST(0::NUMERIC, req.requested_qty - COALESCE(pt.qty_to_produce, 0::NUMERIC))
-         )
-         FROM (
-           SELECT oi2.order_id, oi2.material_id, SUM(oi2.quantity)::NUMERIC(12,4) AS requested_qty
-           FROM order_items oi2
-           JOIN orders o2 ON o2.id = oi2.order_id
-           WHERE oi2.material_id = m.id
-             AND (o2.status IS NULL OR lower(o2.status) NOT IN ('draft', 'cancelado', 'finalizado'))
-           GROUP BY oi2.order_id, oi2.material_id
-         ) req
-         LEFT JOIN production_tasks pt
-           ON pt.order_id = req.order_id
-          AND pt.material_id = req.material_id
+         SELECT SUM(sr.qty)::NUMERIC(12,4)
+         FROM stock_reservations sr
+         WHERE sr.material_id = m.id
+           AND sr.expires_at > now()
        ), 0) AS reserved_total,
+       COALESCE((SELECT SUM(qty)::NUMERIC(12,4) FROM production_reservations pr WHERE pr.material_id = m.id), 0) AS production_reserved,
        COALESCE(sb.on_hand, 0) AS on_hand
      FROM materials m
      LEFT JOIN stock_balances sb ON sb.material_id = m.id
@@ -306,6 +378,7 @@ async function loadMaterialsWithStock(): Promise<{ materials: Material[]; stockB
     materialId: `M-${row.id}`,
     onHand: Number(row.on_hand ?? 0),
     reservedTotal: Number(row.reserved_total ?? 0),
+    productionReserved: Number((row as any).production_reserved ?? 0),
   }))
 
   return { materials, stockBalances, queryMs: res.queryTimeMs }
@@ -329,13 +402,117 @@ async function loadUsers(): Promise<{ items: User[]; queryMs: number }> {
   return { items: users, queryMs: res.queryTimeMs }
 }
 
+async function loadStockReservations(): Promise<{ items: StockReservation[]; queryMs: number }> {
+  const res = await query<StockReservationRow>(`
+    SELECT
+      sr.id,
+      sr.material_id,
+      sr.order_id,
+      sr.user_id,
+      u.name AS user_name,
+      sr.qty,
+      sr.expires_at,
+      sr.updated_at,
+      sr.created_at
+    FROM stock_reservations sr
+    LEFT JOIN users u ON u.id = sr.user_id
+    WHERE sr.expires_at > now()
+    ORDER BY sr.expires_at ASC
+  `)
+
+  const items = res.rows.map((row) => ({
+    id: `SR-${row.id}`,
+    materialId: `M-${row.material_id}`,
+    orderId: `O-${row.order_id}`,
+    userId: row.user_id ?? '',
+    userName: row.user_name ?? 'Usuario',
+    qty: Number(row.qty ?? 0),
+    expiresAt: row.expires_at,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+  }))
+
+  return { items, queryMs: res.queryTimeMs }
+}
+
+async function loadInventoryReceipts(): Promise<{ items: InventoryReceipt[]; queryMs: number }> {
+  const res = await query<InventoryReceiptRow>(`
+    SELECT id, type, status, source_ref, created_at, posted_at, posted_by, auto_allocated
+    FROM inventory_receipts
+    ORDER BY created_at DESC
+  `)
+  const receipts = res.rows.map((row) => ({
+    id: `IR-${row.id}`,
+    type: row.type as InventoryReceipt['type'],
+    status: row.status as InventoryReceipt['status'],
+    items: [] as InventoryReceipt['items'],
+    sourceRef: row.source_ref ?? '',
+    createdAt: row.created_at,
+    postedAt: row.posted_at ?? undefined,
+    postedBy: row.posted_by ?? undefined,
+    autoAllocated: Boolean(row.auto_allocated),
+  }))
+
+  if (receipts.length > 0) {
+    const ids = receipts.map((r) => Number(String(r.id).replace(/^IR-/, ''))).filter((n) => !Number.isNaN(n))
+    const itemsRes = await query<InventoryReceiptItemRow>(
+      `SELECT iri.receipt_id, iri.material_id, iri.qty, iri.uom, m.name AS material_name
+       FROM inventory_receipt_items iri
+       LEFT JOIN materials m ON m.id = iri.material_id
+       WHERE iri.receipt_id = ANY($1::int[])`,
+      [ids]
+    )
+    const map = new Map<number, InventoryReceipt['items']>()
+    for (const row of itemsRes.rows) {
+      const list = map.get(row.receipt_id) ?? ([] as InventoryReceipt['items'])
+      list.push({
+        materialId: `M-${row.material_id}`,
+        materialName: row.material_name ?? `M-${row.material_id}`,
+        qty: Number(row.qty ?? 0),
+        uom: row.uom ?? 'EA',
+      })
+      map.set(row.receipt_id, list)
+    }
+    for (const receipt of receipts) {
+      const rid = Number(String(receipt.id).replace(/^IR-/, ''))
+      receipt.items = map.get(rid) ?? ([] as InventoryReceipt['items'])
+    }
+  }
+
+  return { items: receipts, queryMs: res.queryTimeMs }
+}
+
+async function loadNotifications(): Promise<{ items: Notification[]; queryMs: number }> {
+  const res = await query<NotificationRow>(`
+    SELECT id, type, title, message, created_at, read_at, role_target, order_id, material_id, dedupe_key
+    FROM notifications
+    ORDER BY created_at DESC
+  `)
+  const items = res.rows.map((row) => ({
+    id: `N-${row.id}`,
+    type: row.type,
+    title: row.title,
+    message: row.message ?? '',
+    createdAt: row.created_at,
+    readAt: row.read_at ?? undefined,
+    roleTarget: row.role_target ?? undefined,
+    orderId: row.order_id ? `O-${row.order_id}` : undefined,
+    materialId: row.material_id ? `M-${row.material_id}` : undefined,
+    dedupeKey: row.dedupe_key ?? undefined,
+  }))
+  return { items, queryMs: res.queryTimeMs }
+}
+
 async function createDashboardSnapshotInternal(): Promise<DashboardData> {
   const totalStart = process.hrtime.bigint()
-  const [ordersResult, tasksResult, materialsResult, usersResult] = await Promise.all([
+  const [ordersResult, tasksResult, materialsResult, usersResult, reservationsResult, receiptsResult, notificationsResult] = await Promise.all([
     loadOrders(),
     loadProductionTasks(),
     loadMaterialsWithStock(),
     loadUsers(),
+    loadStockReservations(),
+    loadInventoryReceipts(),
+    loadNotifications(),
   ])
 
   const serializationStart = process.hrtime.bigint()
@@ -344,16 +521,16 @@ async function createDashboardSnapshotInternal(): Promise<DashboardData> {
     productionTasks: tasksResult.items,
     materials: materialsResult.materials,
     stockBalances: materialsResult.stockBalances,
-    stockReservations: [], // not persisted yet
+    stockReservations: reservationsResult.items,
     users: usersResult.items,
-    inventoryReceipts: [],
-    notifications: [],
+    inventoryReceipts: receiptsResult.items,
+    notifications: notificationsResult.items,
   }
   const serializationMs = Number(process.hrtime.bigint() - serializationStart) / 1_000_000
 
   const totalMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000
   logRepoPerf('repo:dashboardSnapshot', {
-    queryMs: ordersResult.queryMs + tasksResult.queryMs + materialsResult.queryMs + usersResult.queryMs,
+    queryMs: ordersResult.queryMs + tasksResult.queryMs + materialsResult.queryMs + usersResult.queryMs + reservationsResult.queryMs + receiptsResult.queryMs + notificationsResult.queryMs,
     serializationMs,
     totalMs,
     rows: dashboardData.orders.length + dashboardData.productionTasks.length,
@@ -370,5 +547,5 @@ export const getDashboardSnapshot = unstable_cache(
 )
 
 export async function refreshDashboardSnapshot() {
-  await getDashboardSnapshot.revalidate()
+  await (getDashboardSnapshot as any).revalidate()
 }

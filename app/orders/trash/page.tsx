@@ -16,17 +16,42 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/ui/empty-state';
-import { usePilotStore } from '@/lib/pilot/store';
 import { formatDate } from '@/lib/utils';
-import { readinessLabel } from '@/lib/pilot/i18n';
+import { readinessLabel } from '@/lib/domain/i18n';
+import { Order, StockBalance, StockReservation, User } from '@/lib/domain/types';
 
 export default function OrdersTrashPage() {
-  const db = usePilotStore((s) => s.db);
-  const restoreOrder = usePilotStore((s) => s.restoreOrder);
-  const purgeOrder = usePilotStore((s) => s.purgeOrder);
-  const setOrders = usePilotStore((s) => s.setOrders);
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [stockBalances, setStockBalances] = React.useState<StockBalance[]>([]);
+  const [stockReservations, setStockReservations] = React.useState<StockReservation[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
 
-  const trashedOrders = React.useMemo(() => db.orders.filter((o) => o.trashedAt), [db.orders]);
+  const loadData = React.useCallback(async () => {
+    const [ordersRes, inventoryRes, usersRes] = await Promise.all([
+      fetch('/api/orders', { cache: 'no-store' }),
+      fetch('/api/inventory', { cache: 'no-store' }),
+      fetch('/api/users', { cache: 'no-store' }),
+    ]);
+    if (ordersRes.ok) {
+      const data = await ordersRes.json();
+      setOrders(Array.isArray(data) ? data : []);
+    }
+    if (inventoryRes.ok) {
+      const data = await inventoryRes.json();
+      setStockBalances(Array.isArray(data.stockBalances) ? data.stockBalances : []);
+      setStockReservations(Array.isArray(data.stockReservations) ? data.stockReservations : []);
+    }
+    if (usersRes.ok) {
+      const data = await usersRes.json();
+      setUsers(Array.isArray(data.users) ? data.users : []);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const trashedOrders = React.useMemo(() => orders.filter((o) => o.trashedAt), [orders]);
 
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(trashedOrders[0]?.id ?? null);
 
@@ -37,19 +62,21 @@ export default function OrdersTrashPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trashedOrders]);
 
-  const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
+  const selectedOrder = orders.find((item) => item.id === selectedOrderId) ?? null;
 
   const stockByMaterial = React.useMemo(() => {
-    const map = new Map<string, { onHand: number; reservedTotal: number; available: number }>();
-    db.stockBalances.forEach((balance) => {
+    const map = new Map<string, { onHand: number; reservedTotal: number; productionReserved: number; available: number }>();
+    stockBalances.forEach((balance) => {
+      const productionReserved = (balance as any).productionReserved ?? 0;
       map.set(balance.materialId, {
         onHand: balance.onHand,
         reservedTotal: balance.reservedTotal,
-        available: Math.max(0, balance.onHand - balance.reservedTotal),
+        productionReserved,
+        available: Math.max(0, balance.onHand - balance.reservedTotal - productionReserved),
       });
     });
     return map;
-  }, [db.stockBalances]);
+  }, [stockBalances]);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
@@ -78,7 +105,7 @@ export default function OrdersTrashPage() {
                   }`}
                 >
                   <p className="font-medium">
-                    {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
+                    {order.orderNumber} — <span className="text-base text-muted-foreground">{users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">{order.clientName} - Removido em {formatDate(order.trashedAt!)}</p>
                   <div className="mt-2 flex gap-2">
@@ -101,7 +128,7 @@ export default function OrdersTrashPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle>
-                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
                   </CardTitle>
                   <CardDescription>
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
@@ -110,27 +137,18 @@ export default function OrdersTrashPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={async () => {
                     try {
-                      if (/^O-\d+$/.test(String(selectedOrder.id))) {
-                        const res = await fetch(`/api/orders/${selectedOrder.id}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ trashed: false }),
-                        });
-                        if (!res.ok) {
-                          const e = await res.json().catch(() => ({}));
-                          alert(e?.error || 'Falha ao restaurar pedido');
-                          return;
-                        }
-                        const r2 = await fetch('/api/orders');
-                        if (r2.ok) {
-                          const orders = await r2.json();
-                          setOrders(orders);
-                          setSelectedOrderId(null);
-                        }
-                      } else {
-                        restoreOrder(selectedOrder.id);
-                        setSelectedOrderId(null);
+                      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'restore' }),
+                      });
+                      if (!res.ok) {
+                        const e = await res.json().catch(() => ({}));
+                        alert(e?.error || 'Falha ao restaurar pedido');
+                        return;
                       }
+                      await loadData();
+                      setSelectedOrderId(null);
                     } catch (err) {
                       console.error(err);
                       alert('Erro ao restaurar pedido');
@@ -140,23 +158,14 @@ export default function OrdersTrashPage() {
                   </Button>
                   <Button size="sm" variant="destructive" onClick={async () => {
                     try {
-                      if (/^O-\d+$/.test(String(selectedOrder.id))) {
-                        const res = await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
-                        if (!res.ok) {
-                          const e = await res.json().catch(() => ({}));
-                          alert(e?.error || 'Falha ao excluir pedido');
-                          return;
-                        }
-                        const r2 = await fetch('/api/orders');
-                        if (r2.ok) {
-                          const orders = await r2.json();
-                          setOrders(orders);
-                          setSelectedOrderId(null);
-                        }
-                      } else {
-                        purgeOrder(selectedOrder.id);
-                        setSelectedOrderId(null);
+                      const res = await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
+                      if (!res.ok) {
+                        const e = await res.json().catch(() => ({}));
+                        alert(e?.error || 'Falha ao excluir pedido');
+                        return;
                       }
+                      await loadData();
+                      setSelectedOrderId(null);
                     } catch (err) {
                       console.error(err);
                       alert('Erro ao excluir pedido');
@@ -188,7 +197,6 @@ export default function OrdersTrashPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Material</TableHead>
-                      <TableHead>Cor</TableHead>
                       <TableHead className="text-right">Qtd. solicitada</TableHead>
                       <TableHead className="text-right">Em estoque</TableHead>
                       <TableHead className="text-right">Reservado</TableHead>
@@ -200,7 +208,7 @@ export default function OrdersTrashPage() {
                   <TableBody>
                     {selectedOrder.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-20 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="h-20 text-center text-muted-foreground">
                           Pedido sem itens.
                         </TableCell>
                       </TableRow>
@@ -213,9 +221,7 @@ export default function OrdersTrashPage() {
                               <p className="font-medium">{item.materialName}</p>
                               <p className="text-xs text-muted-foreground">{item.materialId} - {item.uom}</p>
                             </TableCell>
-                            <TableCell>
-                              <Input value={item.color} disabled />
-                            </TableCell>
+                            {/* Color column removed; colors are available via item.conditions now */}
                             <TableCell className="text-right">{item.qtyRequested}</TableCell>
                             <TableCell className="text-right">{stock.onHand}</TableCell>
                             <TableCell className="text-right">{stock.reservedTotal}</TableCell>

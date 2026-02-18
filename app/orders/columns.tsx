@@ -4,8 +4,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { Order } from '@/lib/pilot/types';
-import { readinessLabel } from '@/lib/pilot/i18n';
+import { Order } from '@/lib/domain/types';
+import { readinessLabel } from '@/lib/domain/i18n';
 import { formatDate } from '@/lib/utils';
 
 const statusVariantMap: Record<string, BadgeProps['variant']> = {

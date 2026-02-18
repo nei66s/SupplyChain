@@ -45,16 +45,15 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Badge } from './ui/badge';
 import NotificationCenter from './notifications/notification-center';
 import DbHealth from './db-health';
-import { usePilotDerived, usePilotStore } from '@/lib/pilot/store';
+import PingHealth from './ping-health';
 import { Input } from './ui/input';
-import { roleLabel } from '@/lib/pilot/i18n';
+import { roleLabel } from '@/lib/domain/i18n';
 import { useAuthUser } from '@/hooks/use-auth';
 
 const navItems = [
-  { href: '/dashboard', icon: AreaChart, label: 'Painel' },
+  { href: '/dashboard', icon: AreaChart, label: 'Indicadores' },
   { href: '/orders', icon: ShoppingCart, label: 'Pedidos' },
   { href: '/orders/trash', icon: Trash2, label: 'Lixeira' },
   { href: '/materials', icon: Bot, label: 'Materiais' },
@@ -69,24 +68,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = React.useState(false);
   const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
-  const db = usePilotStore((state) => state.db);
-  const currentUserId = usePilotStore((state) => state.currentUserId);
-  const currentRole = usePilotStore((state) => state.currentRole);
-  const setCurrentUser = usePilotStore((state) => state.setCurrentUser);
-  const runMaintenance = usePilotStore((state) => state.runMaintenance);
-  const { expiringSoon } = usePilotDerived();
   const { user: authUser } = useAuthUser();
 
-  const user = db.users.find((item) => item.id === currentUserId) ?? db.users[0];
-
-  React.useEffect(() => {
-    if (authUser) {
-      setCurrentUser(authUser.id);
-    }
-  }, [authUser, setCurrentUser]);
-
-  const displayUser = authUser ?? user;
-  const displayRoleLabel = displayUser ? roleLabel(displayUser.role) : roleLabel(currentRole);
+  const displayUser = authUser ?? null;
+  const displayRoleLabel = displayUser ? roleLabel(displayUser.role) : '---';
   const headerIsHydrated = mounted;
   const userName = headerIsHydrated ? displayUser?.name ?? 'Usuario' : 'Usuario';
   const roleLabelText = headerIsHydrated ? displayRoleLabel : 'Carregando...';
@@ -95,16 +80,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const avatarInitial = headerIsHydrated ? displayUser?.name?.charAt(0)?.toUpperCase() ?? 'U' : 'U';
 
   React.useEffect(() => {
-    const timer = window.setInterval(() => {
-      runMaintenance();
-    }, 30000);
-
     setMounted(true);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [runMaintenance]);
+  }, []);
 
   React.useEffect(() => {
     const saved = window.localStorage.getItem('theme');
@@ -122,6 +99,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const isDark = theme === 'dark';
     document.documentElement.classList.toggle('dark', isDark);
     window.localStorage.setItem('theme', theme);
+    try {
+      // Also persist theme in a cookie so SSR or other contexts can read it
+      // Max-Age ~ 1 year
+      document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+    } catch {}
   }, [theme]);
 
   return (
@@ -134,22 +116,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="relative flex flex-col gap-4">
             {/* Painel group with quick indicators */}
             <SidebarGroup>
-              <SidebarGroupLabel>
-                Painel
-                {mounted ? (
-                  expiringSoon > 0 ? (
-                    <div className="ml-2 inline-flex items-center gap-2">
-                      <Badge variant="warning">{expiringSoon}</Badge>
-                    </div>
-                  ) : null
-                ) : null}
-              </SidebarGroupLabel>
+              <SidebarGroupLabel>Indicadores</SidebarGroupLabel>
               <SidebarMenu>
                 <SidebarMenuItem key="/dashboard">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard')} tooltip="Painel">
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard')} tooltip="Indicadores">
                     <Link href="/dashboard">
                       <AreaChart />
-                      <span>Painel</span>
+                      <span>Indicadores</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -177,10 +150,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
 
                 <SidebarMenuItem key="/mrp">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/mrp')} tooltip="MRP">
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/mrp')} tooltip="Planejamento de Materiais">
                     <Link href="/mrp">
                       <AreaChart />
-                      <span>MRP</span>
+                      <span>Planejamento de Materiais</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -263,7 +236,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <NotificationCenter />
-          <DbHealth />
+          <div className="flex items-center gap-2">
+            <PingHealth />
+            <DbHealth />
+          </div>
           {mounted ? (
             <Button
               variant="ghost"
@@ -305,9 +281,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {mounted && expiringSoon > 0 ? (
-            <Badge variant="warning">{expiringSoon} reservas expiram em {'<1m'}</Badge>
-          ) : null}
         </header>
 
         <main className="page-enter flex-1 p-6 lg:p-8">

@@ -4,9 +4,8 @@ import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { Order } from '@/lib/pilot/types';
-import { readinessLabel } from '@/lib/pilot/i18n';
-import { usePilotStore } from '@/lib/pilot/store';
+import { Order } from '@/lib/domain/types';
+import { readinessLabel } from '@/lib/domain/i18n';
 import { formatDate } from '@/lib/utils';
 
 const statusVariantMap: Record<string, BadgeProps['variant']> = {
@@ -28,7 +27,7 @@ export const columns: ColumnDef<Order>[] = [
   {
     accessorKey: 'orderNumber',
     header: 'Pedido',
-    cell: OrderNumberCell,
+    cell: ({ row }) => <div className="font-mono">{row.getValue('orderNumber')}</div>,
   },
   {
     accessorKey: 'clientName',
@@ -57,17 +56,3 @@ export const columns: ColumnDef<Order>[] = [
     cell: ({ row }) => <div>{formatDate(row.getValue('orderDate') as string)}</div>,
   },
 ];
-
-type RowLike = { original: Order; getValue: (key: string) => unknown };
-
-function OrderNumberCell({ row }: { row: RowLike }) {
-  const db = usePilotStore((s) => s.db);
-  const order = row.original as Order;
-  const creatorName = db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy;
-  return (
-    <div>
-      <div className="font-mono">{String(row.getValue('orderNumber'))}</div>
-      <div className="text-sm text-muted-foreground">{creatorName}</div>
-    </div>
-  );
-}

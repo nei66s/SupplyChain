@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { query } from '../db'
 import { logRepoPerf } from './perf'
-import { Material, StockBalance } from '../pilot/types'
+import { Material, StockBalance } from '../domain/types'
 
 type MaterialStockRow = {
   id: number
@@ -32,19 +32,12 @@ const materialSnapshotQuery = `SELECT
   m.color_options,
   m.metadata,
   COALESCE((
-    SELECT SUM(GREATEST(0::NUMERIC, req.requested_qty - COALESCE(pt.qty_to_produce, 0::NUMERIC)))
-    FROM (
-      SELECT oi2.order_id, oi2.material_id, SUM(oi2.quantity)::NUMERIC(12,4) AS requested_qty
-      FROM order_items oi2
-      JOIN orders o2 ON o2.id = oi2.order_id
-      WHERE oi2.material_id = m.id
-        AND (o2.status IS NULL OR lower(o2.status) NOT IN ('draft', 'cancelado', 'finalizado'))
-      GROUP BY oi2.order_id, oi2.material_id
-    ) req
-    LEFT JOIN production_tasks pt
-      ON pt.order_id = req.order_id
-     AND pt.material_id = req.material_id
+    SELECT SUM(sr.qty)::NUMERIC(12,4)
+    FROM stock_reservations sr
+    WHERE sr.material_id = m.id
+      AND sr.expires_at > now()
   ), 0) AS reserved_total,
+  COALESCE((SELECT SUM(qty)::NUMERIC(12,4) FROM production_reservations pr WHERE pr.material_id = m.id), 0) AS production_reserved,
   COALESCE(sb.on_hand, 0) AS on_hand
 FROM materials m
 LEFT JOIN stock_balances sb ON sb.material_id = m.id
@@ -106,6 +99,7 @@ async function buildMaterialSnapshot(): Promise<{ materials: Material[]; stockBa
     materialId: `M-${row.id}`,
     onHand: Number(row.on_hand ?? 0),
     reservedTotal: Number(row.reserved_total ?? 0),
+    productionReserved: Number((row as any).production_reserved ?? 0),
   }))
 
   return { materials, stockBalances, queryMs: res.queryTimeMs }
@@ -131,5 +125,5 @@ export const getMaterialsSnapshot = unstable_cache(async () => {
 }, [], { revalidate: 30 })
 
 export async function refreshMaterialsSnapshot() {
-  await getMaterialsSnapshot.revalidate()
+  await (getMaterialsSnapshot as any).revalidate()
 }

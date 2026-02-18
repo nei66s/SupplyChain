@@ -332,7 +332,7 @@ const Sidebar = React.forwardRef<
             {children}
           </div>
         </div>
-        <SidebarRail />
+        {/* SidebarRail removido para não atrapalhar interação na borda */}
       </div>
     )
   }

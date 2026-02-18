@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { usePilotStore } from '@/lib/pilot/store';
 import { Button } from '@/components/ui/button';
 
 export default function SyncFab() {
-  const sync = usePilotStore((state) => state.syncWithBackend);
   const [busy, setBusy] = useState(false);
 
   return (
@@ -13,7 +11,7 @@ export default function SyncFab() {
       <Button size="sm" onClick={async () => {
         try {
           setBusy(true);
-          await sync();
+          window.location.reload();
         } catch (e) {
           console.error(e);
         } finally {

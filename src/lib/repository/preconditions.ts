@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { query } from '../db'
 import { logRepoPerf } from './perf'
 
@@ -66,4 +67,14 @@ export async function addPreconditionValue(categoryId: number, value: string) {
     [categoryId, value]
   )
   return existing.rows[0] ?? null
+}
+
+export const getPreconditionCategories = unstable_cache(
+  async () => listPreconditionCategories(),
+  [],
+  { revalidate: 180 }
+)
+
+export async function refreshPreconditionCategories() {
+  await (getPreconditionCategories as any).revalidate()
 }

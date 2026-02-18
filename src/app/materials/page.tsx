@@ -15,9 +15,9 @@ import {
 import { Form, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
-import { useCallback, useEffect, useRef, useState, FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, FormEvent } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Boxes, ChevronDown, ChevronUp, Edit, Trash, X } from 'lucide-react';
+import { Boxes, ChevronDown, ChevronUp, Edit, PlusCircle, Trash, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate } from '@/lib/utils';
 
@@ -43,6 +43,17 @@ const defaultValues: MaterialFormValues = {
   colorOptions: '',
 };
 
+type PreconditionValue = {
+  id: number;
+  value: string;
+};
+
+type PreconditionCategory = {
+  id: number;
+  name: string;
+  values: PreconditionValue[];
+};
+
 const defaultConditionCategories = ['Fibra', 'FibraCor', 'Corda', 'CordaCor', 'Trico', 'TricoCor', 'Fio', 'Fiocor'];
 
 export default function MaterialsPage() {
@@ -50,25 +61,16 @@ export default function MaterialsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [conditionCategories, setConditionCategories] = useState<string[]>(defaultConditionCategories);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [conditionOptions, setConditionOptions] = useState<Record<string, string[]>>(() =>
-    Object.fromEntries(defaultConditionCategories.map((key) => [key, []]))
-  );
-  const [newConditionInput, setNewConditionInput] = useState<Record<string, string>>(
-    Object.fromEntries(defaultConditionCategories.map((key) => [key, '']))
-  );
-  const [hiddenConditions, setHiddenConditions] = useState<Record<string, Set<string>>>(() =>
-    Object.fromEntries(defaultConditionCategories.map((key) => [key, new Set<string>()]))
-  );
-  const [manualConditionAdditions, setManualConditionAdditions] = useState<Record<string, string[]>>(() =>
-    Object.fromEntries(defaultConditionCategories.map((key) => [key, []]))
-  );
+  const [preconditionCategories, setPreconditionCategories] = useState<PreconditionCategory[]>([]);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(null);
+  const [newConditionInput, setNewConditionInput] = useState<Record<number, string>>({});
+  const [conditionsLoading, setConditionsLoading] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryError, setCategoryError] = useState('');
+  const [isUsingFallbackData, setIsUsingFallbackData] = useState(false);
 
-  const toast = useToast();
+  const { toast } = useToast();
   const form = useForm<MaterialFormValues>({ defaultValues });
   const mountedRef = useRef(true);
 
@@ -96,6 +98,83 @@ export default function MaterialsPage() {
   useEffect(() => {
     fetchMaterials();
   }, [fetchMaterials]);
+
+  const fallbackCategoriesFromMetadata = useMemo(() => {
+    const aggregated: Record<string, Set<string>> = {};
+    defaultConditionCategories.forEach((key) => {
+      aggregated[key] = new Set<string>();
+    });
+
+    db.materials.forEach((material: any) => {
+      const metadata = material.metadata ?? {};
+      defaultConditionCategories.forEach((key) => {
+        const raw = metadata[key] ?? metadata[key.toLowerCase()];
+        if (Array.isArray(raw)) {
+          raw.forEach((value) => {
+            if (value) aggregated[key].add(value);
+          });
+        } else if (typeof raw === 'string' && raw) {
+          aggregated[key].add(raw);
+        }
+      });
+    });
+
+    let valueId = 1;
+    return defaultConditionCategories
+      .map((key, index) => {
+        const values = Array.from(aggregated[key] ?? []).map((value) => ({
+          id: valueId++,
+          value,
+        }));
+        if (values.length === 0) return null;
+        return { id: -(index + 1), name: key, values };
+      })
+      .filter(Boolean) as PreconditionCategory[];
+  }, [db.materials]);
+
+  const fetchPreconditions = useCallback(async () => {
+    setConditionsLoading(true);
+    try {
+      const response = await fetch('/api/preconditions');
+      if (!response.ok) throw new Error('Erro ao carregar pre-condicoes');
+      const data = (await response.json()) as PreconditionCategory[];
+      if (!mountedRef.current) return data;
+      setPreconditionCategories(data);
+      setIsUsingFallbackData(false);
+      setNewConditionInput(Object.fromEntries(data.map((category) => [category.id, ''])));
+      setExpandedCategoryId((prev) => (prev && data.some((category) => category.id === prev) ? prev : null));
+      return data;
+    } catch (error: any) {
+      console.error('Failed to load preconditions', error);
+      if (mountedRef.current) {
+        setPreconditionCategories([]);
+        setExpandedCategoryId(null);
+      }
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as pré-condições',
+        variant: 'destructive',
+      });
+      return [];
+    } finally {
+      if (mountedRef.current) setConditionsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPreconditions();
+  }, [fetchPreconditions]);
+
+  useEffect(() => {
+    if (preconditionCategories.length === 0 && fallbackCategoriesFromMetadata.length > 0) {
+      setPreconditionCategories(fallbackCategoriesFromMetadata);
+      setNewConditionInput(
+        Object.fromEntries(fallbackCategoriesFromMetadata.map((category) => [category.id, '']))
+      );
+      setExpandedCategoryId(null);
+      setIsUsingFallbackData(true);
+    }
+  }, [fallbackCategoriesFromMetadata, preconditionCategories.length]);
 
   const openNew = () => {
     form.reset(defaultValues);
@@ -188,104 +267,99 @@ export default function MaterialsPage() {
       toast({ title: 'Erro', description: 'Erro ao remover material', variant: 'destructive' });
     }
   };
-  useEffect(() => {
-    const aggregated: Record<string, Set<string>> = {};
-    conditionCategories.forEach((key) => {
-      aggregated[key] = new Set();
-    });
-
-    db.materials.forEach((material: any) => {
-      const metadata = material.metadata ?? {};
-      conditionCategories.forEach((key) => {
-        const raw = metadata[key] ?? metadata[key.toLowerCase()];
-        if (Array.isArray(raw)) {
-          raw.forEach((value) => {
-            if (value) aggregated[key].add(value);
-          });
-        } else if (typeof raw === 'string' && raw) {
-          aggregated[key].add(raw);
+  const handleRemoveCondition = useCallback(
+    async (categoryId: number, valueId: number) => {
+      try {
+        const response = await fetch(`/api/preconditions/${categoryId}/values/${valueId}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.error || 'Falha ao remover valor');
         }
-      });
-    });
+        toast({ title: 'Valor removido', description: 'Lista atualizada', variant: 'success' });
+        await fetchPreconditions();
+      } catch (error: any) {
+        toast({
+          title: 'Erro',
+          description: error?.message || 'Nao foi possivel remover o valor',
+          variant: 'destructive',
+        });
+      }
+    },
+    [fetchPreconditions, toast]
+  );
 
-    const merged = Object.fromEntries(
-      conditionCategories.map((key) => {
-        const visible = Array.from(aggregated[key] ?? new Set()).filter(
-          (value) => !hiddenConditions[key]?.has(value)
-        );
-        const additions = (manualConditionAdditions[key] ?? []).filter(
-          (value) => !visible.includes(value)
-        );
-        return [key, [...visible, ...additions]];
-      })
-    );
+  const handleAddCondition = useCallback(
+    async (categoryId: number, value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      try {
+        const response = await fetch(`/api/preconditions/${categoryId}/values`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: trimmed }),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => null);
+          throw new Error(err?.error || 'Falha ao adicionar valor');
+        }
+        toast({ title: 'Valor salvo', description: 'Lista atualizada', variant: 'success' });
+        await fetchPreconditions();
+        setNewConditionInput((prev) => ({ ...prev, [categoryId]: '' }));
+        setExpandedCategoryId(categoryId);
+      } catch (error: any) {
+        toast({
+          title: 'Erro',
+          description: error?.message || 'Nao foi possivel adicionar o valor',
+          variant: 'destructive',
+        });
+      }
+    },
+    [fetchPreconditions, toast]
+  );
 
-    setConditionOptions(merged);
-  }, [db.materials, hiddenConditions, manualConditionAdditions, conditionCategories]);
-
-  const handleRemoveCondition = (key: string, value: string) => {
-    setHiddenConditions((prev) => {
-      const next = { ...prev, [key]: new Set(prev[key]) };
-      next[key].add(value);
-      return next;
-    });
-    setManualConditionAdditions((prev) => ({
-      ...prev,
-      [key]: prev[key]?.filter((item) => item !== value) ?? [],
-    }));
-  };
-
-  const handleAddCondition = (key: string) => {
-    const value = newConditionInput[key]?.trim();
-    if (!value) return;
-
-    setManualConditionAdditions((prev) => {
-      if (prev[key]?.includes(value)) return prev;
-      return {
-        ...prev,
-        [key]: [...(prev[key] ?? []), value],
-      };
-    });
-
-    setHiddenConditions((prev) => {
-      const next = { ...prev, [key]: new Set(prev[key]) };
-      next[key].delete(value);
-      return next;
-    });
-
-    setNewConditionInput((prev) => ({ ...prev, [key]: '' }));
-  };
-
-  const registerCategory = (name: string) => {
-    setHiddenConditions((prev) => ({ ...prev, [name]: new Set<string>() }));
-    setManualConditionAdditions((prev) => ({ ...prev, [name]: [] }));
-    setNewConditionInput((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleCreateCategory = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateCategory = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalized = newCategoryName.trim();
     if (!normalized) {
-      setCategoryError('Nome obrigatório');
+      setCategoryError('Nome obrigatorio');
       return;
     }
-    if (conditionCategories.some((category) => category.toLowerCase() === normalized.toLowerCase())) {
-      setCategoryError('Categoria já existe');
-      return;
+    try {
+      const response = await fetch('/api/preconditions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: normalized }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        setCategoryError(err?.error || 'Categoria invalida');
+        return;
+      }
+      const payload = await response.json();
+      await fetchPreconditions();
+      setExpandedCategoryId(payload.id);
+      setCategoryDialogOpen(false);
+      setNewCategoryName('');
+      setCategoryError('');
+      toast({
+        title: 'Pre-condicao criada',
+        description: 'Categoria adicionada com sucesso',
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Failed to create category', error);
+      toast({ title: 'Erro', description: 'Nao foi possivel criar a categoria', variant: 'destructive' });
     }
-    setConditionCategories((prev) => [...prev, normalized]);
-    registerCategory(normalized);
-    setExpandedCategory(normalized);
-    setCategoryDialogOpen(false);
-    setNewCategoryName('');
-    setCategoryError('');
   };
 
-  const toggleCategoryDetail = (key: string) => {
-    setExpandedCategory((prev) => (prev === key ? null : key));
+  const toggleCategoryDetail = (categoryId: number) => {
+    setExpandedCategoryId((prev) => (prev === categoryId ? null : categoryId));
   };
 
-  const detailItems = expandedCategory ? conditionOptions[expandedCategory] ?? [] : [];
+  const expandedCategory = preconditionCategories.find((category) => category.id === expandedCategoryId) ?? null;
+  const detailItems = expandedCategory?.values ?? [];
 
   return (
     <>
@@ -376,72 +450,100 @@ export default function MaterialsPage() {
                 <CardTitle className="font-headline">Pré-condições</CardTitle>
                 <CardDescription>Categorias globais com os valores possíveis.</CardDescription>
               </div>
-              <Button size="sm" onClick={() => setCategoryDialogOpen(true)}>
+              <Button onClick={() => setCategoryDialogOpen(true)} disabled={isUsingFallbackData}>
+                <PlusCircle className="mr-2 h-4 w-4" />
                 Criar condição
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {conditionCategories.map((key) => {
-                  const values = conditionOptions[key] ?? [];
-                  const isExpanded = expandedCategory === key;
-                  return (
-                    <div key={key} className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-                      <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                        <span className="font-semibold">{key}</span>
-                        <span>
-                          {values.length} item{values.length === 1 ? '' : 's'}
-                        </span>
+            <CardContent className="space-y-4">
+              {isUsingFallbackData && (
+                <p className="text-xs text-muted-foreground">
+                  Pré-condições exibidas a partir dos materiais atuais. Execute node scripts/run-migrations.js e reinicie o servidor para habilitar a persistência.
+                </p>
+              )}
+              {conditionsLoading ? (
+                <EmptyState title="Carregando Pré-condições..." description="Aguarde enquanto os dados são carregados." className="min-h-[120px]" />
+              ) : preconditionCategories.length === 0 ? (
+                <EmptyState
+                  icon={Boxes}
+                  title="Nenhuma Pré-condição"
+                  description="Crie uma categoria para começar."
+                  className="min-h-[140px]"
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {preconditionCategories.map((category) => {
+                    const values = category.values ?? [];
+                    const isExpanded = expandedCategoryId === category.id;
+                    return (
+                      <div key={category.id} className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+                        <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                          <span className="font-semibold">{category.name}</span>
+                          <span>
+                            {values.length} item{values.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => toggleCategoryDetail(category.id)}
+                          aria-label={`${isExpanded ? 'Fechar' : 'Abrir'} detalhes de ${category.name}`}
+                        >
+                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => toggleCategoryDetail(key)}
-                        aria-label={`${isExpanded ? 'Fechar' : 'Abrir'} detalhes de ${key}`}
-                      >
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-              {expandedCategory && (
+                    );
+                  })}
+                </div>
+              )}
+              {!conditionsLoading && expandedCategory && (
                 <div className="mt-4 rounded-2xl border border-border bg-background p-4 shadow-inner">
                   <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{expandedCategory}</p>
-                      <p className="text-sm text-muted-foreground">Edite os itens dessa pré-condição.</p>
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{expandedCategory.name}</p>
+                      <p className="text-sm text-muted-foreground">Edite os itens dessa Pré-condição.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
-                        value={newConditionInput[expandedCategory]}
+                        value={newConditionInput[expandedCategory.id] ?? ''}
                         onChange={(event) =>
-                          setNewConditionInput((prev) => ({ ...prev, [expandedCategory]: event.target.value }))
+                          setNewConditionInput((prev) => ({ ...prev, [expandedCategory.id]: event.target.value }))
                         }
                         placeholder="Adicionar item"
                         className="h-8 text-xs"
+                        disabled={isUsingFallbackData}
                       />
-                      <Button size="sm" onClick={() => handleAddCondition(expandedCategory)}>
+                      <Button
+                        size="sm"
+                        disabled={isUsingFallbackData}
+                        onClick={() => handleAddCondition(expandedCategory.id, newConditionInput[expandedCategory.id] ?? '')}
+                      >
                         +
                       </Button>
                     </div>
                   </div>
+                  {isUsingFallbackData && (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Edição bloqueada enquanto as Pré-condições estiverem apenas nos dados locais.
+                    </p>
+                  )}
                   <div className="space-y-2">
                     {detailItems.length === 0 ? (
                       <p className="text-sm italic text-muted-foreground">Nenhum item cadastrado</p>
                     ) : (
-                      detailItems.map((value) => (
+                      detailItems.map((item) => (
                         <div
-                          key={`${expandedCategory}-${value}`}
+                          key={item.id}
                           className="flex items-center justify-between rounded-md border border-border/70 bg-muted/30 px-2 py-1 text-[12px] text-muted-foreground"
                         >
-                          <span>{value}</span>
+                          <span>{item.value}</span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleRemoveCondition(expandedCategory, value)}
-                            aria-label={`Remover ${value}`}
+                            onClick={() => handleRemoveCondition(expandedCategory.id, item.id)}
+                            aria-label={`Remover ${item.value}`}
+                            disabled={isUsingFallbackData}
                           >
                             <X className="h-3.5 w-3.5" />
                           </Button>
@@ -454,7 +556,6 @@ export default function MaterialsPage() {
             </CardContent>
           </Card>
         </div>
-
         <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>

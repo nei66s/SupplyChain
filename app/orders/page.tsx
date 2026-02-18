@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ClipboardList, PackageSearch, PlusCircle, Save, Trash2, X } from 'lucide-react';
+import { ClipboardList, PackageSearch, PlusCircle, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,11 +22,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { usePilotStore } from '@/lib/pilot/store';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import { readinessLabel } from '@/lib/pilot/i18n';
+import { readinessLabel } from '@/lib/domain/i18n';
+import { getFirstApiErrorMessage } from '@/lib/api/errors';
+import { useAuthUser } from '@/hooks/use-auth';
+import { Material, Order, StockBalance, StockReservation, User } from '@/lib/domain/types';
 
 type ConditionCategory = {
   id: number;
@@ -42,30 +44,247 @@ type ConditionPickerTarget = {
 const defaultConditionCategories = ['Fibra', 'FibraCor', 'Corda', 'CordaCor', 'Trico', 'TricoCor', 'Fio', 'Fiocor'];
 
 export default function OrdersPage() {
-  const db = usePilotStore((state) => state.db);
-  const createDraftOrder = usePilotStore((state) => state.createDraftOrder);
-  const deleteOrder = usePilotStore((state) => state.deleteOrder);
-  const addItem = usePilotStore((state) => state.addItem);
-  const updateOrderMeta = usePilotStore((state) => state.updateOrderMeta);
-  const updateOrderItemField = usePilotStore((state) => state.updateOrderItemField);
-  const updateOrderClientName = usePilotStore((state) => state.updateOrderClientName);
-  const addItemCondition = usePilotStore((state) => state.addItemCondition);
-  const updateItemConditionField = usePilotStore((state) => state.updateItemConditionField);
-  const removeItemCondition = usePilotStore((state) => state.removeItemCondition);
-  const onQtyBlurReserve = usePilotStore((state) => state.onQtyBlurReserve);
-  const heartbeatOrder = usePilotStore((state) => state.heartbeatOrder);
-  const removeOrderItem = usePilotStore((state) => state.removeOrderItem);
+  const [db, setDb] = React.useState<{
+    orders: Order[];
+    materials: Material[];
+    stockBalances: StockBalance[];
+    stockReservations: StockReservation[];
+    users: User[];
+  }>({ orders: [], materials: [], stockBalances: [], stockReservations: [], users: [] });
 
-  const currentUserId = usePilotStore((state) => state.currentUserId);
-  const setMaterials = usePilotStore((state) => state.setMaterials);
-  const setOrders = usePilotStore((state) => state.setOrders);
-  const syncWithBackend = usePilotStore((state) => state.syncWithBackend);
+  const { user: authUser } = useAuthUser();
+  const currentUserId = authUser?.id ?? '';
+  const { toast } = useToast();
+
+  const refreshOrders = React.useCallback(async () => {
+    const res = await fetch('/api/orders', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    setDb((prev) => ({ ...prev, orders: Array.isArray(data) ? data : [] }));
+  }, []);
+
+  const refreshInventory = React.useCallback(async () => {
+    const res = await fetch('/api/inventory', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    setDb((prev) => ({
+      ...prev,
+      materials: Array.isArray(data.materials) ? data.materials : [],
+      stockBalances: Array.isArray(data.stockBalances) ? data.stockBalances : [],
+      stockReservations: Array.isArray(data.stockReservations) ? data.stockReservations : [],
+    }));
+  }, []);
+
+  const refreshUsers = React.useCallback(async () => {
+    const res = await fetch('/api/users', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    setDb((prev) => ({ ...prev, users: Array.isArray(data.users) ? data.users : [] }));
+  }, []);
+
+  const createDraftOrder = React.useCallback(async () => {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'draft' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? 'Falha ao criar pedido');
+    }
+    const order = await res.json();
+    setDb((prev) => ({ ...prev, orders: [...prev.orders, order] }));
+    return order.id as string;
+  }, []);
+
+  const deleteOrder = React.useCallback(async (orderId: string) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const addItem = React.useCallback(async (orderId: string, materialId: string) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add_item', materialId }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const removeOrderItem = React.useCallback(async (orderId: string, itemId: string) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove_item', itemId }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const updateOrderMeta = React.useCallback(async (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number }) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_meta', ...payload }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const updateOrderClientName = React.useCallback((orderId: string, clientName: string) => {
+    setDb((prev) => ({
+      ...prev,
+      orders: prev.orders.map((order) =>
+        order.id === orderId ? { ...order, clientName } : order
+      ),
+    }));
+  }, []);
+
+  const persistOrderClientName = React.useCallback(async (orderId: string, clientName: string) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_client', clientName }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const updateOrderItemField = React.useCallback(
+    (orderId: string, itemId: string, payload: {
+      qtyRequested?: number;
+      color?: string;
+      shortageAction?: 'PRODUCE' | 'BUY';
+      itemCondition?: string;
+      conditionTemplateName?: string
+    }) => {
+      setDb((prev) => ({
+        ...prev,
+        orders: prev.orders.map((order) => {
+          if (order.id !== orderId) return order;
+          return {
+            ...order,
+            items: order.items.map((item) => {
+              if (item.id !== itemId) return item;
+              const next = { ...item, ...payload };
+              const qtyRequested = payload.qtyRequested !== undefined ? payload.qtyRequested : item.qtyRequested;
+              const shortageAction = payload.shortageAction ?? item.shortageAction ?? 'PRODUCE';
+              const shortage = Math.max(0, (qtyRequested ?? 0) - (next.qtyReservedFromStock ?? 0));
+              next.qtyToProduce = shortageAction === 'BUY' ? 0 : shortage;
+              return next;
+            }),
+          };
+        }),
+      }));
+    },
+    []
+  );
+
+  const persistOrderItemField = React.useCallback(
+    async (orderId: string, itemId: string, payload: {
+      qtyRequested?: number;
+      color?: string;
+      shortageAction?: 'PRODUCE' | 'BUY';
+      itemCondition?: string;
+      conditionTemplateName?: string
+    }) => {
+      await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_item', itemId, ...payload }),
+      });
+      await refreshOrders();
+      await refreshInventory();
+    },
+    [refreshOrders, refreshInventory]
+  );
+
+  const addItemCondition = React.useCallback(async (orderId: string, itemId: string, payload?: { key?: string; value?: string }) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add_item_condition', itemId, key: payload?.key, value: payload?.value }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const updateItemConditionField = React.useCallback(async (orderId: string, itemId: string, index: number, payload: { key?: string; value?: string }) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_item_condition', itemId, index, ...payload }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const removeItemCondition = React.useCallback(async (orderId: string, itemId: string, index: number) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove_item_condition', itemId, index }),
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
+
+  const onQtyBlurReserve = React.useCallback(async (orderId: string, itemId: string, qtyRequested: number) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reserve', itemId, qtyRequested }),
+    });
+    await refreshOrders();
+    await refreshInventory();
+  }, [refreshOrders, refreshInventory]);
+
+  const heartbeatOrder = React.useCallback(async (orderId: string) => {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'heartbeat' }),
+    });
+    await refreshInventory();
+  }, [refreshInventory]);
+
+  const submitOrder = React.useCallback(async (order: Order) => {
+    const errors: string[] = [];
+    if (!order.clientName || order.clientName.trim().length === 0) {
+      errors.push('Cliente obrigatório.');
+    }
+    if (!order.items || order.items.length === 0) {
+      errors.push('Adicione ao menos um item.');
+    }
+    const invalidQty = (order.items || []).filter((item) => Number(item.qtyRequested) <= 0);
+    if (invalidQty.length > 0) {
+      errors.push('Quantidade precisa ser maior que zero.');
+    }
+    if (errors.length > 0) {
+      toast({ title: 'Nao foi possivel enviar', description: errors.join(' '), variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_order' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? 'Falha ao enviar pedido');
+      }
+      await refreshOrders();
+      toast({ title: 'Pedido enviado', description: 'Status atualizado para ABERTO.' });
+    } catch (err) {
+      const message = getFirstApiErrorMessage(err) ?? 'Falha ao enviar pedido';
+      toast({ title: 'Erro', description: message, variant: 'destructive' });
+    }
+  }, [refreshOrders, toast]);
 
   const [mainView, setMainView] = React.useState<'open' | 'finalized'>('open');
   // default to show all orders ("Todos") instead of "Meus pedidos"
   const [subView, setSubView] = React.useState<'mine' | 'all'>('all');
   const [mounted, setMounted] = React.useState(false);
-  const { toast } = useToast();
   const [preconditionCategories, setPreconditionCategories] = React.useState<ConditionCategory[]>([]);
   const [conditionsLoading, setConditionsLoading] = React.useState(false);
   const [conditionPickerTarget, setConditionPickerTarget] = React.useState<ConditionPickerTarget | null>(null);
@@ -120,32 +339,19 @@ export default function OrdersPage() {
     }
   }, []);
 
-  // Load materials (and optionally server orders) from API on client mount
+  // Load materials/orders/users from API on client mount
   React.useEffect(() => {
-    let mounted = true;
+    let active = true;
     (async () => {
       try {
-        await syncWithBackend();
-        const m = await fetch('/api/materials');
-        if (mounted && m.ok) {
-          const mats = await m.json().catch(() => []);
-          if (Array.isArray(mats) && mats.length > 0) setMaterials(mats);
-        }
-        const o = await fetch('/api/orders');
-        if (mounted && o.ok) {
-          const orders = await o.json().catch(() => []);
-          if (Array.isArray(orders) && orders.length > 0) setOrders(orders);
-        }
+        await Promise.all([refreshInventory(), refreshOrders(), refreshUsers()]);
       } catch {
         // ignore
       }
-      // mark component as mounted after client-side data fetch attempt
-      try {
-        setMounted(true);
-      } catch {}
+      if (active) setMounted(true);
     })();
-    return () => { mounted = false };
-  }, [setMaterials, setOrders, syncWithBackend]);
+    return () => { active = false };
+  }, [refreshInventory, refreshOrders, refreshUsers]);
 
   const fetchConditionCategories = React.useCallback(async () => {
     setConditionsLoading(true);
@@ -194,7 +400,7 @@ export default function OrdersPage() {
   const filteredOrders = React.useMemo(() => {
     return db.orders.filter((order) => {
       if (order.trashedAt) return false;
-      const isFinalized = order.status === 'FINALIZADO';
+      const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA';
       if (mainView === 'open' && isFinalized) return false;
       if (mainView === 'finalized' && !isFinalized) return false;
       if (subView === 'mine') return order.createdBy === currentUserId;
@@ -224,19 +430,21 @@ export default function OrdersPage() {
   }, [selectedOrder?.id, conditionPickerTarget]);
 
   const stockByMaterial = React.useMemo(() => {
-    const map = new Map<string, { onHand: number; reservedTotal: number; available: number }>();
+    const map = new Map<string, { onHand: number; reservedTotal: number; productionReserved: number; available: number }>();
     db.stockBalances.forEach((balance) => {
+      const productionReserved = (balance as any).productionReserved ?? 0;
       map.set(balance.materialId, {
         onHand: balance.onHand,
         reservedTotal: balance.reservedTotal,
-        available: Math.max(0, balance.onHand - balance.reservedTotal),
+        productionReserved,
+        available: Math.max(0, balance.onHand - (balance.reservedTotal ?? 0) - productionReserved),
       });
     });
     return map;
   }, [db.stockBalances]);
 
-  const handleNewOrder = () => {
-    const id = createDraftOrder();
+  const handleNewOrder = async () => {
+    const id = await createDraftOrder();
     setSelectedOrderId(id);
   };
 
@@ -270,7 +478,7 @@ export default function OrdersPage() {
                   </Select>
                 </div>
               </div>
-              <CardDescription className="mt-2 truncate">Reserva em tempo real (TTL + heartbeat) simulada no frontend.</CardDescription>
+              <CardDescription className="mt-2 truncate">Reserva em tempo real (TTL + heartbeat).</CardDescription>
             </div>
             <div className="ml-2 shrink-0">
               <Button onClick={handleNewOrder} size="sm">
@@ -314,7 +522,16 @@ export default function OrdersPage() {
       </Card>
 
       <Card>
-        {selectedOrder ? (
+        {!mounted || !selectedOrder ? (
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={PackageSearch}
+              title="Selecione um pedido"
+              description="Selecione ou crie um pedido para editar itens e simular reservas."
+              className="min-h-[220px]"
+            />
+          </CardContent>
+        ) : (
           <>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -329,30 +546,8 @@ export default function OrdersPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={async () => {
                     try {
-                      // If order id looks like a persisted DB id (O-<number>), call API
-                      if (/^O-\d+$/.test(String(selectedOrder.id))) {
-                        const res = await fetch(`/api/orders/${selectedOrder.id}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ trashed: true }),
-                        });
-                        if (!res.ok) {
-                          const e = await res.json().catch(() => ({}));
-                          alert(e?.error || 'Falha ao remover pedido');
-                          return;
-                        }
-                        // refresh orders from server
-                        const r2 = await fetch('/api/orders');
-                        if (r2.ok) {
-                          const orders = await r2.json();
-                          setOrders(orders);
-                          setSelectedOrderId(null);
-                        }
-                      } else {
-                        // Local (non-persisted) order — remove from pilot store
-                        deleteOrder(selectedOrder.id);
-                        setSelectedOrderId(null);
-                      }
+                      await deleteOrder(selectedOrder.id);
+                      setSelectedOrderId(null);
                     } catch (err) {
                       console.error(err);
                       alert('Erro ao remover pedido');
@@ -360,54 +555,29 @@ export default function OrdersPage() {
                   }}>
                     <Trash2 className="mr-2 h-4 w-4" />Excluir
                   </Button>
-                  <Button onClick={async () => {
-                    try {
-                      const order = db.orders.find((o) => o.id === selectedOrder.id);
-                      if (!order) return;
-                      const payload = {
-                        status: (order.status ?? 'draft').toLowerCase(),
-                        items: order.items.map((it: { materialId: string; qtyRequested?: number; unitPrice?: number; shortageAction?: 'PRODUCE' | 'BUY' }) => ({
-                          materialId: Number(String(it.materialId).replace(/^M-/, '')),
-                          quantity: Number(it.qtyRequested || 0),
-                          unitPrice: Number(it.unitPrice || 0),
-                          shortageAction: it.shortageAction ?? 'PRODUCE',
-                        })),
-                      };
-
-                      const res = await fetch('/api/orders/submit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                      });
-                      if (!res.ok) {
-                        const err = await res.json().catch(() => ({}));
-                        alert(err?.error || 'Falha ao criar pedido');
-                        return;
-                      }
-                      // refresh orders from server
-                      const r2 = await fetch('/api/orders');
-                      if (r2.ok) {
-                        const orders = await r2.json();
-                        setOrders(orders);
-                        setSelectedOrderId(orders[0]?.id ?? null);
-                      }
-                    } catch (e) {
-                      console.error('Save failed', e);
-                      alert('Erro ao salvar pedido');
-                    }
-                  }}>
-                    <Save className="mr-2 h-4 w-4" />Criar pedido
-                  </Button>
+                  {/* Save button removed: unused/empty button caused an empty element in the DOM */}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => selectedOrder && submitOrder(selectedOrder)}
+                  disabled={selectedOrder.status !== 'RASCUNHO'}
+                  className="min-w-[160px] font-semibold"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Criar pedido
+                </Button>
+              </div>
               <div className="grid gap-4 md:grid-cols-4">
                 <div>
                   <Label>Cliente</Label>
                   <Input
                     value={selectedOrder.clientName}
                     onChange={(e) => updateOrderClientName(selectedOrder.id, e.target.value)}
+                    onBlur={(e) => persistOrderClientName(selectedOrder.id, e.target.value)}
                     placeholder="Digite o nome do cliente"
                   />
                 </div>
@@ -451,7 +621,6 @@ export default function OrdersPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Material</TableHead>
-                      <TableHead>Cor</TableHead>
                       <TableHead className="text-right">Qtd. solicitada</TableHead>
                       <TableHead>Faltante</TableHead>
                       <TableHead className="text-right">Em estoque</TableHead>
@@ -465,7 +634,7 @@ export default function OrdersPage() {
                   <TableBody>
                     {selectedOrder.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="h-20 text-center text-muted-foreground">
+                        <TableCell colSpan={9} className="h-20 text-center text-muted-foreground">
                           Adicione itens para iniciar a reserva.
                         </TableCell>
                       </TableRow>
@@ -488,12 +657,7 @@ export default function OrdersPage() {
                                 <p className="font-medium">{item.materialName}</p>
                                 <p className="text-xs text-muted-foreground">{item.materialId} - {item.uom}</p>
                               </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={item.color}
-                                  onChange={(e) => updateOrderItemField(selectedOrder.id, item.id, { color: e.target.value })}
-                                />
-                              </TableCell>
+                              {/* `Cor` column removed; prefer item.conditions for color */}
                               <TableCell className="text-right">
                                 <Input
                                   type="number"
@@ -516,7 +680,9 @@ export default function OrdersPage() {
                                 <Select
                                   value={item.shortageAction ?? 'PRODUCE'}
                                   onValueChange={(value) => {
-                                    updateOrderItemField(selectedOrder.id, item.id, { shortageAction: value as 'PRODUCE' | 'BUY' });
+                                    const action = value as 'PRODUCE' | 'BUY';
+                                    updateOrderItemField(selectedOrder.id, item.id, { shortageAction: action });
+                                    persistOrderItemField(selectedOrder.id, item.id, { shortageAction: action });
                                   }}
                                 >
                                   <SelectTrigger className="w-28">
@@ -524,7 +690,6 @@ export default function OrdersPage() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="PRODUCE">Produzir</SelectItem>
-                                    <SelectItem value="BUY">Comprar</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -533,8 +698,7 @@ export default function OrdersPage() {
                               <TableCell className="text-right">{availableForThisOrder}</TableCell>
                               <TableCell className="text-right font-semibold text-primary">{item.qtyReservedFromStock}</TableCell>
                               <TableCell className="text-right font-semibold text-amber-600">
-                                {(item.shortageAction ?? 'PRODUCE') === 'PRODUCE' ? item.qtyToProduce : 0}
-                                {(item.shortageAction ?? 'PRODUCE') === 'BUY' ? ` (compra ${item.qtyToBuy ?? 0})` : ''}
+                                {item.qtyToProduce}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Button variant="ghost" onClick={() => removeOrderItem(selectedOrder.id, item.id)}>
@@ -543,7 +707,7 @@ export default function OrdersPage() {
                               </TableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell colSpan={10} className="bg-muted/30">
+                              <TableCell colSpan={9} className="bg-muted/30">
                                 <div className="grid gap-3 md:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>Condicao especifica do item</Label>
@@ -722,15 +886,6 @@ export default function OrdersPage() {
               </div>
             </CardContent>
           </>
-        ) : (
-          <CardContent className="pt-6">
-            <EmptyState
-              icon={PackageSearch}
-              title="Selecione um pedido"
-              description="Selecione ou crie um pedido para editar itens e simular reservas."
-              className="min-h-[220px]"
-            />
-          </CardContent>
         )}
       </Card>
     </div>

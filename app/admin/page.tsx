@@ -10,8 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthUser } from '@/hooks/use-auth';
-import { Role } from '@/lib/pilot/types';
-import { roleLabel } from '@/lib/pilot/i18n';
+import { Role } from '@/lib/domain/types';
+import { roleLabel } from '@/lib/domain/i18n';
 
 type AccountForm = {
   name: string;

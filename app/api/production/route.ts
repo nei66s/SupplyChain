@@ -11,6 +11,7 @@ type DbRow = {
   updated_at: string
   order_number: string | null
   material_name: string | null
+  order_source: string | null
 }
 
 function toApiTask(row: DbRow) {
@@ -24,6 +25,7 @@ function toApiTask(row: DbRow) {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    isMrp: String(row.order_source ?? '').toLowerCase() === 'mrp',
   }
 }
 
@@ -44,6 +46,7 @@ export async function GET() {
          pt.created_at,
          pt.updated_at,
          o.order_number,
+         o.source AS order_source,
          m.name AS material_name
        FROM production_tasks pt
        LEFT JOIN orders o ON o.id = pt.order_id
@@ -73,7 +76,7 @@ export async function POST(request: Request) {
     if (Object.keys(errors).length > 0) return NextResponse.json({ errors }, { status: 400 })
 
     const res = await pool.query<DbRow>(
-      `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
+       `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
        VALUES ($1, $2, $3, 'PENDING')
        ON CONFLICT (order_id, material_id)
        DO UPDATE SET
@@ -85,10 +88,28 @@ export async function POST(request: Request) {
          updated_at = now()
        RETURNING id, order_id, material_id, qty_to_produce, status, created_at, updated_at,
          (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
+         (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
          (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`
       ,
       [orderId, materialId, qtyToProduce]
     )
+    // Also create/update a production reservation tied to this order/material
+    try {
+      if (Number(res.rows[0].qty_to_produce ?? 0) > 0) {
+        await pool.query(
+          `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
+           VALUES ($1, $2, $3, now(), now())
+           ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
+          [orderId, materialId, Number(res.rows[0].qty_to_produce ?? 0)]
+        )
+      } else {
+        // If qty is zero, ensure no lingering reservation remains
+        await pool.query(`DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2`, [orderId, materialId])
+      }
+    } catch (e) {
+      // don't fail the whole request for reservation write issues; log and continue
+      console.error('production reservation upsert error', e)
+    }
 
     return NextResponse.json(toApiTask(res.rows[0]), { status: 201 })
   } catch (err: unknown) {

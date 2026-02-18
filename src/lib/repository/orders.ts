@@ -1,6 +1,6 @@
 import { query } from '../db'
 import { logRepoPerf } from './perf'
-import { Order, OrderItem, OrderStatus } from '../pilot/types'
+import { Order, OrderItem, OrderStatus } from '../domain/types'
 
 const statusMap: Record<string, OrderStatus> = {
   draft: 'RASCUNHO',
@@ -38,12 +38,26 @@ type OrderRow = {
   created_at: Date | string
   due_date: Date | string | null
   trashed_at: Date | string | null
+  client_id: number | null
+  client_name: string | null
+  created_by: string | null
+  picker_id: string | null
+  volume_count: number | null
+  label_print_count: number | null
   item_id: number | null
   material_id: number | null
   quantity: string | number | null
   unit_price: string | number | null
   material_name: string | null
   material_unit: string | null
+  color: string | null
+  shortage_action: string | null
+  qty_reserved_from_stock: string | number | null
+  qty_to_produce: string | number | null
+  qty_separated: string | number | null
+  separated_weight: string | number | null
+  item_condition: string | null
+  condition_template_name: string | null
 }
 
 const orderQuery = `SELECT
@@ -54,10 +68,25 @@ const orderQuery = `SELECT
   o.created_at,
   o.due_date,
   o.trashed_at,
+  o.client_id,
+  o.client_name,
+  o.created_by,
+  o.picker_id,
+  o.volume_count,
+  o.label_print_count,
   oi.id AS item_id,
   oi.material_id,
   oi.quantity,
+  oi.conditions,
   oi.unit_price,
+  oi.color,
+  oi.shortage_action,
+  oi.qty_reserved_from_stock,
+  oi.qty_to_produce,
+  oi.qty_separated,
+  oi.separated_weight,
+  oi.item_condition,
+  oi.condition_template_name,
   m.name AS material_name,
   m.unit AS material_unit
 FROM orders o
@@ -92,38 +121,43 @@ function buildOrdersFromRows(rows: OrderRow[]): Order[] {
       map.set(oid, {
         id: `O-${oid}`,
         orderNumber,
-        clientId: '',
-        clientName: '',
+        clientId: row.client_id ? `C-${row.client_id}` : '',
+        clientName: row.client_name ?? '',
         status: normalizedStatus,
         readiness: 'NOT_READY',
         orderDate: created.toISOString(),
         dueDate: row.due_date ? new Date(row.due_date).toISOString() : created.toISOString(),
-        createdBy: '',
-        volumeCount: 1,
+        createdBy: row.created_by ?? '',
+        pickerId: row.picker_id ?? undefined,
+        volumeCount: Number(row.volume_count ?? 1),
         items: [],
         auditTrail: [],
-        labelPrintCount: 0,
+        labelPrintCount: Number(row.label_print_count ?? 0),
         total: Number(row.total ?? 0),
-        trashedAt: row.trashed_at ? (new Date(row.trashed_at).toISOString?.() ?? String(row.trashed_at)) : null,
+        trashedAt: row.trashed_at ? (row.trashed_at instanceof Date ? row.trashed_at.toISOString() : String(row.trashed_at)) : null,
       })
     }
 
     if (row.item_id) {
       const order = map.get(oid)!
       const qtyRequested = Number(row.quantity ?? 0)
-      const qtyToProduce = 0
-      const qtyReservedFromStock = Math.max(0, qtyRequested - qtyToProduce)
+      const qtyReservedFromStock = Math.max(0, Number(row.qty_reserved_from_stock ?? 0))
+      const qtyToProduce = Math.max(0, Number(row.qty_to_produce ?? 0))
       order.items.push({
         id: `itm-${row.item_id}`,
         materialId: row.material_id ? `M-${row.material_id}` : `M-${row.item_id}`,
         materialName: row.material_name || '',
         uom: row.material_unit || 'EA',
-        color: '',
+        color: row.color ?? '',
+        shortageAction: (String(row.shortage_action ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'),
         qtyRequested,
         qtyReservedFromStock,
         qtyToProduce,
-        qtySeparated: 0,
-        conditions: [],
+        qtySeparated: Number(row.qty_separated ?? 0),
+        separatedWeight: row.separated_weight ? Number(row.separated_weight) : undefined,
+        itemCondition: row.item_condition ?? undefined,
+        conditionTemplateName: row.condition_template_name ?? undefined,
+        conditions: Array.isArray((row as any).conditions) ? (row as any).conditions : ((row as any).conditions ? JSON.parse(String((row as any).conditions)) : []),
       })
     }
   }

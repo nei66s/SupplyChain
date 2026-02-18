@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Factory } from 'lucide-react';
+import { Factory, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,10 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { usePilotStore } from '@/lib/pilot/store';
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import { productionTaskStatusLabel } from '@/lib/pilot/i18n';
+import { productionTaskStatusLabel } from '@/lib/domain/i18n';
 
 type ProductionTask = {
   id: string;
@@ -26,6 +25,8 @@ type ProductionTask = {
   status: 'PENDING' | 'IN_PROGRESS' | 'DONE';
   updatedAt: string;
   createdAt: string;
+  isMrp?: boolean;
+  pendingReceiptId?: string | null;
 };
 
 function errorMessage(err: unknown): string {
@@ -34,9 +35,6 @@ function errorMessage(err: unknown): string {
 }
 
 export default function ProductionPage() {
-  const localTasks = usePilotStore((state) => state.db.productionTasks);
-  const startLocalTask = usePilotStore((state) => state.startProductionTask);
-  const completeLocalTask = usePilotStore((state) => state.completeProduction);
   const [serverTasks, setServerTasks] = React.useState<ProductionTask[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -63,33 +61,12 @@ export default function ProductionPage() {
   }, [loadTasks]);
 
   const tasks = React.useMemo(() => {
-    const all = [...serverTasks];
-    for (const task of localTasks) {
-      // Keep only local draft tasks; persisted orders must come from API.
-      if (/^O-\d+$/.test(String(task.orderId))) continue;
-      if (!all.some((item) => item.id === task.id)) {
-        all.push({
-          id: task.id,
-          orderNumber: task.orderNumber,
-          materialName: task.materialName,
-          qtyToProduce: task.qtyToProduce,
-          status: task.status,
-          updatedAt: task.updatedAt,
-          createdAt: task.createdAt,
-        });
-      }
-    }
-    return all.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [serverTasks, localTasks]);
+    return [...serverTasks].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [serverTasks]);
 
   const mutateTask = async (taskId: string, action: 'start' | 'complete') => {
     try {
       setBusyTaskId(taskId);
-      if (taskId.startsWith('pt-')) {
-        if (action === 'start') startLocalTask(taskId);
-        if (action === 'complete') completeLocalTask(taskId);
-        return;
-      }
       const res = await fetch(`/api/production/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -104,6 +81,24 @@ export default function ProductionPage() {
     }
   };
 
+  const approveAllocation = async (task: ProductionTask) => {
+    if (!task.pendingReceiptId) return;
+    try {
+      setBusyTaskId(task.id);
+      const res = await fetch(`/api/receipts/${task.pendingReceiptId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'post', autoAllocate: true }),
+      });
+      if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+      await loadTasks();
+    } catch (err: unknown) {
+      setError(errorMessage(err) || 'Falha ao aprovar alocacao');
+    } finally {
+      setBusyTaskId(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -111,7 +106,7 @@ export default function ProductionPage() {
           <div>
             <CardTitle className="font-headline flex items-center gap-2"><Factory className="h-5 w-5" /> Producao</CardTitle>
             <CardDescription>
-              Tarefas de producao persistidas no banco. Iniciar e concluir atualizam status na tabela.
+              Tarefas de producao persistidas no banco. Concluir cria aprovacao pendente de alocacao do estoque.
             </CardDescription>
           </div>
           <Button size="sm" variant="outline" onClick={() => loadTasks()} disabled={loading}>
@@ -152,7 +147,17 @@ export default function ProductionPage() {
             ) : (
               tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell>{task.orderNumber}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{task.orderNumber}</span>
+                      {task.isMrp ? (
+                        <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]">
+                          <Star className="h-3 w-3 text-amber-500" />
+                          mrp
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>{task.materialName}</TableCell>
                   <TableCell className="text-right">{task.qtyToProduce}</TableCell>
                   <TableCell>
@@ -177,6 +182,14 @@ export default function ProductionPage() {
                         onClick={() => mutateTask(task.id, 'complete')}
                       >
                         Concluir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={task.status !== 'DONE' || !task.pendingReceiptId || busyTaskId === task.id}
+                        onClick={() => approveAllocation(task)}
+                      >
+                        Aprovar alocacao
                       </Button>
                     </div>
                   </TableCell>

@@ -7,7 +7,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from "../ui/dropdown-menu";
-import { usePilotStore, usePilotDerived } from "@/lib/pilot/store";
+type Notification = {
+  id: string;
+  type: string;
+  title: string;
+  message?: string;
+  createdAt?: string;
+  readAt?: string;
+};
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 
@@ -25,26 +32,43 @@ function timeAgo(iso?: string) {
 }
 
 export function NotificationCenter() {
-  const db = usePilotStore((s) => s.db);
-  const markNotification = usePilotStore((s) => s.markNotification);
-  const { unreadCount } = usePilotDerived();
-  type UiNotification = (typeof db.notifications)[number] & { _removing?: boolean };
+  type UiNotification = Notification & { _removing?: boolean };
 
-  const [items, setItems] = React.useState<UiNotification[]>(() =>
-    db.notifications.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  );
+  const [items, setItems] = React.useState<UiNotification[]>([]);
+  const unreadCount = items.filter((it) => !it.readAt).length;
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
+  const loadNotifications = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setItems(
+          data
+            .map((item: Notification) => ({ ...item }))
+            .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+        );
+      }
+    } catch (err) {
+      console.error('notifications fetch failed', err);
+    }
+  }, []);
+
   React.useEffect(() => {
-    setItems(db.notifications.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-  }, [db.notifications]);
+    loadNotifications();
+  }, [loadNotifications]);
 
   const handleMarkRead = (id: string) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, _removing: true } : it)));
     setTimeout(() => {
-      markNotification(id, true);
+      fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, read: true }),
+      }).catch(() => {});
       setItems((prev) => prev.filter((it) => it.id !== id));
     }, 140);
   };
@@ -52,7 +76,13 @@ export function NotificationCenter() {
   const handleMarkAll = () => {
     const unread = items.filter((it) => !it.readAt).map((i) => i.id);
     setItems((prev) => prev.filter((it) => it.readAt));
-    unread.forEach((id) => markNotification(id, true));
+    unread.forEach((id) =>
+      fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, read: true }),
+      }).catch(() => {})
+    );
   };
 
   return (

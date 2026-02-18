@@ -26,22 +26,24 @@ async function getLogoDataUrl() {
   }
 }
 
-function shortDate(value: string): string {
+function shortDate(value?: string): string {
+  if (!value) return '';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
+  if (Number.isNaN(d.getTime())) return String(value);
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(
     d.getHours()
   ).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function simpleDate(value?: string): string {
+  if (!value) return '';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
+  if (Number.isNaN(d.getTime())) return String(value);
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 async function addQr(
-  pdf: ReturnType<typeof jsPDF>,
+  pdf: any,
   order: Order,
   pageIndex: number,
   format: LabelFormat,
@@ -55,14 +57,14 @@ async function addQr(
 }
 
 type LabelRenderContext = {
-  pdf: ReturnType<typeof jsPDF>;
+  pdf: any;
   order: Order;
   pickerName?: string;
   pageIndex: number;
 };
 
 function drawItemList(
-  pdf: ReturnType<typeof jsPDF>,
+  pdf: any,
   items: Order['items'],
   startY: number,
   maxHeight?: number

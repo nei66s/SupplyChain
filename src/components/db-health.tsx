@@ -1,26 +1,50 @@
 "use client";
 
 import * as React from 'react';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Database, Loader2, XCircle } from 'lucide-react';
+
+type Status = 'loading' | 'connected' | 'disconnected';
+
+const statusConfig: Record<Status, { label: string; border: string; bg: string; iconColor: string }> = {
+  connected: {
+    label: 'Conectado',
+    border: 'border-emerald-200/80',
+    bg: 'bg-emerald-50/70',
+    iconColor: 'text-emerald-500',
+  },
+  loading: {
+    label: 'Verificando...',
+    border: 'border-yellow-200/80',
+    bg: 'bg-yellow-50/80',
+    iconColor: 'text-yellow-500',
+  },
+  disconnected: {
+    label: 'Desconectado',
+    border: 'border-rose-200/80',
+    bg: 'bg-rose-50/80',
+    iconColor: 'text-rose-500',
+  },
+};
 
 export default function DbHealth() {
-  const [status, setStatus] = React.useState<'loading' | 'connected' | 'disconnected'>('loading');
-  const [lastChecked, setLastChecked] = React.useState<number | null>(null);
+  const [status, setStatus] = React.useState<Status>('loading');
+  const [latency, setLatency] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
 
     const check = async () => {
+      const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
       try {
         const res = await fetch('/api/inventory', { cache: 'no-store' });
         if (!mounted) return;
+        const elapsed = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - start);
+        setLatency(elapsed);
         setStatus(res.ok ? 'connected' : 'disconnected');
-      } catch (err) {
+      } catch {
         if (!mounted) return;
+        setLatency(null);
         setStatus('disconnected');
-      } finally {
-        if (!mounted) return;
-        setLastChecked(Date.now());
       }
     };
 
@@ -32,33 +56,19 @@ export default function DbHealth() {
     };
   }, []);
 
-  const isConnected = status === 'connected';
-  const isLoading = status === 'loading';
+  const cfg = statusConfig[status];
 
-  const bg = isConnected ? 'bg-emerald-50' : isLoading ? 'bg-yellow-50' : 'bg-rose-50';
-  const border = isConnected ? 'border-emerald-200' : isLoading ? 'border-yellow-200' : 'border-rose-200';
-  const text = isConnected ? 'text-emerald-700' : isLoading ? 'text-yellow-700' : 'text-rose-700';
-  const Icon = isConnected ? CheckCircle : isLoading ? Loader2 : XCircle;
-
-  const label = isConnected ? 'DB: Conectado' : isLoading ? 'DB: Verificando...' : 'DB: Desconectado';
+  const latencyLabel = latency ? `${latency} ms` : '—';
 
   return (
-    <div className="ml-3 flex items-center">
-      <div
-        title={label}
-        className={`hidden md:inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-medium ${bg} ${border} ${text}`}
-      >
-        <Icon className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        <span>{label}</span>
-        {lastChecked ? (
-          <span className="ml-2 text-[11px] text-muted-foreground">{new Date(lastChecked).toLocaleTimeString()}</span>
-        ) : null}
-      </div>
-
-      {/* small screens: just show icon with accessible label */}
-      <div className="md:hidden flex items-center" aria-hidden>
-        <Icon className={`h-4 w-4 ${isLoading ? 'animate-spin text-yellow-500' : isConnected ? 'text-emerald-500' : 'text-rose-500'}`} />
-      </div>
-    </div>
+    <span
+      role="status"
+      aria-label={`Banco de dados: ${cfg.label}`}
+      title={`Banco de dados: ${cfg.label}`}
+      className={`inline-flex min-w-[80px] items-center gap-1 rounded-2xl border ${cfg.border} ${cfg.bg} px-2 py-1 text-slate-700 shadow-sm transition`}
+    >
+      <Database className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-5 w-5`} />
+      <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">{latencyLabel}</span>
+    </span>
   );
 }

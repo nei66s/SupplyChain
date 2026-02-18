@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Factory, FileText } from 'lucide-react';
+import { Factory, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +15,7 @@ import {
 } from '@/components/ui/table';
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import { productionTaskStatusLabel } from '@/lib/pilot/i18n';
-import { generateLabelPdf } from '@/lib/pilot/labels';
-import { usePilotStore } from '@/lib/pilot/store';
+import { productionTaskStatusLabel } from '@/lib/domain/i18n';
 
 type ProductionTask = {
   id: string;
@@ -27,6 +25,8 @@ type ProductionTask = {
   status: 'PENDING' | 'IN_PROGRESS' | 'DONE';
   updatedAt: string;
   createdAt: string;
+  isMrp?: boolean;
+  pendingReceiptId?: string | null;
 };
 
 function errorMessage(err: unknown): string {
@@ -35,13 +35,10 @@ function errorMessage(err: unknown): string {
 }
 
 export default function ProductionPage() {
-  const [tasks, setTasks] = React.useState<ProductionTask[]>([]);
+  const [serverTasks, setServerTasks] = React.useState<ProductionTask[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [busyTaskId, setBusyTaskId] = React.useState<string | null>(null);
-  const [busyLabelTaskId, setBusyLabelTaskId] = React.useState<string | null>(null);
-  const orders = usePilotStore((state) => state.db.orders);
-  const registerLabelPrint = usePilotStore((state) => state.registerLabelPrint);
 
   const loadTasks = React.useCallback(async () => {
     setLoading(true);
@@ -50,10 +47,10 @@ export default function ProductionPage() {
       const res = await fetch('/api/production', { cache: 'no-store' });
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
       const data = await res.json();
-      setTasks(Array.isArray(data) ? data : []);
+      setServerTasks(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       setError(errorMessage(err) || 'Falha ao carregar tarefas de producao');
-      setTasks([]);
+      setServerTasks([]);
     } finally {
       setLoading(false);
     }
@@ -62,6 +59,10 @@ export default function ProductionPage() {
   React.useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  const tasks = React.useMemo(() => {
+    return [...serverTasks].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [serverTasks]);
 
   const mutateTask = async (taskId: string, action: 'start' | 'complete') => {
     try {
@@ -80,21 +81,21 @@ export default function ProductionPage() {
     }
   };
 
-  const handlePrintProductionLabel = async (task: ProductionTask) => {
-    const order = orders.find((item) => item.id === task.orderId);
-    if (!order) {
-      setError('Pedido não encontrado para imprimir etiqueta.');
-      return;
-    }
-
-    setBusyLabelTaskId(task.id);
+  const approveAllocation = async (task: ProductionTask) => {
+    if (!task.pendingReceiptId) return;
     try {
-      await generateLabelPdf(order, undefined, 'PRODUCTION_4x4');
-      registerLabelPrint(order.id, 'PRODUCTION_4x4');
+      setBusyTaskId(task.id);
+      const res = await fetch(`/api/receipts/${task.pendingReceiptId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'post', autoAllocate: true }),
+      });
+      if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+      await loadTasks();
     } catch (err: unknown) {
-      setError(errorMessage(err) || 'Falha ao imprimir etiqueta de produção');
+      setError(errorMessage(err) || 'Falha ao aprovar alocacao');
     } finally {
-      setBusyLabelTaskId(null);
+      setBusyTaskId(null);
     }
   };
 
@@ -105,7 +106,7 @@ export default function ProductionPage() {
           <div>
             <CardTitle className="font-headline flex items-center gap-2"><Factory className="h-5 w-5" /> Producao</CardTitle>
             <CardDescription>
-              Tarefas de producao persistidas no banco. Iniciar e concluir atualizam status na tabela.
+              Tarefas de producao persistidas no banco. Concluir cria aprovacao pendente de alocacao do estoque.
             </CardDescription>
           </div>
           <Button size="sm" variant="outline" onClick={() => loadTasks()} disabled={loading}>
@@ -146,7 +147,17 @@ export default function ProductionPage() {
             ) : (
               tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell>{task.orderNumber}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{task.orderNumber}</span>
+                      {task.isMrp ? (
+                        <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]">
+                          <Star className="h-3 w-3 text-amber-500" />
+                          mrp
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>{task.materialName}</TableCell>
                   <TableCell className="text-right">{task.qtyToProduce}</TableCell>
                   <TableCell>
@@ -174,12 +185,11 @@ export default function ProductionPage() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
-                        disabled={busyLabelTaskId === task.id}
-                        onClick={() => handlePrintProductionLabel(task)}
-                        aria-label="Imprimir etiqueta 4x4"
+                        variant="outline"
+                        disabled={task.status !== 'DONE' || !task.pendingReceiptId || busyTaskId === task.id}
+                        onClick={() => approveAllocation(task)}
                       >
-                        <FileText className="h-4 w-4" />
+                        Aprovar alocacao
                       </Button>
                     </div>
                   </TableCell>

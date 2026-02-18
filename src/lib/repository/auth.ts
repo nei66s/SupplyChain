@@ -1,6 +1,6 @@
 import { query } from '../db'
 import { logRepoPerf } from './perf'
-import { User } from '../pilot/types'
+import { User } from '../domain/types'
 
 type UserRow = {
   id: string

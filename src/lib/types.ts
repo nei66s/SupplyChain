@@ -1,4 +1,4 @@
-import { Material, Order, User } from '@/lib/pilot/types';
+import { Material, Order, User } from '@/lib/domain/types';
 
 export type LegacyUser = User;
 export type LegacyOrder = Order;

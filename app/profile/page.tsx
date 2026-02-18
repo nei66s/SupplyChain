@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthUser } from '@/hooks/use-auth';
-import { usePilotStore } from '@/lib/pilot/store';
 
 type ProfilePatchResponse = {
   user: { id: string; name: string; email: string; role: string; avatarUrl?: string };
@@ -18,7 +17,6 @@ type ProfilePatchResponse = {
 
 export default function ProfilePage() {
   const { user: authUser, loading: authLoading, refresh } = useAuthUser();
-  const updateCurrentUserProfile = usePilotStore((state) => state.updateCurrentUserProfile);
   const { toast } = useToast();
 
   const [name, setName] = useState('');
@@ -81,11 +79,6 @@ export default function ProfilePage() {
         throw new Error(result.message ?? 'Nao foi possivel atualizar');
       }
 
-      updateCurrentUserProfile({
-        name: result.user.name,
-        email: result.user.email,
-        avatarUrl: result.user.avatarUrl ?? '',
-      });
       await refresh();
       setPassword('');
 
@@ -170,7 +163,6 @@ export default function ProfilePage() {
                         if (!res.ok) throw new Error(json.message || 'Upload falhou');
                         setAvatarUrl(json.avatarUrl ?? '');
                         setPreviewUrl(json.avatarUrl ?? previewUrl);
-                        updateCurrentUserProfile({ avatarUrl: json.avatarUrl ?? '' });
                         toast({ title: 'Upload concluido' });
                       } catch (err: unknown) {
                         const message = err instanceof Error ? err.message : 'Erro no upload';

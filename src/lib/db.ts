@@ -35,9 +35,9 @@ if (!globalThis.__supplychain_pg_pool__) {
 
 export const pool = globalThis.__supplychain_pg_pool__!
 
-export type QueryResultWithStats<T> = QueryResult<T> & { queryTimeMs: number }
+export type QueryResultWithStats<T extends import('pg').QueryResultRow = any> = QueryResult<T> & { queryTimeMs: number }
 
-export async function query<T = any>(text: string | QueryConfig, params?: unknown[]) {
+export async function query<T extends import('pg').QueryResultRow = any>(text: string | QueryConfig, params?: unknown[]) {
   const totalStart = process.hrtime.bigint()
   const result = await pool.query<T>(text, params)
   const queryDurationMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000

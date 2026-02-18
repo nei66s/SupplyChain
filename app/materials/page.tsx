@@ -152,7 +152,7 @@ export default function MaterialsPage() {
       }
       toast({
         title: 'Erro',
-        description: 'NÃ£o foi possÃ­vel carregar as prÃ©-condiÃ§Ãµes',
+        description: 'Não foi possível carregar as pré-condições',
         variant: 'destructive',
       });
       return [];
@@ -226,7 +226,7 @@ export default function MaterialsPage() {
             toast({ title: 'Erro', description: String(msg), variant: 'destructive' });
             return;
           }
-          toast({ title: 'Material atualizado', description: 'As alteraÃ§Ãµes foram salvas', variant: 'success' });
+          toast({ title: 'Material atualizado', description: 'As alterações foram salvas', variant: 'success' });
         } else {
           const res = await fetch('/api/materials', {
             method: 'POST',
@@ -261,7 +261,7 @@ export default function MaterialsPage() {
         toast({ title: 'Erro', description: String(msg), variant: 'destructive' });
         return;
       }
-      toast({ title: 'Material removido', description: 'Material excluÃ­do com sucesso', variant: 'success' });
+      toast({ title: 'Material removido', description: 'Material excluído com sucesso', variant: 'success' });
       await fetchMaterials();
     } catch (e) {
       toast({ title: 'Erro', description: 'Erro ao remover material', variant: 'destructive' });
@@ -379,15 +379,15 @@ export default function MaterialsPage() {
               <TableRow>
                 <TableHead>Material</TableHead>
                 <TableHead>Operador</TableHead>
-                <TableHead>CÃ³digo</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Unidade</TableHead>
-                <TableHead className="text-right">Estoque mÃ­nimo</TableHead>
+                <TableHead className="text-right">Estoque mínimo</TableHead>
                 <TableHead className="text-right">Ponto de pedido</TableHead>
                 <TableHead className="text-right">Preparação (min)</TableHead>
                 <TableHead className="text-right">Produção por unidade (min)</TableHead>
-                <TableHead className="text-right">AÃ§Ãµes</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -407,7 +407,7 @@ export default function MaterialsPage() {
                 db.materials.map((m: any) => {
                   const metadata = m.metadata ?? {};
                   const getMeta = (key: string) => metadata[key] || metadata[key.toLowerCase()] || '';
-                  const codigo = getMeta('CÃ³digo') || getMeta('Codigo');
+                  const codigo = getMeta('Código') || getMeta('Codigo');
                   const tipo = getMeta('Tipos') || getMeta('Produto');
                   const dataValue = getMeta('Data') || getMeta('data');
 
@@ -591,7 +591,7 @@ export default function MaterialsPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <FormItem>
-                  <FormLabel>Estoque mÃ­nimo</FormLabel>
+                  <FormLabel>Estoque mínimo</FormLabel>
                   <FormControl>
                     <Input type="number" {...form.register('minStock')} />
                   </FormControl>
@@ -624,7 +624,7 @@ export default function MaterialsPage() {
               </div>
 
               <FormItem>
-                <FormLabel>OpÃ§Ãµes de cor (separadas por vÃ­rgula)</FormLabel>
+                <FormLabel>Opções de cor (separadas por vírgula)</FormLabel>
                 <FormControl>
                   <Input {...form.register('colorOptions')} />
                 </FormControl>
@@ -645,7 +645,7 @@ export default function MaterialsPage() {
         <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar prÃ©-condiÃ§Ã£o</DialogTitle>
+              <DialogTitle>Criar pré-condição</DialogTitle>
               <DialogDescription>Defina uma nova categoria global de valores.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateCategory} className="space-y-3">

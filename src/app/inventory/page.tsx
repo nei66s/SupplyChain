@@ -1,7 +1,7 @@
 'use client';
 
-import * as React from 'react';
-import { Bell, CheckCircle2, Inbox, PackagePlus, Warehouse } from 'lucide-react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { Bell, Inbox, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,55 +14,88 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePilotDerived, usePilotStore } from '@/lib/pilot/store';
+import dynamic from 'next/dynamic';
+const MrpPanel = dynamic(() => import('@/components/mrp-panel'), { ssr: false });
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import { notificationTypeLabel, receiptStatusLabel } from '@/lib/pilot/i18n';
+import { notificationTypeLabel } from '@/lib/domain/i18n';
+import { Material, Notification, Order, StockBalance, StockReservation } from '@/lib/domain/types';
 
 export default function InventoryPage() {
-  const db = usePilotStore((state) => state.db);
-  const postInventoryReceipt = usePilotStore((state) => state.postInventoryReceipt);
-  const countOpenDemands = usePilotStore((state) => state.countOpenDemands);
-  const markNotification = usePilotStore((state) => state.markNotification);
-  const busyReceipts = usePilotStore((state) => state.busyReceipts);
-  const { stockView } = usePilotDerived();
-  const syncWithBackend = usePilotStore((state) => state.syncWithBackend);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [stockBalances, setStockBalances] = useState<StockBalance[]>([]);
+  const [stockReservations, setStockReservations] = useState<StockReservation[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  const receiptsDraft = db.inventoryReceipts.filter((item) => item.status === 'DRAFT');
-  const receiptsPosted = db.inventoryReceipts.filter((item) => item.status === 'POSTED');
+  const loadData = useCallback(async () => {
+    try {
+      const [inventoryRes, notificationsRes, ordersRes] = await Promise.all([
+        fetch('/api/inventory', { cache: 'no-store' }),
+        fetch('/api/notifications', { cache: 'no-store' }),
+        fetch('/api/orders', { cache: 'no-store' }),
+      ]);
+      if (inventoryRes.ok) {
+        const payload = await inventoryRes.json();
+        setMaterials(Array.isArray(payload.materials) ? payload.materials : []);
+        setStockBalances(Array.isArray(payload.stockBalances) ? payload.stockBalances : []);
+        setStockReservations(Array.isArray(payload.stockReservations) ? payload.stockReservations : []);
+      }
+      if (notificationsRes.ok) {
+        const payload = await notificationsRes.json();
+        setNotifications(Array.isArray(payload) ? payload : []);
+      }
+      if (ordersRes.ok) {
+        const payload = await ordersRes.json();
+        setOrders(Array.isArray(payload) ? payload : []);
+      }
+    } catch (err) {
+      console.error('inventory load failed', err);
+    }
+  }, []);
 
-  const onPostReceipt = (receiptId: string) => {
-    const autoAllocate = window.confirm('Autoalocar agora?\nOK = Sim / Cancelar = Nao');
-    postInventoryReceipt(receiptId, autoAllocate);
+  useEffect(() => {
+    (async () => {
+      await loadData();
+    })()
+  }, [loadData]);
+
+  const stockView = useMemo(() => {
+    const materialsById = Object.fromEntries(materials.map((m) => [m.id, m]));
+    return stockBalances.map((balance) => {
+      const material = materialsById[balance.materialId];
+      const productionReserved = (balance as any).productionReserved ?? 0;
+      const available = Math.max(0, balance.onHand - (balance.reservedTotal ?? 0) - productionReserved);
+      const activeReservations = stockReservations
+        .filter((reservation) => reservation.materialId === balance.materialId)
+        .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+      return { ...balance, material, available, activeReservations };
+    });
+  }, [materials, stockBalances, stockReservations]);
+
+  const markNotification = async (id: string, read: boolean) => {
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, read }),
+    }).catch(() => {});
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: read ? new Date().toISOString() : undefined } : n)));
   };
-
-  React.useEffect(() => {
-    syncWithBackend();
-  }, [syncWithBackend]);
 
   return (
     <Tabs defaultValue="stock" className="space-y-4">
       <TabsList>
         <TabsTrigger value="stock">Estoque</TabsTrigger>
-        <TabsTrigger value="receipts">Recebimentos</TabsTrigger>
         <TabsTrigger value="reservations">Reservas</TabsTrigger>
         <TabsTrigger value="inbox" id="inbox">Inbox</TabsTrigger>
+        <TabsTrigger value="mrp">MRP</TabsTrigger>
       </TabsList>
 
       <TabsContent value="stock">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="font-headline">Saldo de estoque</CardTitle>
-                <CardDescription>Em estoque, reservado e disponivel calculados em tempo real no piloto.</CardDescription>
-              </div>
-              <div>
-                <Button size="sm" onClick={() => { syncWithBackend(); }}>
-                  Sincronizar
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="font-headline">Saldo de estoque</CardTitle>
+            <CardDescription>Em estoque, reservado e disponível calculados em tempo real.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -71,6 +104,7 @@ export default function InventoryPage() {
                   <TableHead>Material</TableHead>
                   <TableHead className="text-right">Em estoque</TableHead>
                   <TableHead className="text-right">Reservado</TableHead>
+                  <TableHead className="text-right">Reservado produção</TableHead>
                   <TableHead className="text-right">Disponivel</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
@@ -88,6 +122,7 @@ export default function InventoryPage() {
                       </TableCell>
                       <TableCell className="text-right">{entry.onHand}</TableCell>
                       <TableCell className="text-right">{entry.reservedTotal}</TableCell>
+                      <TableCell className="text-right">{entry.productionReserved ?? 0}</TableCell>
                       <TableCell className="text-right font-semibold">{entry.available}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant={statusVariant}>{statusVariant === 'destructive' ? 'RUPTURA' : statusVariant === 'warning' ? 'BAIXO' : 'OK'}</Badge>
@@ -99,64 +134,6 @@ export default function InventoryPage() {
             </Table>
           </CardContent>
         </Card>
-      </TabsContent>
-
-      <TabsContent value="receipts">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2"><PackagePlus className="h-5 w-5" /> {receiptStatusLabel('DRAFT')}</CardTitle>
-              <CardDescription>Concluir producao cria rascunho; postar confirma entrada com opcao de autoalocar.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {receiptsDraft.length === 0 ? (
-                <EmptyState icon={PackagePlus} title="Nenhum recebimento em rascunho" description="Recebimentos em preparacao aparecerao aqui." className="min-h-[130px]" />
-              ) : (
-                receiptsDraft.map((receipt) => {
-                  const openDemands = receipt.items.reduce((acc, item) => acc + countOpenDemands(item.materialId), 0);
-                  return (
-                    <div key={receipt.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                      <p className="font-medium">{receipt.id}</p>
-                      <p className="text-sm text-muted-foreground">Origem {receipt.sourceRef} - criado em {formatDate(receipt.createdAt)}</p>
-                      <p className="text-sm">Ha {openDemands} demandas abertas para os materiais deste recebimento.</p>
-                      {receipt.items.map((item) => (
-                        <p key={item.materialId} className="text-xs">{item.materialName} - {item.qty} {item.uom}</p>
-                      ))}
-                      <Button
-                        className="mt-2"
-                        disabled={Boolean(busyReceipts[receipt.id])}
-                        onClick={() => onPostReceipt(receipt.id)}
-                      >
-                        {busyReceipts[receipt.id] ? 'Processando...' : 'Postar entrada'}
-                      </Button>
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2"><CheckCircle2 className="h-5 w-5" /> {receiptStatusLabel('POSTED')}</CardTitle>
-              <CardDescription>Historico de recebimentos confirmados.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {receiptsPosted.length === 0 ? (
-                <EmptyState icon={CheckCircle2} title="Nenhum recebimento postado" description="Quando confirmar uma entrada, o historico sera exibido aqui." className="min-h-[130px]" />
-              ) : (
-                receiptsPosted.map((receipt) => (
-                  <div key={receipt.id} className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
-                    <p className="font-medium">{receipt.id}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {receipt.autoAllocated ? 'Autoalocado' : 'Sem autoalocacao'} - {formatDate(receipt.postedAt)} - {receipt.postedBy}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </TabsContent>
 
       <TabsContent value="reservations">
@@ -177,15 +154,15 @@ export default function InventoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {db.stockReservations.length === 0 ? (
+                {stockReservations.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="border-none py-8">
                       <EmptyState icon={Warehouse} title="Sem reservas no momento" description="As reservas ativas de estoque aparecerao aqui." className="min-h-[120px]" />
                     </TableCell>
                   </TableRow>
                 ) : (
-                  db.stockReservations.map((reservation) => {
-                    const order = db.orders.find((item) => item.id === reservation.orderId);
+                  stockReservations.map((reservation) => {
+                    const order = orders.find((item) => item.id === reservation.orderId);
                     return (
                       <TableRow key={reservation.id}>
                         <TableCell>{reservation.materialId}</TableCell>
@@ -207,13 +184,13 @@ export default function InventoryPage() {
         <Card id="inbox">
           <CardHeader>
             <CardTitle className="font-headline flex items-center gap-2"><Bell className="h-5 w-5" /> Notificacoes</CardTitle>
-            <CardDescription>Inbox interna do piloto para alertas e disponibilidade para separacao.</CardDescription>
+            <CardDescription>Inbox interna para alertas e disponibilidade para separação.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {db.notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <EmptyState icon={Inbox} title="Inbox vazia" description="Novas notificacoes operacionais aparecerao aqui." className="min-h-[130px]" />
             ) : (
-              db.notifications.map((notification) => (
+              notifications.map((notification) => (
                 <div key={notification.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -234,6 +211,13 @@ export default function InventoryPage() {
             )}
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="mrp">
+        {/* Lazy-loaded MRP panel */}
+        <div>
+          <MrpPanel />
+        </div>
       </TabsContent>
     </Tabs>
   );

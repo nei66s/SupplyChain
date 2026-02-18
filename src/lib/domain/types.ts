@@ -61,6 +61,7 @@ export type Client = {
 export type Material = {
   id: string;
   sku?: string;
+  description?: string;
   name: string;
   standardUom: string;
   minStock: number;
@@ -75,6 +76,7 @@ export type StockBalance = {
   materialId: string;
   onHand: number;
   reservedTotal: number;
+  productionReserved?: number;
 };
 
 export type StockReservation = {
@@ -101,6 +103,7 @@ export type OrderItem = {
   qtyToProduce: number;
   qtyToBuy?: number;
   qtySeparated: number;
+  separatedWeight?: number;
   itemCondition?: string;
   conditionTemplateName?: string;
   // Lista de condições específicas do item (ex: cor: vermelho, lote: 1234)
@@ -127,10 +130,11 @@ export type Order = {
   createdBy: string;
   pickerId?: string;
   volumeCount: number;
-  trashedAt?: string;
+  trashedAt?: string | null;
   items: OrderItem[];
   auditTrail: AuditEvent[];
   labelPrintCount: number;
+  total?: number;
 };
 
 export type ProductionTask = {
