@@ -20,7 +20,7 @@ export async function GET() {
   try {
     const client = await pool.connect();
     try {
-      const res = await client.query<DbRow>(`
+      const res = await client.query(`
         SELECT
           m.id,
           m.sku,
@@ -45,7 +45,8 @@ export async function GET() {
         ORDER BY m.id
       `);
 
-      const materials = res.rows.map((r) => ({
+      const rows = res.rows as DbRow[]
+      const materials = rows.map((r) => ({
         id: `M-${r.id}`,
         name: r.name,
         standardUom: r.unit ?? 'UN',
@@ -56,12 +57,12 @@ export async function GET() {
         colorOptions: Array.isArray(r.color_options) ? r.color_options : [],
       }));
 
-      const stockBalances = res.rows.map((r) => ({
+      const stockBalances = rows.map((r) => ({
         materialId: `M-${r.id}`,
         onHand: Number(r.on_hand ?? 0),
         reservedTotal: Number(r.reserved_total ?? 0),
-          productionReserved: Number(r.production_reserved ?? 0),
-        }));
+        productionReserved: Number(r.production_reserved ?? 0),
+      }));
 
       const reservationsRes = await client.query(
         `SELECT sr.id, sr.material_id, sr.order_id, sr.user_id, sr.qty, sr.expires_at, sr.updated_at, sr.created_at, u.name AS user_name

@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+require('dotenv').config()
 const { Client } = require('pg')
 
 async function main() {
@@ -9,7 +10,11 @@ async function main() {
     process.exit(1)
   }
 
-  const client = new Client({ connectionString: databaseUrl })
+  const useSsl = process.env.PGSSLMODE === 'disable' ? false : true
+  const client = new Client({
+    connectionString: databaseUrl,
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+  })
   await client.connect()
 
   // ensure migrations table exists

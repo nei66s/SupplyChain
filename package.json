@@ -6,6 +6,7 @@
     "dev": "next dev -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "prebuild": "npm run db:migrate",
     "build": "next build",
     "postbuild": "node ./scripts/postbuild-deploy.js",
     "start:prod": "next start -p 3000",
@@ -16,7 +17,8 @@
     "start": "next start",
     "lint": "eslint src eslint.config.mjs next.config.ts tailwind.config.ts --ext .ts,.tsx,.mjs",
     "typecheck": "tsc --noEmit",
-    "clear-db": "node ./scripts/clear-db.js"
+    "clear-db": "node ./scripts/clear-db.js",
+    "db:migrate": "node ./scripts/run-migrations.js"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

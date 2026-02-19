@@ -63,27 +63,6 @@ type LabelRenderContext = {
   pageIndex: number;
 };
 
-function drawItemList(
-  pdf: any,
-  items: Order['items'],
-  startY: number,
-  maxHeight?: number
-) {
-  if (!maxHeight || maxHeight <= 0) return startY;
-  let y = startY;
-  pdf.setFontSize(9);
-  const lineSpacing = 6;
-  const maxY = startY + maxHeight - lineSpacing;
-  items.forEach((item) => {
-    if (y > maxY) return;
-    const qty = Math.max(item.qtySeparated, item.qtyRequested);
-    const line = `${item.materialName} | ${item.color} | ${qty} ${item.uom}`;
-    pdf.text(line.slice(0, 160), 14, y);
-    y += lineSpacing;
-  });
-  return y;
-}
-
 async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRenderContext) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -154,7 +133,7 @@ async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRende
       pdf.text('Condições:', detailX, conditionsStartY);
       let currentY = conditionsStartY + 3.5;
       pdf.setFontSize(6.5);
-      for (const [idx, cond] of conditions.entries()) {
+      for (const cond of conditions) {
         if (currentY + condLineHeight > bottomLimit - 2) break;
         const condText = `${cond.key}: ${cond.value}`;
         pdf.text(condText.slice(0, 50), detailX, currentY);
@@ -257,7 +236,6 @@ export async function generateLabelPdf(order: Order, pickerName?: string, format
 
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
     if (pageIndex !== 0) pdf.addPage();
-    // eslint-disable-next-line no-await-in-loop
     await render({ pdf, order, pickerName, pageIndex });
   }
 

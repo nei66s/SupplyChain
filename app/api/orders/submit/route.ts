@@ -64,8 +64,11 @@ export async function POST(request: NextRequest) {
         // if still null, try lookup by sku or exact id string
         if (!materialIdNum) {
           try {
-            const r = await pool.query<MaterialLookupRow>('SELECT id FROM materials WHERE sku=$1 OR name=$1 LIMIT 1', [it.materialId])
-            if (r.rowCount > 0) materialIdNum = Number(r.rows[0].id)
+        const r = await pool.query('SELECT id FROM materials WHERE sku=$1 OR name=$1 LIMIT 1', [it.materialId])
+        if (r.rowCount > 0) {
+          const lookupRow = r.rows[0] as MaterialLookupRow
+          materialIdNum = Number(lookupRow.id)
+        }
           } catch {}
         }
       }
@@ -106,8 +109,9 @@ export async function POST(request: NextRequest) {
       const materialDescriptionCache = new Map<number, string | null>()
       const resolveMaterialDescription = async (materialId: number) => {
         if (!materialDescriptionCache.has(materialId)) {
-          const matRes = await client.query<MaterialDescriptionRow>('SELECT description FROM materials WHERE id = $1', [materialId])
-          materialDescriptionCache.set(materialId, matRes.rows[0]?.description ?? null)
+        const matRes = await client.query('SELECT description FROM materials WHERE id = $1', [materialId])
+        const matRow = matRes.rows[0] as MaterialDescriptionRow | undefined
+        materialDescriptionCache.set(materialId, matRow?.description ?? null)
         }
         return materialDescriptionCache.get(materialId) ?? null
       }
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest) {
       }
 
       for (const [materialId, requestedQty] of requestedToProduceByMaterial.entries()) {
-        const availableRes = await client.query<{ available: string | number }>(
+        const availableRes = await client.query(
           `WITH others_requested AS (
              SELECT COALESCE(SUM(oi.quantity), 0)::NUMERIC(12,4) AS qty
              FROM order_items oi
@@ -164,8 +168,8 @@ export async function POST(request: NextRequest) {
            WHERE m.id = $1`,
           [materialId, orderId]
         )
-
-        const available = Number(availableRes.rows[0]?.available ?? 0)
+        const availableRow = availableRes.rows[0] as { available: string | number } | undefined
+        const available = Number(availableRow?.available ?? 0)
         const qtyToProduce = Math.max(0, Number(requestedQty) - available)
         if (qtyToProduce <= 0) continue
 
@@ -191,8 +195,9 @@ export async function POST(request: NextRequest) {
       const createdAtInserted = orderRes.rows[0].created_at ?? new Date().toISOString()
       const dateStr = new Date(createdAtInserted).toISOString().slice(0,10) // YYYY-MM-DD
       const dateKey = dateStr.replace(/-/g, '') // YYYYMMDD
-      const sameDayRes = await client.query<OrderIdRow>('SELECT id FROM orders WHERE created_at::date = $1::date ORDER BY created_at ASC', [dateStr])
-      const ids = sameDayRes.rows.map((r) => Number(r.id))
+      const sameDayRes = await client.query('SELECT id FROM orders WHERE created_at::date = $1::date ORDER BY created_at ASC', [dateStr])
+      const sameDayRows = sameDayRes.rows as OrderIdRow[]
+      const ids = sameDayRows.map((r) => Number(r.id))
       const pos = ids.indexOf(orderId)
       const seq = pos >= 0 ? (pos + 1) : (ids.length)
       const orderNumber = `${dateKey}${String(seq).padStart(2,'0')}`
@@ -200,21 +205,23 @@ export async function POST(request: NextRequest) {
       await client.query('UPDATE orders SET order_number = $1 WHERE id = $2', [orderNumber, orderId])
 
       // Update order_items with reserved/produce quantities and create stock reservations
-      const orderItemsRes = await client.query<{ id: number; material_id: number; quantity: string | number; shortage_action: string | null }>(
+      const orderItemsRes = await client.query(
         'SELECT id, material_id, quantity, shortage_action FROM order_items WHERE order_id = $1',
         [orderId]
       )
-      for (const row of orderItemsRes.rows) {
+      const orderItemRows = orderItemsRes.rows as { id: number; material_id: number; quantity: string | number; shortage_action: string | null }[]
+      for (const row of orderItemRows) {
         const requested = Number(row.quantity ?? 0)
         const shortageAction = String(row.shortage_action ?? 'PRODUCE').toUpperCase()
-        const availableRes = await client.query<{ available: string | number }>(
+        const availableRes = await client.query(
           `SELECT COALESCE(sb.on_hand,0) AS available
            FROM materials m
            LEFT JOIN stock_balances sb ON sb.material_id = m.id
            WHERE m.id = $1`,
           [row.material_id]
         )
-        const available = Number(availableRes.rows[0]?.available ?? 0)
+        const availableRow = availableRes.rows[0] as { available: string | number } | undefined
+        const available = Number(availableRow?.available ?? 0)
         const qtyReserved = Math.max(0, Math.min(requested, available))
         const qtyToProduce = shortageAction === 'BUY' ? 0 : Math.max(0, requested - qtyReserved)
         await client.query(
@@ -237,11 +244,11 @@ export async function POST(request: NextRequest) {
 
       const materialNames = new Map<number, string>()
       if (notificationMaterialIds.size > 0) {
-        const materialsRes = await client.query<{ id: number; name: string }>(
+        const materialsRes = await client.query(
           'SELECT id, name FROM materials WHERE id = ANY($1::int[])',
           [[...notificationMaterialIds]]
         )
-        for (const row of materialsRes.rows) {
+        for (const row of materialsRes.rows as { id: number; name: string | null }[]) {
           materialNames.set(row.id, row.name ?? `M-${row.id}`)
         }
       }
@@ -286,7 +293,7 @@ export async function POST(request: NextRequest) {
       await client.query('COMMIT')
 
       // Fetch created order and items
-      const createdRes = await pool.query<CreatedOrderItemRow>(
+      const createdRes = await pool.query(
         `SELECT o.id, o.order_number, o.status, o.total, o.created_at, oi.id AS item_id, oi.material_id, oi.conditions, m.sku, m.name AS material_name, oi.quantity, oi.unit_price
          FROM orders o
          LEFT JOIN order_items oi ON oi.order_id = o.id
@@ -295,7 +302,7 @@ export async function POST(request: NextRequest) {
         [orderId]
       )
 
-      const rows = createdRes.rows || []
+      const rows = (createdRes.rows as CreatedOrderItemRow[]) || []
       const createdAt = rows[0]?.created_at ?? createdAtInserted
 
       // compute daily sequence for orderNumber

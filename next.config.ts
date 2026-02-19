@@ -2,7 +2,7 @@ import type {NextConfig} from 'next';
 import path from 'node:path';
 
 const nextConfig: NextConfig = {
-  distDir: 'build',
+  distDir: 'next_build',
   images: {
     remotePatterns: [
       {

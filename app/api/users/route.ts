@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     await requireAdmin(req);
     const result = await pool.query('SELECT id, name, email, role, avatar_url FROM users ORDER BY role, name');
     return NextResponse.json({
-      users: result.rows.map((user) => ({
+      users: result.rows.map((user: { id: string; name: string; email: string; role: Role; avatar_url: string | null }) => ({
         id: user.id,
         name: user.name,
         email: user.email,

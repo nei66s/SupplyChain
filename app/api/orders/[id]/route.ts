@@ -26,7 +26,7 @@ async function resolveMaterialId(client: import('pg').Pool | import('pg').PoolCl
   if (!raw) return null
   const m = raw.match(/\d+/)
   if (m) return Number(m[0])
-  const lookup = await client.query<{ id: number }>(
+  const lookup = await client.query(
     'SELECT id FROM materials WHERE sku = $1 OR name = $1 LIMIT 1',
     [raw]
   )
@@ -88,32 +88,28 @@ async function recalcReservationForItem(
   itemId: number,
   userId: string | null
 ) {
-  const itemRes = await client.query<{
-    material_id: number
-    quantity: string | number
-    shortage_action: string | null
-  }>(
-    `SELECT material_id, quantity, shortage_action
-     FROM order_items
-     WHERE id = $1 AND order_id = $2`,
-    [itemId, orderId]
-  )
+    const itemRes = await client.query(
+      `SELECT material_id, quantity, shortage_action
+       FROM order_items
+       WHERE id = $1 AND order_id = $2`,
+      [itemId, orderId]
+    )
   if (itemRes.rowCount === 0) return
 
   const materialId = Number(itemRes.rows[0].material_id)
   const qtyRequested = Number(itemRes.rows[0].quantity ?? 0)
   const shortageAction = String(itemRes.rows[0].shortage_action ?? 'PRODUCE').toUpperCase()
 
-  const balRes = await client.query<{ on_hand: string | number }>(
-    'SELECT COALESCE(on_hand,0) AS on_hand FROM stock_balances WHERE material_id = $1',
-    [materialId]
-  )
+    const balRes = await client.query(
+      'SELECT COALESCE(on_hand,0) AS on_hand FROM stock_balances WHERE material_id = $1',
+      [materialId]
+    )
   const onHand = Number(balRes.rows[0]?.on_hand ?? 0)
-  const otherRes = await client.query<{ reserved: string | number }>(
-    `SELECT COALESCE(SUM(qty),0) AS reserved
-     FROM stock_reservations
-     WHERE material_id = $1 AND order_id <> $2 AND expires_at > now()`,
-    [materialId, orderId]
+    const otherRes = await client.query(
+      `SELECT COALESCE(SUM(qty),0) AS reserved
+       FROM stock_reservations
+       WHERE material_id = $1 AND order_id <> $2 AND expires_at > now()`,
+      [materialId, orderId]
   )
   const reservedOther = Number(otherRes.rows[0]?.reserved ?? 0)
   const available = Math.max(0, onHand - reservedOther)
@@ -151,7 +147,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           const clientIdNum = Number(String(body.clientId).replace(/\D+/g, ''))
           updates.push(`client_id = $${values.length + 1}`)
           values.push(clientIdNum)
-          const nameRes = await client.query<{ name: string }>('SELECT name FROM clients WHERE id = $1', [clientIdNum])
+          const nameRes = await client.query('SELECT name FROM clients WHERE id = $1', [clientIdNum])
           updates.push(`client_name = $${values.length + 1}`)
           values.push(nameRes.rows[0]?.name ?? null)
         }
@@ -180,7 +176,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'materialId invalido' }, { status: 400 })
         }
-        const descRes = await client.query<{ description: string | null }>(
+        const descRes = await client.query(
           'SELECT description FROM materials WHERE id = $1',
           [materialId]
         )
@@ -196,7 +192,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
-        const itemRes = await client.query<{ material_id: number }>(
+        const itemRes = await client.query(
           'SELECT material_id FROM order_items WHERE id = $1 AND order_id = $2',
           [itemId, orderId]
         )
@@ -251,7 +247,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
-        const res = await client.query<{ conditions: any }>(
+        const res = await client.query(
           'SELECT conditions FROM order_items WHERE id = $1 AND order_id = $2',
           [itemId, orderId]
         )
@@ -303,7 +299,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
         if (action === 'update_separated_qty') {
-          const row = await client.query<{ qty_reserved_from_stock: string | number }>(
+          const row = await client.query(
             'SELECT qty_reserved_from_stock FROM order_items WHERE id = $1 AND order_id = $2',
             [itemId, orderId]
           )
@@ -322,13 +318,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           ])
         }
       } else if (action === 'complete_picking') {
-        const items = await client.query<{
-          id: number
-          material_id: number
-          qty_separated: string | number
-          qty_reserved_from_stock: string | number
-          quantity: string | number
-        }>('SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity FROM order_items WHERE order_id = $1', [orderId])
+        const items = await client.query('SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity FROM order_items WHERE order_id = $1', [orderId])
 
         for (const item of items.rows) {
           const qtySeparated = Math.max(0, Number(item.qty_separated ?? 0))
@@ -354,11 +344,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           )
         }
 
-        const allItems = await client.query<{ quantity: string | number; qty_separated: string | number }>(
+        const allItems = await client.query(
           'SELECT quantity, qty_separated FROM order_items WHERE order_id = $1',
           [orderId]
         )
-        const allSeparated = allItems.rows.every(
+        const allItemsRows = allItems.rows as { quantity: string | number; qty_separated: string | number }[]
+        const allSeparated = allItemsRows.every(
           (row) => Number(row.qty_separated ?? 0) >= Number(row.quantity ?? 0)
         )
         const nextStatus = allSeparated ? 'FINALIZADO' : 'SAIDA_CONCLUIDA'
@@ -372,7 +363,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
            VALUES ($1, $2, $3, now(), $4)`,
           [orderId, 'PICKING_COMPLETED', auth.userId, `Pedido concluido com status ${nextStatus}.`]
         )
-        const orderMeta = await client.query<{ created_by: string | null; order_number: string | null }>(
+        const orderMeta = await client.query(
           'SELECT created_by, order_number FROM orders WHERE id = $1',
           [orderId]
         )

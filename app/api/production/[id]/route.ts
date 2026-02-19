@@ -75,7 +75,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const pick = await client.query<{ qty_to_produce: string | number; material_id: number }>(
+        const pick = await client.query(
           'SELECT qty_to_produce, material_id FROM production_tasks WHERE id = $1 FOR UPDATE',
           [taskId]
         );
@@ -84,10 +84,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
         }
 
-        const qtyProduced = Number(pick.rows[0].qty_to_produce ?? 0);
-        const materialId = Number(pick.rows[0].material_id);
+        const pickRow = pick.rows[0] as { qty_to_produce: string | number; material_id: number } | undefined;
+        const qtyProduced = Number(pickRow?.qty_to_produce ?? 0);
+        const materialId = Number(pickRow?.material_id ?? 0);
 
-        const upd = await client.query<DbRow>(
+        const upd = await client.query(
           `UPDATE production_tasks
            SET
              status = 'DONE',
@@ -100,7 +101,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
           (SELECT created_by FROM orders WHERE id = production_tasks.order_id) AS order_created_by,
           (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`,
-          [taskId]
+            [taskId]
         );
 
         if (upd.rowCount === 0) {
@@ -108,10 +109,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
         }
 
-        const orderNumber = upd.rows[0].order_number ?? `O-${upd.rows[0].order_id}`;
-        const orderCreatedBy = upd.rows[0].order_created_by ?? null;
-        const materialName = upd.rows[0].material_name ?? `M-${materialId}`;
-        const orderId = upd.rows[0].order_id;
+        const updRow = upd.rows[0] as DbRow;
+        const orderNumber = updRow.order_number ?? `O-${updRow.order_id}`;
+        const orderCreatedBy = updRow.order_created_by ?? null;
+        const materialName = updRow.material_name ?? `M-${materialId}`;
+        const orderId = updRow.order_id;
 
         if (qtyProduced <= 0) {
           // If nothing was produced, clear any lingering reservation
@@ -124,12 +126,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             `DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2`,
             [orderId, materialId]
           );
-          const receiptRes = await client.query<{ id: number }>(
+          const receiptRes = await client.query(
             `INSERT INTO inventory_receipts (type, status, source_ref)
              VALUES ('PRODUCTION', 'DRAFT', $1) RETURNING id`,
             [orderNumber]
           );
-          const receiptId = receiptRes.rows[0].id;
+          const receiptRow = receiptRes.rows[0] as { id: number } | undefined;
+          const receiptId = receiptRow?.id ?? 0;
           await client.query(
             `INSERT INTO inventory_receipt_items (receipt_id, material_id, qty, uom)
              VALUES ($1, $2, $3, (SELECT unit FROM materials WHERE id = $2))`,
@@ -172,7 +175,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }
 
         await client.query('COMMIT');
-        return NextResponse.json(toApiTask(upd.rows[0]));
+        return NextResponse.json(toApiTask(updRow));
       } catch (e) {
         await client.query('ROLLBACK');
         throw e;
@@ -181,10 +184,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       }
     }
     // For 'start' action we execute the prepared SQL, then ensure a production_reservation exists
-    const res = await pool.query<DbRow>(sql, [taskId]);
+    const res = await pool.query(sql, [taskId]);
     if (res.rowCount === 0) return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
 
-    const row = res.rows[0];
+    const row = res.rows[0] as DbRow;
     const qtyToProduce = Number(row.qty_to_produce ?? 0);
     try {
       if (qtyToProduce > 0) {

@@ -41,7 +41,7 @@ function errorMessage(err: unknown): string {
 
 export async function GET() {
   try {
-    const res = await pool.query<DbRow>(
+    const res = await pool.query(
       `SELECT
          pt.id,
          pt.order_id,
@@ -69,7 +69,8 @@ export async function GET() {
        ORDER BY pt.created_at ASC, pt.id ASC`
     )
 
-    return NextResponse.json(res.rows.map(toApiTask))
+    const rows = res.rows as DbRow[]
+    return NextResponse.json(rows.map(toApiTask))
   } catch (err: unknown) {
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     if (Number.isNaN(qtyToProduce) || qtyToProduce <= 0) errors.qtyToProduce = 'qtyToProduce deve ser maior que zero'
     if (Object.keys(errors).length > 0) return NextResponse.json({ errors }, { status: 400 })
 
-    const res = await pool.query<DbRow>(
+    const res = await pool.query(
        `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
        VALUES ($1, $2, $3, 'PENDING')
        ON CONFLICT (order_id, material_id)
@@ -108,14 +109,15 @@ export async function POST(request: Request) {
       ,
       [orderId, materialId, qtyToProduce]
     )
+    const createdRow = res.rows[0] as DbRow
     // Also create/update a production reservation tied to this order/material
     try {
-      if (Number(res.rows[0].qty_to_produce ?? 0) > 0) {
-        await pool.query(
+        if (Number(createdRow.qty_to_produce ?? 0) > 0) {
+         await pool.query(
           `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
            VALUES ($1, $2, $3, now(), now())
            ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
-          [orderId, materialId, Number(res.rows[0].qty_to_produce ?? 0)]
+          [orderId, materialId, Number(createdRow.qty_to_produce ?? 0)]
         )
       } else {
         // If qty is zero, ensure no lingering reservation remains
@@ -126,17 +128,17 @@ export async function POST(request: Request) {
       console.error('production reservation upsert error', e)
     }
     const createdQty = Number(res.rows[0].qty_to_produce ?? 0)
-    if (createdQty > 0) {
-      await notifyProductionTaskCreated({
-        orderId,
-        materialId,
-        orderNumber: res.rows[0].order_number,
-        materialName: res.rows[0].material_name,
-        qty: createdQty,
-      })
-    }
+        if (createdQty > 0) {
+          await notifyProductionTaskCreated({
+            orderId,
+            materialId,
+            orderNumber: createdRow.order_number,
+            materialName: createdRow.material_name,
+            qty: createdQty,
+          })
+        }
 
-    return NextResponse.json(toApiTask(res.rows[0]), { status: 201 })
+        return NextResponse.json(toApiTask(createdRow), { status: 201 })
   } catch (err: unknown) {
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }

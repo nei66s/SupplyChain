@@ -1,7 +1,6 @@
 import { Pool, PoolConfig, QueryConfig, QueryResult } from 'pg'
 
 declare global {
-  // eslint-disable-next-line no-var
   var __supplychain_pg_pool__: Pool | undefined
 }
 
