@@ -286,6 +286,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
   const bothSeparatedAndProducing = orders.filter(
     (order) => isInSeparationStatus(order.status) && producingSet.has(order.id)
   ).length;
+  const heroStats = [
+    { label: 'Pedidos abertos', value: openOrders },
+    { label: 'Pedidos finalizados', value: finishedCount },
+    { label: 'Alertas críticos', value: lowStock.length },
+    { label: 'Tarefas pendentes', value: tasksPending },
+  ];
 
   const ordersComparisonSeries = useMemo(() => {
     const buckets: string[] = [];
@@ -354,9 +360,45 @@ export default function DashboardClient({ data }: DashboardClientProps) {
       </div>
 
       <div className="space-y-6">
-        <section aria-labelledby="overview">
-          <h3 id="overview" className="font-headline text-lg">Overview</h3>
-          <p className="text-sm text-muted-foreground mt-1">Visão consolidada com KPIs principais e atalhos.</p>
+        <section aria-labelledby="overview" className="space-y-6">
+          <div className="dashboard-hero">
+            <div className="dashboard-hero-inner">
+              <div className="space-y-4">
+                <p className="text-eyebrow">Visão consolidada</p>
+                <div className="space-y-2">
+                  <h3 id="overview" className="text-2xl font-headline">
+                    KPIs em destaque
+                  </h3>
+                  <p className="text-body-2">Resumo em tempo real para priorizar pedidos, estoque e produção.</p>
+                </div>
+                <div className="hero-ctas">
+                  <Button
+                    variant="secondary"
+                    className="hero-cta px-5"
+                    onClick={() => router.push('/orders/new')}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar pedido simulado
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="hero-cta px-5"
+                    onClick={() => router.push('/materials?filter=lowstock')}
+                  >
+                    Ver alertas críticos
+                  </Button>
+                </div>
+              </div>
+              <div className="dashboard-hero-stats">
+                {heroStats.map((stat) => (
+                  <div key={stat.label} className="dashboard-hero-stat">
+                    <p>{stat.value}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             <KpiCard
               title="Pedidos abertos"
@@ -413,7 +455,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Card>
+            <Card className="chart-card interactive-card">
               <CardHeader>
                 <div className="flex items-start justify-between w-full">
                   <div>
@@ -466,7 +508,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="chart-card interactive-card">
               <CardHeader>
                 <CardTitle>Fulfillment rate (últimos 14 dias)</CardTitle>
                 <CardDescription>% de pedidos finalizados por dia</CardDescription>
@@ -490,7 +532,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="interactive-card">
               <CardHeader>
                 <CardTitle className="font-headline text-xl">{dashboardLabels.recentOrdersTitle}</CardTitle>
                 <CardDescription>{dashboardLabels.recentOrdersDescription}</CardDescription>
@@ -541,7 +583,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="interactive-card">
               <CardHeader>
                 <CardTitle className="font-headline text-xl">{dashboardLabels.lowStockTitle}</CardTitle>
                 <CardDescription>{dashboardLabels.lowStockDescription}</CardDescription>
@@ -575,7 +617,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
+        <Card className="chart-card interactive-card">
           <CardHeader>
             <CardTitle>Distribuição por status</CardTitle>
             <CardDescription>Proporção de pedidos por status</CardDescription>
@@ -647,7 +689,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-card interactive-card">
           <CardHeader>
             <CardTitle>Aging de pedidos</CardTitle>
             <CardDescription>Distribuição por faixa de dias</CardDescription>
@@ -669,7 +711,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-card interactive-card">
           <CardHeader>
             <CardTitle>Risco de ruptura</CardTitle>
             <CardDescription>% de materiais abaixo do mínimo</CardDescription>
@@ -695,7 +737,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card>
+        <Card className="chart-card interactive-card">
           <CardHeader>
             <CardTitle>{dashboardLabels.sellersTitle}</CardTitle>
             <CardDescription>{dashboardLabels.sellersDescription}</CardDescription>
@@ -723,7 +765,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="chart-card interactive-card">
           <CardHeader>
             <CardTitle>{dashboardLabels.pickersTitle}</CardTitle>
             <CardDescription>{dashboardLabels.pickersDescription}</CardDescription>

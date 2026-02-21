@@ -110,6 +110,30 @@ export async function POST(request: Request) {
       [orderId, materialId, qtyToProduce]
     )
     const createdRow = res.rows[0] as DbRow
+    // If this was created for an MRP order, ensure the order has an order_items row
+    try {
+      const orderSrcRes = await pool.query<{ source: string }>('SELECT source FROM orders WHERE id = $1', [createdRow.order_id])
+      const orderSource = String(orderSrcRes.rows[0]?.source ?? '').toLowerCase()
+      const resultingQty = Number(createdRow.qty_to_produce ?? 0)
+      if (orderSource === 'mrp' && resultingQty > 0) {
+        const existing = await pool.query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [createdRow.order_id, createdRow.material_id])
+        if (existing.rowCount > 0) {
+          await pool.query(
+            'UPDATE order_items SET quantity = $3, item_description = COALESCE($4, item_description) WHERE order_id = $1 AND material_id = $2',
+            [createdRow.order_id, createdRow.material_id, resultingQty, createdRow.description ?? null]
+          )
+        } else {
+          await pool.query(
+            `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [createdRow.order_id, createdRow.material_id, resultingQty, 0, '', 'PRODUCE', createdRow.description ?? null]
+          )
+        }
+      }
+    } catch (e) {
+      console.error('upsert order_items for production task (app) error', e)
+    }
+
     // Also create/update a production reservation tied to this order/material
     try {
         if (Number(createdRow.qty_to_produce ?? 0) > 0) {
@@ -128,6 +152,20 @@ export async function POST(request: Request) {
       console.error('production reservation upsert error', e)
     }
     const createdQty = Number(res.rows[0].qty_to_produce ?? 0)
+        // ensure order_items exist for MRP-created tasks even if qty is zero
+        try {
+          const orderSrc = String(createdRow.order_source ?? '').toLowerCase()
+          if (orderSrc === 'mrp') {
+            const existing = await pool.query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [createdRow.order_id, createdRow.material_id])
+            if (existing.rowCount > 0) {
+              await pool.query('UPDATE order_items SET quantity = $3, item_description = COALESCE($4, item_description) WHERE order_id = $1 AND material_id = $2', [createdRow.order_id, createdRow.material_id, createdQty, createdRow.description ?? null])
+            } else {
+              await pool.query(`INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [createdRow.order_id, createdRow.material_id, createdQty, 0, '', 'PRODUCE', createdRow.description ?? null])
+            }
+          }
+        } catch (e) {
+          console.error('upsert order_items for production task (app) error', e)
+        }
         if (createdQty > 0) {
           await notifyProductionTaskCreated({
             orderId,

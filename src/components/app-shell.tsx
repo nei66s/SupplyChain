@@ -206,19 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarContent>
 
-        <SidebarFooter className="rounded-3xl border border-sidebar-border/70 bg-sidebar/90 p-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 p-3 text-card-foreground">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={avatarSrc} alt={avatarAlt} />
-              <AvatarFallback>{avatarInitial}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-foreground">{userName}</div>
-              <div className="text-xs text-muted-foreground">{roleLabelText}</div>
-            </div>
-            <SidebarTrigger className="ml-auto hidden md:inline-flex" />
-          </div>
-        </SidebarFooter>
+        {/* Profile moved to top bar; Sidebar footer removed to avoid duplication */}
       </Sidebar>
 
       <SidebarInset className="bg-background">
@@ -285,9 +273,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         </header>
 
-        <main className="page-enter flex-1 p-6 lg:p-8">
-          <div className="relative min-h-full rounded-[32px] border border-border bg-background p-6 shadow-sm">
-            <div className="rounded-[28px] border border-border bg-card p-6 shadow-sm text-card-foreground">
+        <main className="page-enter flex-1 p-6 lg:p-10">
+          <div className="mx-auto min-h-[65vh] w-full max-w-6xl">
+            <div className="min-h-full rounded-[32px] border border-border bg-card p-6 shadow-xl text-card-foreground">
               {children}
             </div>
           </div>

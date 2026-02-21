@@ -93,10 +93,12 @@ export async function POST(request: Request) {
     if (Number.isNaN(qtyToProduce) || qtyToProduce <= 0) errors.qtyToProduce = 'qtyToProduce deve ser maior que zero'
     if (Object.keys(errors).length > 0) return NextResponse.json({ errors }, { status: 400 })
 
-    const orderStatusRes = await pool.query<{ status: string }>('SELECT status FROM orders WHERE id = $1', [orderId])
+    const orderStatusRes = await pool.query<{ status: string; source: string }>('SELECT status, source FROM orders WHERE id = $1', [orderId])
     if (orderStatusRes.rowCount === 0) return NextResponse.json({ error: 'order not found' }, { status: 400 })
     const os = String(orderStatusRes.rows[0]?.status ?? '').toUpperCase()
-    if (['RASCUNHO', 'DRAFT'].includes(os)) {
+    const orderSource = String(orderStatusRes.rows[0]?.source ?? '').toLowerCase()
+    // Allow creating production tasks for draft orders when the order was created by MRP
+    if (['RASCUNHO', 'DRAFT'].includes(os) && orderSource !== 'mrp') {
       return NextResponse.json({ error: 'Cannot create production task for draft order' }, { status: 403 })
     }
 
@@ -118,6 +120,30 @@ export async function POST(request: Request) {
           (SELECT item_description FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS description`
       [orderId, materialId, qtyToProduce]
     )
+    // If this request is coming from MRP and the order doesn't have an item for this material,
+    // create or update an order_items row so the order shows the item/quantity in the orders list.
+    try {
+      const resultingQty = Number(res.rows[0].qty_to_produce ?? 0)
+      if (orderSource === 'mrp') {
+        const matRes = await pool.query<{ description: string | null }>('SELECT description FROM materials WHERE id = $1', [materialId])
+        const materialDescription = matRes.rows[0]?.description ?? null
+        const existing = await pool.query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [orderId, materialId])
+        if (existing.rowCount > 0) {
+          await pool.query(
+            'UPDATE order_items SET quantity = $3, item_description = COALESCE($4, item_description) WHERE order_id = $1 AND material_id = $2',
+            [orderId, materialId, resultingQty, materialDescription]
+          )
+        } else {
+          await pool.query(
+            `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [orderId, materialId, resultingQty, 0, '', 'PRODUCE', materialDescription]
+          )
+        }
+      }
+    } catch (e) {
+      console.error('upsert order_items for production task error', e)
+    }
     // Also create/update a production reservation tied to this order/material
     try {
       if (Number(res.rows[0].qty_to_produce ?? 0) > 0) {

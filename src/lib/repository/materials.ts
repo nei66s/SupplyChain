@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { query } from '../db'
 import { logRepoPerf } from './perf'
-import { Material, StockBalance } from '../domain/types'
+import { ConditionVariant, Material, StockBalance } from '../domain/types'
 
 type MaterialStockRow = {
   id: number
@@ -17,6 +17,14 @@ type MaterialStockRow = {
   metadata: unknown
   reserved_total: string | number | null
   on_hand: string | number | null
+}
+
+type ConditionVariantRow = {
+  material_id: number
+  conditions: unknown
+  quantity_requested: string | number | null
+  reserved_from_stock: string | number | null
+  qty_to_produce: string | number | null
 }
 
 const materialSnapshotQuery = `SELECT
@@ -55,7 +63,12 @@ function parseJson<T>(value: unknown, fallback: T): T {
   return value as T
 }
 
-async function buildMaterialSnapshot(): Promise<{ materials: Material[]; stockBalances: StockBalance[]; queryMs: number }> {
+async function buildMaterialSnapshot(): Promise<{
+  materials: Material[];
+  stockBalances: StockBalance[];
+  conditionVariants: ConditionVariant[];
+  queryMs: number;
+}> {
   const res = await query<MaterialStockRow>(materialSnapshotQuery)
   const colorMap = res.rows.map((row) => {
     const colorOptionsRaw = parseJson<unknown>(row.color_options, [])
@@ -102,12 +115,36 @@ async function buildMaterialSnapshot(): Promise<{ materials: Material[]; stockBa
     productionReserved: Number((row as any).production_reserved ?? 0),
   }))
 
-  return { materials, stockBalances, queryMs: res.queryTimeMs }
+  const variantsRes = await query<ConditionVariantRow>(`
+    SELECT
+      oi.material_id,
+      oi.conditions,
+      COALESCE(SUM(oi.quantity)::NUMERIC(12,4), 0) AS quantity_requested,
+      COALESCE(SUM(oi.qty_reserved_from_stock)::NUMERIC(12,4), 0) AS reserved_from_stock,
+      COALESCE(SUM(oi.qty_to_produce)::NUMERIC(12,4), 0) AS qty_to_produce
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE COALESCE(oi.conditions, '[]'::jsonb) <> '[]'::jsonb
+      AND NOT (lower(o.status) IN ('finalizado', 'saida_concluida', 'cancelado'))
+    GROUP BY oi.material_id, oi.conditions
+    ORDER BY oi.material_id
+  `)
+
+  const conditionVariants: ConditionVariant[] = variantsRes.rows.map((row) => ({
+    materialId: `M-${row.material_id}`,
+    conditions: parseJson<{ key: string; value: string }[]>(row.conditions, []),
+    quantityRequested: Number(row.quantity_requested ?? 0),
+    reservedFromStock: Number(row.reserved_from_stock ?? 0),
+    qtyToProduce: Number(row.qty_to_produce ?? 0),
+  }))
+
+  return { materials, stockBalances, conditionVariants, queryMs: res.queryTimeMs }
 }
 
 export async function fetchMaterialsWithStock() {
   const totalStart = process.hrtime.bigint()
-  const { materials, stockBalances, queryMs } = await buildMaterialSnapshot()
+  const snapshot = await buildMaterialSnapshot()
+  const { materials, stockBalances, conditionVariants, queryMs } = snapshot
   const serializationMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000 - queryMs
   const totalMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000
   logRepoPerf('materials:inventorySnapshot', {
@@ -116,12 +153,16 @@ export async function fetchMaterialsWithStock() {
     totalMs,
     rows: materials.length,
   })
-  return { materials, stockBalances }
+  return { materials, stockBalances, conditionVariants }
 }
 
 export const getMaterialsSnapshot = unstable_cache(async () => {
   const snapshot = await buildMaterialSnapshot()
-  return { materials: snapshot.materials, stockBalances: snapshot.stockBalances }
+  return {
+    materials: snapshot.materials,
+    stockBalances: snapshot.stockBalances,
+    conditionVariants: snapshot.conditionVariants,
+  }
 }, [], { revalidate: 30 })
 
 export async function refreshMaterialsSnapshot() {

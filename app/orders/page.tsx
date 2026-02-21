@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ClipboardList, PackageSearch, PlusCircle, Trash2, X } from 'lucide-react';
+import { ClipboardList, PackageSearch, PlusCircle, Star, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +42,9 @@ type ConditionPickerTarget = {
 };
 
 const defaultConditionCategories = ['Fibra', 'FibraCor', 'Corda', 'CordaCor', 'Trico', 'TricoCor', 'Fio', 'Fiocor'];
+
+const isMrpOrder = (order: Order) =>
+  Boolean(order.isMrp ?? String(order.orderNumber ?? '').startsWith('MRP-'));
 
 export default function OrdersPage() {
   const [db, setDb] = React.useState<{
@@ -284,6 +287,7 @@ export default function OrdersPage() {
   const [mainView, setMainView] = React.useState<'open' | 'finalized'>('open');
   // default to show all orders ("Todos") instead of "Meus pedidos"
   const [subView, setSubView] = React.useState<'mine' | 'all'>('all');
+  const [mrpView, setMrpView] = React.useState<'all' | 'mrp' | 'standard'>('all');
   const [mounted, setMounted] = React.useState(false);
   const [preconditionCategories, setPreconditionCategories] = React.useState<ConditionCategory[]>([]);
   const [conditionsLoading, setConditionsLoading] = React.useState(false);
@@ -400,13 +404,18 @@ export default function OrdersPage() {
   const filteredOrders = React.useMemo(() => {
     return db.orders.filter((order) => {
       if (order.trashedAt) return false;
+      const orderIsMrp = isMrpOrder(order);
+      if (orderIsMrp && !order.hasPendingProduction) return false;
+      if (mrpView === 'mrp' && !orderIsMrp) return false;
+      if (mrpView === 'standard' && orderIsMrp) return false;
+
       const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA';
       if (mainView === 'open' && isFinalized) return false;
       if (mainView === 'finalized' && !isFinalized) return false;
       if (subView === 'mine') return order.createdBy === currentUserId;
       return true;
     });
-  }, [db.orders, mainView, subView, currentUserId]);
+  }, [db.orders, mainView, subView, currentUserId, mrpView]);
 
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(filteredOrders[0]?.id ?? null);
 
@@ -418,6 +427,7 @@ export default function OrdersPage() {
   }, [filteredOrders]);
 
   const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
+  const selectedOrderIsMrp = selectedOrder ? isMrpOrder(selectedOrder) : false;
 
   React.useEffect(() => {
     if (!selectedOrder) {
@@ -477,6 +487,18 @@ export default function OrdersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="ml-0">
+                  <Select value={mrpView} onValueChange={(value) => setMrpView(value as 'all' | 'mrp' | 'standard')}>
+                    <SelectTrigger className="w-36">
+                      <SelectValue placeholder="Origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="mrp">Somente MRP</SelectItem>
+                      <SelectItem value="standard">Pedidos normais</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <CardDescription className="mt-2 truncate">Reserva em tempo real (TTL + heartbeat).</CardDescription>
             </div>
@@ -496,26 +518,30 @@ export default function OrdersPage() {
             <EmptyState icon={ClipboardList} title="Nenhum pedido na visualizacao" description="Ajuste os filtros ou crie um novo pedido para iniciar." className="min-h-[120px]" />
           ) : (
             <div className="max-h-[420px] overflow-y-auto space-y-2">
-              {filteredOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${
-                    selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
-                  }`}
-                >
-                  <p className="font-medium">
-                    {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
-                  <div className="mt-2 flex gap-2">
-                    <Badge variant="outline">{order.status}</Badge>
-                    <Badge variant={order.readiness === 'READY_FULL' ? 'positive' : order.readiness === 'READY_PARTIAL' ? 'warning' : 'outline'}>
-                      {readinessLabel(order.readiness)}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+              {filteredOrders.map((order) => {
+                const orderIsMrp = isMrpOrder(order);
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => setSelectedOrderId(order.id)}
+                    className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${
+                      selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
+                    }`}
+                  >
+                    <p className="font-medium flex flex-wrap items-center gap-1">
+                      {orderIsMrp && <Star className="h-4 w-4 text-amber-500" aria-label="Pedido MRP" />}
+                      {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant="outline">{order.status}</Badge>
+                      <Badge variant={order.readiness === 'READY_FULL' ? 'positive' : order.readiness === 'READY_PARTIAL' ? 'warning' : 'outline'}>
+                        {readinessLabel(order.readiness)}
+                      </Badge>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -537,7 +563,10 @@ export default function OrdersPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle>
-                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      {selectedOrderIsMrp && <Star className="h-4 w-4 text-amber-500" aria-label="Pedido MRP" />}
+                      {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                    </span>
                   </CardTitle>
                   <CardDescription>
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}

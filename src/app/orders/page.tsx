@@ -81,6 +81,8 @@ export default function OrdersPage() {
     setDb((prev) => ({ ...prev, users: Array.isArray(data.users) ? data.users : [] }));
   }, []);
 
+  
+
   const createDraftOrder = React.useCallback(async () => {
     const res = await fetch('/api/orders', {
       method: 'POST',
@@ -398,8 +400,13 @@ export default function OrdersPage() {
   );
 
   const filteredOrders = React.useMemo(() => {
+    // hide MRP orders that have no pending production tasks (server provides `hasPendingProduction`)
     return db.orders.filter((order) => {
       if (order.trashedAt) return false;
+      // Detect MRP-created orders by orderNumber prefix `MRP-`.
+      const isMrpOrder = String(order.orderNumber ?? '').startsWith('MRP-');
+      if (isMrpOrder && !order.hasPendingProduction) return false;
+
       const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA';
       if (mainView === 'open' && isFinalized) return false;
       if (mainView === 'finalized' && !isFinalized) return false;
@@ -752,14 +759,6 @@ export default function OrdersPage() {
                                       >
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         Adicionar condição
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => addItemCondition(selectedOrder.id, item.id)}
-                                      >
-                                        Condição livre
                                       </Button>
                                     </div>
                                     {isPickerOpen && (

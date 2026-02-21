@@ -92,6 +92,14 @@ export type StockReservation = {
   createdAt: string;
 };
 
+export type ConditionVariant = {
+  materialId: string;
+  conditions: { key: string; value: string }[];
+  quantityRequested: number;
+  reservedFromStock: number;
+  qtyToProduce: number;
+};
+
 export type OrderItem = {
   id: string;
   materialId: string;
@@ -132,6 +140,8 @@ export type Order = {
   createdBy: string;
   pickerId?: string;
   volumeCount: number;
+  hasPendingProduction?: boolean;
+  isMrp?: boolean;
   trashedAt?: string | null;
   items: OrderItem[];
   auditTrail: AuditEvent[];
@@ -193,6 +203,9 @@ export type MrpSuggestion = {
   rationale: string;
   createdAt: string;
   appliedAt?: string;
+  status: string;
+  updatedBy?: string;
+  updatedAt: string;
 };
 
 export type MetricDaily = {

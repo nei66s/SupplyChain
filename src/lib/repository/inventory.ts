@@ -1,15 +1,16 @@
 import { getMaterialsSnapshot, refreshMaterialsSnapshot } from './materials'
 import { query } from '../db'
-import { Material, StockBalance, StockReservation } from '../domain/types'
+import { ConditionVariant, Material, StockBalance, StockReservation } from '../domain/types'
 
 export type InventorySnapshot = {
   materials: Material[]
   stockBalances: StockBalance[]
   stockReservations: StockReservation[]
+  conditionVariants: ConditionVariant[]
 }
 
 export async function getInventorySnapshot(): Promise<InventorySnapshot> {
-  const { materials, stockBalances } = await getMaterialsSnapshot()
+  const { materials, stockBalances, conditionVariants } = await getMaterialsSnapshot()
   const reservationsRes = await query(`
     SELECT sr.id, sr.material_id, sr.order_id, sr.user_id, sr.qty, sr.expires_at, sr.updated_at, sr.created_at, u.name AS user_name
     FROM stock_reservations sr
@@ -32,6 +33,7 @@ export async function getInventorySnapshot(): Promise<InventorySnapshot> {
     materials,
     stockBalances,
     stockReservations,
+    conditionVariants,
   }
 }
 

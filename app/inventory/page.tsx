@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
-import { Bell, Inbox, Warehouse } from 'lucide-react';
+import { Fragment, useCallback, useMemo, useState, useEffect } from 'react';
+import { Bell, Inbox, Warehouse, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,14 @@ const MrpPanel = dynamic(() => import('@/components/mrp-panel'), { ssr: false })
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { notificationTypeLabel } from '@/lib/domain/i18n';
-import { Material, Notification, Order, StockBalance, StockReservation } from '@/lib/domain/types';
+import {
+  ConditionVariant,
+  Material,
+  Notification,
+  Order,
+  StockBalance,
+  StockReservation,
+} from '@/lib/domain/types';
 
 export default function InventoryPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -27,6 +34,8 @@ export default function InventoryPage() {
   const [stockReservations, setStockReservations] = useState<StockReservation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [conditionVariants, setConditionVariants] = useState<ConditionVariant[]>([]);
+  const [expandedVariantRows, setExpandedVariantRows] = useState<Record<string, boolean>>({});
 
   const loadData = useCallback(async () => {
     try {
@@ -40,6 +49,9 @@ export default function InventoryPage() {
         setMaterials(Array.isArray(payload.materials) ? payload.materials : []);
         setStockBalances(Array.isArray(payload.stockBalances) ? payload.stockBalances : []);
         setStockReservations(Array.isArray(payload.stockReservations) ? payload.stockReservations : []);
+        setConditionVariants(
+          Array.isArray(payload.conditionVariants) ? payload.conditionVariants : []
+        );
       }
       if (notificationsRes.ok) {
         const payload = await notificationsRes.json();
@@ -73,6 +85,22 @@ export default function InventoryPage() {
     });
   }, [materials, stockBalances, stockReservations]);
 
+  const variantsByMaterial = useMemo(() => {
+    const map: Record<string, ConditionVariant[]> = {};
+    conditionVariants.forEach((variant) => {
+      if (!map[variant.materialId]) map[variant.materialId] = [];
+      map[variant.materialId].push(variant);
+    });
+    return map;
+  }, [conditionVariants]);
+
+  const toggleVariantRow = useCallback((materialId: string) => {
+    setExpandedVariantRows((prev) => ({
+      ...prev,
+      [materialId]: !prev[materialId],
+    }));
+  }, []);
+
   const markNotification = async (id: string, read: boolean) => {
     await fetch('/api/notifications', {
       method: 'PATCH',
@@ -88,7 +116,7 @@ export default function InventoryPage() {
         <TabsTrigger value="stock">Estoque</TabsTrigger>
         <TabsTrigger value="reservations">Reservas</TabsTrigger>
         <TabsTrigger value="inbox" id="inbox">Inbox</TabsTrigger>
-        <TabsTrigger value="mrp">Planejamento de Materiais</TabsTrigger>
+        <TabsTrigger value="mrp">MRP</TabsTrigger>
       </TabsList>
 
       <TabsContent value="stock">
@@ -100,9 +128,10 @@ export default function InventoryPage() {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-right">Em estoque</TableHead>
+              <TableRow>
+                <TableHead className="w-20"></TableHead>
+                <TableHead>Material</TableHead>
+                <TableHead className="text-right">Em estoque</TableHead>
                   <TableHead className="text-right">Reservado</TableHead>
                   <TableHead className="text-right">Reservado produção</TableHead>
                   <TableHead className="text-right">Disponivel</TableHead>
@@ -113,10 +142,33 @@ export default function InventoryPage() {
                 {stockView.map((entry) => {
                   const material = entry.material;
                   const statusVariant = entry.available <= 0 ? 'destructive' : material && entry.available <= material.minStock ? 'warning' : 'positive';
+                  const variantRows = variantsByMaterial[entry.materialId] ?? [];
+                  const hasVariants = variantRows.length > 0;
+                  const isExpanded = Boolean(expandedVariantRows[entry.materialId] && hasVariants);
 
                   return (
-                    <TableRow key={entry.materialId}>
-                      <TableCell>
+                    <Fragment key={entry.materialId}>
+                      <TableRow>
+                        <TableCell className="pr-2 align-top">
+                          {hasVariants ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleVariantRow(entry.materialId)}
+                              className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] opacity-100 shadow"
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              )}
+                              Vertentes
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">â€”</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                         <p className="font-medium">{material?.name}</p>
                         <p className="text-xs text-muted-foreground">{entry.materialId} - min {material?.minStock} - ponto de pedido {material?.reorderPoint}</p>
                       </TableCell>
@@ -127,7 +179,52 @@ export default function InventoryPage() {
                       <TableCell className="text-right">
                         <Badge variant={statusVariant}>{statusVariant === 'destructive' ? 'RUPTURA' : statusVariant === 'warning' ? 'BAIXO' : 'OK'}</Badge>
                       </TableCell>
-                    </TableRow>
+                      </TableRow>
+                      {isExpanded && variantRows.length > 0 && (
+                        <TableRow key={`${entry.materialId}-variants`}>
+                          <TableCell className="border-none p-0" />
+                          <TableCell colSpan={6} className="border-none bg-muted/10 px-6 py-4">
+                          <div className="space-y-3">
+                            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Materiais Condicionados</p>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              {variantRows.map((variant, variantIndex) => {
+                                const summary =
+                                  variant.conditions
+                                    .map((cond) => `${cond.key}: ${cond.value}`)
+                                    .filter(Boolean)
+                                    .join(' â€¢ ') || 'Sem condições';
+                                const variantKey = `${entry.materialId}-${variantIndex}-${summary}`;
+                                return (
+                                  <div key={variantKey} className="rounded-2xl border border-border bg-background/70 p-3 shadow-sm">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-sm font-semibold">{summary}</p>
+                                      <span className="text-xs text-muted-foreground">
+                                        Solic: {variant.quantityRequested}
+                                      </span>
+                                    </div>
+                                    <div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                                      <div>
+                                        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Reservado</p>
+                                        <p className="text-sm font-semibold text-foreground">{variant.reservedFromStock}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Produção</p>
+                                        <p className="text-sm font-semibold text-amber-600">{variant.qtyToProduce}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Total</p>
+                                        <p className="text-sm font-semibold text-foreground">{variant.quantityRequested}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
                   );
                 })}
               </TableBody>
@@ -184,7 +281,7 @@ export default function InventoryPage() {
         <Card id="inbox">
           <CardHeader>
             <CardTitle className="font-headline flex items-center gap-2"><Bell className="h-5 w-5" /> Notificacoes</CardTitle>
-            <CardDescription>Inbox interna para alertas e disponibilidade para separação.</CardDescription>
+            <CardDescription>Inbox interna para alertas e disponibilidade para separacao.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {notifications.length === 0 ? (

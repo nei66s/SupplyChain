@@ -51,6 +51,7 @@ export default function ProductionPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [busyTaskId, setBusyTaskId] = React.useState<string | null>(null);
   const [busyLabelTaskId, setBusyLabelTaskId] = React.useState<string | null>(null);
+  const [showHistory, setShowHistory] = React.useState(false);
   const tasksFingerprintRef = React.useRef('');
 
   const loadTasks = React.useCallback(async (opts?: LoadTasksOptions) => {
@@ -101,6 +102,9 @@ export default function ProductionPage() {
   const tasks = React.useMemo(() => {
     return [...serverTasks].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [serverTasks]);
+
+  const activeTasks = React.useMemo(() => tasks.filter((task) => task.status === 'PENDING'), [tasks]);
+  const historyTasks = React.useMemo(() => tasks.filter((task) => task.status !== 'PENDING'), [tasks]);
 
   const mutateTask = async (taskId: string, action: 'start' | 'complete') => {
     try {
@@ -174,6 +178,60 @@ export default function ProductionPage() {
     }
   };
 
+  const renderTaskRow = (task: ProductionTask) => (
+    <TableRow key={task.id}>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <span>{task.orderNumber}</span>
+          {task.isMrp ? (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]">
+              <Star className="h-3 w-3 text-amber-500" />
+              mrp
+            </Badge>
+          ) : null}
+        </div>
+      </TableCell>
+      <TableCell>{task.materialName}</TableCell>
+      <TableCell className="text-sm text-muted-foreground">{task.description ?? task.materialName}</TableCell>
+      <TableCell className="text-sm text-muted-foreground">{task.color ?? ''}</TableCell>
+      <TableCell className="text-right">{task.qtyToProduce}</TableCell>
+      <TableCell>
+        <Badge variant={task.status === 'DONE' ? 'positive' : task.status === 'IN_PROGRESS' ? 'warning' : 'outline'}>
+          {productionTaskStatusLabel(task.status)}
+        </Badge>
+      </TableCell>
+      <TableCell>{formatDate(task.updatedAt)}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={task.status !== 'PENDING' || busyTaskId === task.id}
+            onClick={() => mutateTask(task.id, 'start')}
+          >
+            Iniciar
+          </Button>
+          <Button
+            size="sm"
+            disabled={task.status === 'DONE' || busyTaskId === task.id}
+            onClick={() => mutateTask(task.id, 'complete')}
+          >
+            Concluir
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busyLabelTaskId === task.id || busyTaskId === task.id}
+            onClick={() => handlePrintProductionLabel(task)}
+          >
+            <FileText className="mr-1 h-3 w-3" />
+            Etiqueta 4x4
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -195,16 +253,16 @@ export default function ProductionPage() {
       <CardContent>
         <Table>
           <TableHeader>
-              <TableRow>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Desc</TableHead>
-                <TableHead>Cor</TableHead>
-                <TableHead className="text-right">Qtd. para produzir</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Atualizado</TableHead>
-                <TableHead className="text-right">Acoes</TableHead>
-              </TableRow>
+            <TableRow>
+              <TableHead>Pedido</TableHead>
+              <TableHead>Material</TableHead>
+              <TableHead>Desc</TableHead>
+              <TableHead>Cor</TableHead>
+              <TableHead className="text-right">Qtd. para produzir</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Atualizado</TableHead>
+              <TableHead className="text-right">Acoes</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -213,70 +271,63 @@ export default function ProductionPage() {
                   Carregando tarefas...
                 </TableCell>
               </TableRow>
-            ) : tasks.length === 0 ? (
+            ) : activeTasks.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="border-none py-8">
-                  <EmptyState icon={Factory} title="Sem tarefas de producao" description="Crie pedidos para gerar tarefas ou adicione tarefas na tabela production_tasks." className="min-h-[120px]" />
+                  <EmptyState
+                    icon={Factory}
+                    title="Sem tarefas pendentes"
+                    description="As tarefas iniciadas ou concluidas ficam guardadas no histórico."
+                    className="min-h-[120px]"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
-              tasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{task.orderNumber}</span>
-                      {task.isMrp ? (
-                        <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]">
-                          <Star className="h-3 w-3 text-amber-500" />
-                          mrp
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell>{task.materialName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{task.description ?? task.materialName}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{task.color ?? ''}</TableCell>
-                  <TableCell className="text-right">{task.qtyToProduce}</TableCell>
-                  <TableCell>
-                    <Badge variant={task.status === 'DONE' ? 'positive' : task.status === 'IN_PROGRESS' ? 'warning' : 'outline'}>
-                      {productionTaskStatusLabel(task.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(task.updatedAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={task.status !== 'PENDING' || busyTaskId === task.id}
-                        onClick={() => mutateTask(task.id, 'start')}
-                      >
-                        Iniciar
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={task.status === 'DONE' || busyTaskId === task.id}
-                        onClick={() => mutateTask(task.id, 'complete')}
-                      >
-                        Concluir
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busyLabelTaskId === task.id || busyTaskId === task.id}
-                        onClick={() => handlePrintProductionLabel(task)}
-                      >
-                        <FileText className="mr-1 h-3 w-3" />
-                        Etiqueta 4x4
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              activeTasks.map(renderTaskRow)
             )}
           </TableBody>
         </Table>
       </CardContent>
+      {historyTasks.length > 0 && (
+        <CardContent className="pt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Histórico de produção</p>
+              <p className="text-xs text-muted-foreground">
+                Tarefas iniciadas ou concluídas continuam disponíveis aqui.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowHistory((prev) => !prev)}>
+              {showHistory ? 'Ocultar histórico' : 'Ver histórico'} ({historyTasks.length})
+            </Button>
+          </div>
+          {showHistory ? (
+            <div className="mt-3 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pedido</TableHead>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Desc</TableHead>
+                    <TableHead>Cor</TableHead>
+                    <TableHead className="text-right">Qtd. para produzir</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Atualizado</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {historyTasks.map(renderTaskRow)}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Clique para expandir e revisar as tarefas já iniciadas ou finalizadas.
+            </p>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }

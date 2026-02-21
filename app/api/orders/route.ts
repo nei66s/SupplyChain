@@ -35,6 +35,8 @@ type ApiOrder = {
   labelPrintCount: number
   total: number
   trashedAt: string | null
+  hasPendingProduction?: boolean
+  isMrp?: boolean
 }
 
 type OrderRow = {
@@ -67,6 +69,8 @@ type OrderRow = {
   condition_template_name: string | null
   conditions: any | null
   item_description: string | null
+  has_pending_production?: boolean | null
+  order_source: string | null
 }
 
 const statusMap: Record<string, ApiOrder['status']> = {
@@ -164,11 +168,16 @@ export async function GET() {
          oi.item_condition,
          oi.condition_template_name,
          oi.item_description,
-         m.name as material_name,
-         m.unit as material_unit
-       FROM orders o
+        m.name as material_name,
+        m.unit as material_unit,
+        o.source AS order_source,
+        pp.has_pending_production AS has_pending_production
+      FROM orders o
        LEFT JOIN order_items oi ON oi.order_id = o.id
        LEFT JOIN materials m ON m.id = oi.material_id
+       LEFT JOIN LATERAL (
+         SELECT EXISTS(SELECT 1 FROM production_tasks pt WHERE pt.order_id = o.id AND pt.status <> 'DONE') AS has_pending_production
+       ) pp ON true
        ORDER BY o.created_at ASC`
     )
     const rows = res.rows || []
@@ -213,6 +222,8 @@ export async function GET() {
           labelPrintCount: Number(r.label_print_count ?? 0),
           total: Number(r.total ?? 0),
           trashedAt: r.trashed_at ? (r.trashed_at instanceof Date ? r.trashed_at.toISOString() : String(r.trashed_at)) : null,
+          hasPendingProduction: Boolean(r.has_pending_production ?? false),
+          isMrp: String(r.order_source ?? '').toLowerCase() === 'mrp',
         })
       }
       if (r.item_id) {

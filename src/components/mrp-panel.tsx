@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
-import { Material, StockBalance, Order } from '@/lib/domain/types';
+import { Material, StockBalance, Order, MrpSuggestion } from '@/lib/domain/types';
 import { formatDate } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type InventoryReceipt = { postedAt?: string; items?: { materialId?: string; qty?: number }[] };
 type ProductionTask = {
@@ -31,7 +33,20 @@ type OrderItem = { materialId?: string; qtyRequested?: number };
 type OrderType = { status?: string; orderDate?: string; createdAt?: string; items?: OrderItem[] };
 type Db = { inventoryReceipts?: InventoryReceipt[]; productionTasks?: ProductionTask[]; orders?: OrderType[] };
 type StockViewItem = StockBalance & { material?: Material; available: number };
-type Suggestion = StockViewItem & { suggestionQty: number };
+type SuggestionHeuristic = StockViewItem & {
+  suggestionId?: string;
+  suggestedQty: number;
+  suggestedReorderPoint: number;
+  suggestedMinStock: number;
+  avgWeeklyDemand: number;
+  leadTimeDays: number;
+  riskScore: number;
+  confirmed: boolean;
+  status: string;
+  appliedAt?: string;
+  rationale: string;
+  persistedRationale: string;
+};
 
 const WEEK_COUNT = 6;
 
@@ -115,22 +130,30 @@ export default function MrpPanel() {
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [expandedMaterialId, setExpandedMaterialId] = React.useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [dialogMaterial, setDialogMaterial] = React.useState<Suggestion | null>(null);
+  const [dialogMaterial, setDialogMaterial] = React.useState<SuggestionHeuristic | null>(null);
   const [dialogQty, setDialogQty] = React.useState('');
   const [dialogOrderId, setDialogOrderId] = React.useState('');
   const [dialogOrderNumber, setDialogOrderNumber] = React.useState<string | null>(null);
   const [dialogBusy, setDialogBusy] = React.useState(false);
   const [creatingOrderDraft, setCreatingOrderDraft] = React.useState(false);
   const [dialogError, setDialogError] = React.useState<string | null>(null);
+  const [mrpSuggestions, setMrpSuggestions] = React.useState<MrpSuggestion[]>([]);
+  const [pendingSuggestion, setPendingSuggestion] = React.useState<SuggestionHeuristic | null>(null);
+  const [suggestionDialogOpen, setSuggestionDialogOpen] = React.useState(false);
+  const [confirmationChecked, setConfirmationChecked] = React.useState(false);
+  const [confirmationBusy, setConfirmationBusy] = React.useState(false);
+  const [confirmationError, setConfirmationError] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   React.useEffect(() => {
     (async () => {
       try {
-        const [inventoryRes, receiptsRes, tasksRes, ordersRes] = await Promise.all([
+        const [inventoryRes, receiptsRes, tasksRes, ordersRes, suggestionsRes] = await Promise.all([
           fetch('/api/inventory', { cache: 'no-store' }),
           fetch('/api/receipts', { cache: 'no-store' }),
           fetch('/api/production', { cache: 'no-store' }),
           fetch('/api/orders', { cache: 'no-store' }),
+          fetch('/api/mrp-suggestions', { cache: 'no-store', credentials: 'include' }),
         ]);
         if (inventoryRes.ok) {
           const data = await inventoryRes.json();
@@ -149,6 +172,12 @@ export default function MrpPanel() {
           const data = await ordersRes.json();
           setOrders(Array.isArray(data) ? data : []);
         }
+        if (suggestionsRes.ok) {
+          const data = await suggestionsRes.json();
+          setMrpSuggestions(Array.isArray(data) ? data : []);
+        } else {
+          setMrpSuggestions([]);
+        }
       } catch (err) {
         console.error('Planejamento de Materiais: falha ao carregar', err);
       }
@@ -165,16 +194,68 @@ export default function MrpPanel() {
     });
   }, [materials, stockBalances]);
 
-  const suggestions = React.useMemo<Suggestion[]>(() => {
-    return stockView
-      .map((entry) => {
-        const material = entry.material;
-        const reorderPoint = material?.reorderPoint ?? 0;
-        const suggestionQty = Math.max(reorderPoint - entry.available, 0);
-        return { ...entry, material, suggestionQty };
-      })
-      .filter((entry) => entry.material && entry.suggestionQty > 0);
-  }, [stockView]);
+  const db = React.useMemo<Db>(() => {
+    return {
+      inventoryReceipts,
+      productionTasks,
+      orders: orders.map((order) => ({
+        status: order.status,
+        orderDate: order.orderDate,
+        createdAt: order.orderDate,
+        items: (order.items ?? []).map((item) => ({
+          materialId: item.materialId,
+          qtyRequested: item.qtyRequested,
+        })),
+      })),
+    };
+  }, [inventoryReceipts, productionTasks, orders]);
+
+  const suggestions = React.useMemo<SuggestionHeuristic[]>(() => {
+    const persistedByMaterial = new Map(mrpSuggestions.map((entry) => [entry.materialId, entry]));
+    return stockView.reduce<SuggestionHeuristic[]>((acc, entry) => {
+      if (!entry.material) return acc;
+      const buckets = buildSeries(db, entry.materialId);
+      const recentBuckets = buckets.slice(-4);
+      const totalOutputs = recentBuckets.reduce((sum, bucket) => sum + bucket.outputs, 0);
+      const avgWeeklyDemand = recentBuckets.length ? totalOutputs / recentBuckets.length : 0;
+      const leadTimeDays =
+        Number(
+          entry.material.metadata?.leadTimeDays ??
+            entry.material.metadata?.LeadTimeDays ??
+            entry.material.metadata?.lead_time_days ??
+            entry.material.metadata?.lead_time ??
+            7
+        ) || 7;
+      const leadTimeWeeks = Math.max(1, leadTimeDays / 7);
+      const suggestedReorderPoint = Math.max(entry.material.reorderPoint, Math.ceil(avgWeeklyDemand * leadTimeWeeks));
+      const suggestedMinStock = Math.max(entry.material.minStock, Math.ceil(avgWeeklyDemand * 1.5));
+      const suggestionQty = Math.max(0, suggestedReorderPoint - entry.available);
+      if (suggestionQty <= 0) return acc;
+      const persisted = persistedByMaterial.get(entry.materialId);
+      const riskScore = suggestedReorderPoint
+        ? Math.min(100, Math.round((suggestionQty / suggestedReorderPoint) * 100))
+        : 0;
+      const rationale =
+        persisted?.rationale ??
+        `Consumo médio ${avgWeeklyDemand.toFixed(1)} /sem, lead time ${leadTimeDays} dias e estoque disponível ${entry.available}.`;
+      acc.push({
+        ...entry,
+        suggestionId: persisted?.id,
+        suggestedQty: persisted?.suggestedQty ?? suggestionQty,
+        suggestedReorderPoint: persisted?.suggestedReorderPoint ?? suggestedReorderPoint,
+        suggestedMinStock: persisted?.suggestedMinStock ?? suggestedMinStock,
+        avgWeeklyDemand,
+        leadTimeDays,
+        riskScore,
+        confirmed: Boolean(persisted?.id),
+        status: persisted?.status ?? 'PENDING',
+        appliedAt: persisted?.appliedAt,
+        rationale,
+        persistedRationale: persisted?.rationale ?? rationale,
+      });
+      return acc;
+    }, []);
+  }, [stockView, mrpSuggestions, db]);
 
   const tasksByMaterial = React.useMemo(() => {
     const map = new Map<string, ProductionTask[]>();
@@ -205,9 +286,9 @@ export default function MrpPanel() {
     setExpandedMaterialId((cur) => (cur === materialId ? null : materialId));
   };
 
-  const handleOpenDialog = async (suggestion: Suggestion) => {
+  const handleOpenDialog = async (suggestion: SuggestionHeuristic) => {
     setDialogMaterial(suggestion);
-    setDialogQty(String(Math.max(1, Math.ceil(suggestion.suggestionQty))));
+    setDialogQty(String(Math.max(1, Math.ceil(suggestion.suggestedQty))));
     setDialogError(null);
     setDialogOrderId('');
     setDialogOrderNumber(null);
@@ -219,6 +300,72 @@ export default function MrpPanel() {
     } catch (err) {
       // show error in dialog but keep dialog open so user can retry
       setDialogError(errorMessage(err));
+    }
+  };
+
+  const handleOpenSuggestionDialog = (suggestion: SuggestionHeuristic) => {
+    setPendingSuggestion(suggestion);
+    setSuggestionDialogOpen(true);
+    setConfirmationChecked(false);
+    setConfirmationError(null);
+  };
+
+  const closeSuggestionDialog = () => {
+    setSuggestionDialogOpen(false);
+    setPendingSuggestion(null);
+    setConfirmationChecked(false);
+    setConfirmationError(null);
+    setConfirmationBusy(false);
+  };
+
+  const handleSuggestionDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      closeSuggestionDialog();
+    } else {
+      setSuggestionDialogOpen(true);
+    }
+  };
+
+  const handleConfirmSuggestion = async () => {
+    if (!pendingSuggestion) return;
+    if (!confirmationChecked) {
+      setConfirmationError('Confirme a revisão antes de salvar.');
+      return;
+    }
+    setConfirmationBusy(true);
+    setConfirmationError(null);
+    try {
+      const payload = {
+        materialId: pendingSuggestion.materialId,
+        suggestedReorderPoint: pendingSuggestion.suggestedReorderPoint,
+        suggestedMinStock: pendingSuggestion.suggestedMinStock,
+        suggestedQty: pendingSuggestion.suggestedQty,
+        rationale: pendingSuggestion.rationale,
+      };
+      const response = await fetch('/api/mrp-suggestions', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.message ?? 'Falha ao salvar sugestão');
+      }
+      const updated = (await response.json()) as MrpSuggestion;
+      setMrpSuggestions((prev) => {
+        const filtered = prev.filter((entry) => entry.materialId !== updated.materialId);
+        return [...filtered, updated];
+      });
+      toast({
+        title: 'Sugestão confirmada',
+        description: `${pendingSuggestion.material?.name ?? pendingSuggestion.materialId} atualizado.`,
+      });
+      closeSuggestionDialog();
+    } catch (err) {
+      setConfirmationError(errorMessage(err));
+    } finally {
+      setConfirmationBusy(false);
     }
   };
 
@@ -236,7 +383,8 @@ export default function MrpPanel() {
     const response = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'rascunho', source: 'mrp' }),
+      // Create MRP orders as open (not draft)
+      body: JSON.stringify({ status: 'aberto', source: 'mrp' }),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
@@ -272,7 +420,7 @@ export default function MrpPanel() {
         setDialogOrderId(order.id);
       }
       const parsedQty = Number(dialogQty);
-      const fallbackQty = Math.max(1, Math.ceil(dialogMaterial.suggestionQty));
+      const fallbackQty = Math.max(1, Math.ceil(dialogMaterial.suggestedQty));
       const quantity =
         Number.isFinite(parsedQty) && parsedQty > 0 ? Math.floor(parsedQty) : fallbackQty;
       const res = await fetch('/api/production', {
@@ -309,20 +457,6 @@ export default function MrpPanel() {
     else setDialogOpen(true);
   };
 
-  const db: Db = {
-    inventoryReceipts,
-    productionTasks,
-    orders: orders.map((order) => ({
-      status: order.status,
-      orderDate: order.orderDate,
-      createdAt: order.orderDate,
-      items: (order.items ?? []).map((item) => ({
-        materialId: item.materialId,
-        qtyRequested: item.qtyRequested,
-      })),
-    })),
-  };
-
   return (
     <>
       <Card>
@@ -336,33 +470,62 @@ export default function MrpPanel() {
               <TableRow>
                 <TableHead>Material</TableHead>
                 <TableHead className="text-right">Disponível</TableHead>
+                <TableHead className="text-right">Consumo / Lead time</TableHead>
                 <TableHead className="text-right">Ponto pedido</TableHead>
                 <TableHead className="text-right">Sugestão</TableHead>
-                <TableHead className="text-right">Status</TableHead>
+                <TableHead className="text-right">Risco</TableHead>
+                <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {suggestions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="border-none py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="border-none py-8 text-center text-sm text-muted-foreground">
                     Nenhuma sugestão no momento.
                   </TableCell>
                 </TableRow>
               ) : (
                 suggestions.map((s) => {
-                  const status = getSuggestionStatus(s.materialId);
+                  const flowStatus = getSuggestionStatus(s.materialId);
+                  const riskVariant =
+                    s.riskScore > 70 ? 'destructive' : s.riskScore > 40 ? 'warning' : 'info';
                   return (
                     <React.Fragment key={s.materialId}>
                       <TableRow>
-                        <TableCell>{s.material?.name ?? s.materialId}</TableCell>
-                        <TableCell className="text-right">{s.available}</TableCell>
-                        <TableCell className="text-right">{s.material?.reorderPoint ?? 0}</TableCell>
-                        <TableCell className="text-right">{s.suggestionQty}</TableCell>
+                        <TableCell className="max-w-[220px]">
+                          <div className="font-semibold">{s.material?.name ?? s.materialId}</div>
+                          <p className="text-xs text-muted-foreground">
+                            {s.material?.sku ? `${s.material.sku} • ` : ''}
+                            {s.material?.description ?? s.persistedRationale}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">{s.available}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="text-sm font-semibold">{s.avgWeeklyDemand.toFixed(1)} /sem</div>
+                          <p className="text-xs text-muted-foreground">Lead {Math.round(s.leadTimeDays)} dias</p>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{s.suggestedReorderPoint}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="text-lg font-semibold">{s.suggestedQty}</div>
+                          <p className="text-xs text-muted-foreground">Min. {s.suggestedMinStock}</p>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end">
-                            <Badge variant={status.variant}>{status.label}</Badge>
+                            <Badge variant={riskVariant}>{s.riskScore}%</Badge>
                           </div>
+                          <p className="text-xs text-muted-foreground">{flowStatus.label}</p>
+                        </TableCell>
+                        <TableCell className="text-center space-y-1">
+                          <Badge variant={s.confirmed ? 'positive' : 'warning'}>{s.status}</Badge>
+                          {s.appliedAt ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              Atualizado {formatDate(s.appliedAt)}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground">Sem confirmação</p>
+                          )}
+                          <p className="text-[11px] text-muted-foreground">{s.persistedRationale}</p>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -370,7 +533,9 @@ export default function MrpPanel() {
                               variant="outline"
                               size="sm"
                               onClick={() => toggleExpand(s.materialId)}
-                              aria-label={expandedMaterialId === s.materialId ? 'Fechar histórico' : 'Ver histórico'}
+                              aria-label={
+                                expandedMaterialId === s.materialId ? 'Fechar histórico' : 'Ver histórico'
+                              }
                             >
                               {expandedMaterialId === s.materialId ? (
                                 <ChevronUp className="h-4 w-4" />
@@ -380,9 +545,18 @@ export default function MrpPanel() {
                             </Button>
                             <Button
                               size="sm"
+                              variant="outline"
+                              disabled={confirmationBusy && pendingSuggestion?.materialId === s.materialId}
+                              onClick={() => handleOpenSuggestionDialog(s)}
+                            >
+                              {s.confirmed ? 'Atualizar sugestão' : 'Confirmar sugestão'}
+                            </Button>
+                            <Button
+                              size="sm"
                               variant="secondary"
-                              disabled={dialogBusy}
                               onClick={() => handleOpenDialog(s)}
+                              disabled={!s.confirmed || dialogBusy}
+                              title={!s.confirmed ? 'Confirme a sugestão antes de criar ordem' : undefined}
                             >
                               Criar ordem de produção
                             </Button>
@@ -391,7 +565,7 @@ export default function MrpPanel() {
                       </TableRow>
                       {expandedMaterialId === s.materialId && (
                         <TableRow>
-                          <TableCell colSpan={6} className="border-none p-4">
+                          <TableCell colSpan={8} className="border-none p-4">
                             <div className="rounded-md border border-border/70 bg-muted/20 p-4">
                               <div className="font-medium mb-2">{s.material?.name ?? s.materialId}</div>
                               <div className="h-56">
@@ -450,7 +624,7 @@ export default function MrpPanel() {
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
               <Label htmlFor="production-qty">
-                Quantidade (mínimo 1) — sugestão atual {dialogMaterial ? dialogMaterial.suggestionQty : 0}
+                Quantidade (mínimo 1) — sugestão atual {dialogMaterial ? dialogMaterial.suggestedQty : 0}
               </Label>
               <Input
                 id="production-qty"
@@ -476,6 +650,59 @@ export default function MrpPanel() {
             </Button>
             <Button onClick={handleCreateProduction} disabled={dialogBusy}>
               {dialogBusy ? 'Criando...' : 'Criar ordem de produção'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={suggestionDialogOpen} onOpenChange={handleSuggestionDialogOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirmar sugestão</DialogTitle>
+            <DialogDescription>
+              Valide a heurística para {pendingSuggestion?.material?.name ?? pendingSuggestion?.materialId}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Consumo médio</p>
+                <p className="font-semibold">
+                  {pendingSuggestion ? pendingSuggestion.avgWeeklyDemand.toFixed(1) : '0.0'} /sem
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Lead time</p>
+                <p className="font-semibold">{pendingSuggestion ? `${Math.round(pendingSuggestion.leadTimeDays)} dias` : '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Sugestão</p>
+                <p className="font-semibold">{pendingSuggestion?.suggestedQty ?? 0}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="mrp-rationale">Justificativa</Label>
+              <p id="mrp-rationale" className="text-sm text-muted-foreground">
+                {pendingSuggestion?.rationale}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="mrp-suggestion-confirm"
+                checked={confirmationChecked}
+                onCheckedChange={(checked) => setConfirmationChecked(Boolean(checked))}
+              />
+              <label htmlFor="mrp-suggestion-confirm" className="text-sm">
+                Confirmo que revisei os dados e desejo salvar esta sugestão.
+              </label>
+            </div>
+            {confirmationError ? <p className="text-sm text-destructive">{confirmationError}</p> : null}
+          </div>
+          <DialogFooter className="justify-end gap-2">
+            <Button variant="outline" onClick={closeSuggestionDialog} disabled={confirmationBusy}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmSuggestion} disabled={confirmationBusy || !confirmationChecked}>
+              {confirmationBusy ? 'Salvando...' : pendingSuggestion?.confirmed ? 'Atualizar sugestão' : 'Salvar sugestão'}
             </Button>
           </DialogFooter>
         </DialogContent>
