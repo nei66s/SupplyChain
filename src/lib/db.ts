@@ -143,7 +143,11 @@ export type QueryResultWithStats<T extends QueryResultRow = any> = QueryResult<T
   queryTimeMs: number
 }
 
-function buildQueryConfig(text: string | QueryConfig, params?: unknown[]): QueryConfig {
+type QueryConfigWithSimple = QueryConfig<any> & {
+  simple?: boolean
+}
+
+function buildQueryConfig(text: string | QueryConfigWithSimple, params?: unknown[]): QueryConfigWithSimple {
   if (typeof text === 'string') {
     return {
       text,
