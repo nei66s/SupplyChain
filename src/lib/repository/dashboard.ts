@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { query } from '../db'
+import { getJsonCache, setJsonCache } from '../cache'
 import { logRepoPerf } from './perf'
 import {
   InventoryReceipt,
@@ -177,42 +178,22 @@ export type DashboardData = {
   notifications: Notification[]
 }
 
+const DASHBOARD_CACHE_KEY = 'dashboard:snapshot'
+const DASHBOARD_CACHE_TTL_SECONDS = 45
+const MATERIALIZED_VIEW_REFRESH_INTERVAL_MS = 15_000
+const MATERIALIZED_VIEWS = [
+  'dashboard_orders_view',
+  'dashboard_production_tasks_view',
+  'dashboard_materials_stock_view',
+]
+let bypassRedisCache = false
+
 async function loadOrders(): Promise<{ items: Order[]; queryMs: number }> {
-  const res = await query<OrderRow>(
-    `SELECT
-       o.id AS order_id,
-       o.order_number,
-       o.status,
-       o.total,
-       o.created_at,
-       o.due_date,
-       o.trashed_at,
-       o.client_id,
-       o.client_name,
-       o.created_by,
-       o.picker_id,
-       o.volume_count,
-       o.label_print_count,
-       oi.id AS item_id,
-       oi.material_id,
-       oi.quantity,
-       oi.conditions,
-       oi.unit_price,
-       oi.color,
-       oi.shortage_action,
-       oi.qty_reserved_from_stock,
-       oi.qty_to_produce,
-       oi.qty_separated,
-       oi.separated_weight,
-       oi.item_condition,
-       oi.condition_template_name,
-       m.name AS material_name,
-       m.unit AS material_unit
-     FROM orders o
-     LEFT JOIN order_items oi ON oi.order_id = o.id
-     LEFT JOIN materials m ON m.id = oi.material_id
-     ORDER BY o.created_at ASC`
-  )
+  const res = await query<OrderRow>(`
+    SELECT *
+    FROM dashboard_orders_view
+    ORDER BY created_at ASC
+  `)
 
   const map = new Map<number, Order>()
   const dayCounters = new Map<string, number>()
@@ -290,22 +271,9 @@ async function loadOrders(): Promise<{ items: Order[]; queryMs: number }> {
 
 async function loadProductionTasks(): Promise<{ items: ProductionTask[]; queryMs: number }> {
   const res = await query<ProductionTaskRow>(
-    `SELECT
-       pt.id,
-       pt.order_id,
-       pt.material_id,
-       pt.qty_to_produce,
-       pt.status,
-       pt.created_at,
-       pt.updated_at,
-       o.order_number,
-       m.name AS material_name
-    FROM production_tasks pt
-    JOIN orders o ON o.id = pt.order_id
-     LEFT JOIN materials m ON m.id = pt.material_id
-    WHERE o.trashed_at IS NULL
-      AND (o.status IS NULL OR lower(o.status) NOT IN ('cancelado', 'finalizado', 'rascunho', 'draft'))
-     ORDER BY pt.created_at ASC, pt.id ASC`
+    `SELECT *
+     FROM dashboard_production_tasks_view
+     ORDER BY created_at ASC, id ASC`
   )
 
   const items = res.rows.map((row) => ({
@@ -324,31 +292,10 @@ async function loadProductionTasks(): Promise<{ items: ProductionTask[]; queryMs
 }
 
 async function loadMaterialsWithStock(): Promise<{ materials: Material[]; stockBalances: StockBalance[]; queryMs: number }> {
-  const res = await query<MaterialStockRow>(
-    `SELECT
-       m.id,
-       m.sku,
-       m.name,
-       m.description,
-       m.unit,
-       m.min_stock,
-       m.reorder_point,
-       m.setup_time_minutes,
-       m.production_time_per_unit_minutes,
-       m.color_options,
-       m.metadata,
-       COALESCE((
-         SELECT SUM(sr.qty)::NUMERIC(12,4)
-         FROM stock_reservations sr
-         WHERE sr.material_id = m.id
-           AND sr.expires_at > now()
-       ), 0) AS reserved_total,
-       COALESCE((SELECT SUM(qty)::NUMERIC(12,4) FROM production_reservations pr WHERE pr.material_id = m.id), 0) AS production_reserved,
-       COALESCE(sb.on_hand, 0) AS on_hand
-     FROM materials m
-     LEFT JOIN stock_balances sb ON sb.material_id = m.id
-     GROUP BY m.id, sb.on_hand`
-  )
+  const res = await query<MaterialStockRow>(`
+    SELECT *
+    FROM dashboard_materials_stock_view
+  `)
 
   const materials = res.rows.map((row) => {
     const colorOptionsRaw = parseJson<unknown>(row.color_options, [])
@@ -539,13 +486,60 @@ async function createDashboardSnapshotInternal(): Promise<DashboardData> {
   return dashboardData
 }
 
-// Keep dashboard data fresh-ish (≈15s) while deferring repeated renders to the cached snapshot.
+// Keep dashboard data fresh-ish (~15s) while reusing the cached snapshot and Redis fallback.
+async function loadDashboardSnapshot(): Promise<DashboardData> {
+  const skipCache = bypassRedisCache
+  bypassRedisCache = false
+  if (!skipCache) {
+    const cached = await getJsonCache<DashboardData>(DASHBOARD_CACHE_KEY)
+    if (cached) return cached
+  }
+  const snapshot = await createDashboardSnapshotInternal()
+  await setJsonCache(DASHBOARD_CACHE_KEY, snapshot, DASHBOARD_CACHE_TTL_SECONDS)
+  return snapshot
+}
+
 export const getDashboardSnapshot = unstable_cache(
-  async () => createDashboardSnapshotInternal(),
+  async () => loadDashboardSnapshot(),
   [],
   { revalidate: 15 }
 )
 
-export async function refreshDashboardSnapshot() {
-  await (getDashboardSnapshot as any).revalidate()
+let pendingMaterializedRefresh: Promise<void> | null = null
+let lastMaterializedRefreshAt = 0
+
+async function refreshMaterializedViews(): Promise<void> {
+  for (const view of MATERIALIZED_VIEWS) {
+    await query(`REFRESH MATERIALIZED VIEW ${view}`)
+  }
+}
+
+function scheduleDashboardRefresh(force = false): Promise<void> | null {
+  const now = Date.now()
+  if (!force && now - lastMaterializedRefreshAt < MATERIALIZED_VIEW_REFRESH_INTERVAL_MS) {
+    return null
+  }
+  if (pendingMaterializedRefresh) return pendingMaterializedRefresh
+
+  pendingMaterializedRefresh = (async () => {
+    try {
+      await refreshMaterializedViews()
+      lastMaterializedRefreshAt = Date.now()
+      bypassRedisCache = true
+      await (getDashboardSnapshot as any).revalidate()
+    } catch (error) {
+      console.error('[repo:dashboard] failed to refresh materialized views', error)
+    } finally {
+      pendingMaterializedRefresh = null
+    }
+  })()
+
+  return pendingMaterializedRefresh
+}
+
+export async function refreshDashboardSnapshot(waitForRefresh = false) {
+  const refreshPromise = scheduleDashboardRefresh(waitForRefresh)
+  if (waitForRefresh && refreshPromise) {
+    await refreshPromise
+  }
 }

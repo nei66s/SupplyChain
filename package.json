@@ -54,6 +54,7 @@
     "embla-carousel-react": "^8.6.0",
     "firebase": "^11.9.1",
     "genkit": "^1.20.0",
+    "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.475.0",
