@@ -189,13 +189,13 @@ export default function PickingPage() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Fila de picking</CardTitle>
           <CardDescription>Filtre por prontidao e conclua separacao com baixa de saida simulada.</CardDescription>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as 'READY_FULL' | 'READY_PARTIAL' | 'ALL')}>
-            <TabsList>
+            <TabsList className="w-full">
               <TabsTrigger value="ALL">Todos</TabsTrigger>
               <TabsTrigger value="READY_FULL">{readinessTabLabel.READY_FULL}</TabsTrigger>
               <TabsTrigger value="READY_PARTIAL">{readinessTabLabel.READY_PARTIAL}</TabsTrigger>
@@ -210,7 +210,7 @@ export default function PickingPage() {
               <button
                 key={order.id}
                 onClick={() => setSelectedOrderId(order.id)}
-                className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''}`}
+                className={`w-full rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition hover:border-primary sm:p-4 ${selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''}`}
               >
                 <p className="font-medium">{order.orderNumber}</p>
                 <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
@@ -237,14 +237,14 @@ export default function PickingPage() {
                     {selected.clientName} - entrega em {formatDate(selected.dueDate)}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                   {
                     (() => {
                       const hasProductionBlocking = selected.items.some((it) => it.qtyToProduce > 0);
                       return (
                         <>
-                          <Button variant="outline" onClick={handlePrintLabels} disabled={hasProductionBlocking}><FileText className="mr-2 h-4 w-4" />Imprimir etiquetas</Button>
-                          <Button onClick={() => concludePicking(selected.id)} disabled={hasProductionBlocking}>Concluir picking</Button>
+                          <Button className="w-full sm:w-auto" variant="outline" onClick={handlePrintLabels} disabled={hasProductionBlocking}><FileText className="mr-2 h-4 w-4" />Imprimir etiquetas</Button>
+                          <Button className="w-full sm:w-auto" onClick={() => concludePicking(selected.id)} disabled={hasProductionBlocking}>Concluir picking</Button>
                         </>
                       )
                     })()
@@ -288,7 +288,7 @@ export default function PickingPage() {
                       type="number"
                       step="0.01"
                       min={0}
-                      className="ml-auto w-28 text-right"
+                      className="ml-auto w-full max-w-[7rem] text-right"
                       value={item.separatedWeight ?? ''}
                       onChange={(e) => updateSeparatedWeightLocal(selected.id, item.id, Number(e.target.value))}
                       onBlur={(e) => commitSeparatedWeight(selected.id, item.id, Number(e.target.value))}
@@ -302,7 +302,7 @@ export default function PickingPage() {
                               type="number"
                               min={0}
                               max={item.qtyReservedFromStock}
-                              className="ml-auto w-28 text-right"
+                              className="ml-auto w-full max-w-[7rem] text-right"
                               value={item.qtySeparated}
                               onChange={(e) => updateSeparatedQtyLocal(selected.id, item.id, Number(e.target.value))}
                               onBlur={(e) => commitSeparatedQty(selected.id, item.id, Number(e.target.value))}
@@ -317,7 +317,7 @@ export default function PickingPage() {
                               <Label>Condições do item</Label>
                               {item.conditions && item.conditions.length > 0 ? (
                                 item.conditions.map((cond, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
+                                  <div key={idx} className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                                     <Input
                                       placeholder="Campo (ex: Cor)"
                                       value={cond.key}

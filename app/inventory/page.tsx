@@ -112,7 +112,7 @@ export default function InventoryPage() {
 
   return (
     <Tabs defaultValue="stock" className="space-y-4">
-      <TabsList>
+      <TabsList className="w-full">
         <TabsTrigger value="stock">Estoque</TabsTrigger>
         <TabsTrigger value="reservations">Reservas</TabsTrigger>
         <TabsTrigger value="inbox" id="inbox">Inbox</TabsTrigger>
@@ -183,7 +183,7 @@ export default function InventoryPage() {
                       {isExpanded && variantRows.length > 0 && (
                         <TableRow key={`${entry.materialId}-variants`}>
                           <TableCell className="border-none p-0" />
-                          <TableCell colSpan={6} className="border-none bg-muted/10 px-6 py-4">
+                          <TableCell colSpan={6} className="border-none bg-muted/10 px-3 py-4 sm:px-6">
                           <div className="space-y-3">
                             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Materiais Condicionados</p>
                             <div className="grid gap-3 md:grid-cols-2">
@@ -202,7 +202,7 @@ export default function InventoryPage() {
                                         Solic: {variant.quantityRequested}
                                       </span>
                                     </div>
-                                    <div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                                    <div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-2 lg:grid-cols-3">
                                       <div>
                                         <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Reservado</p>
                                         <p className="text-sm font-semibold text-foreground">{variant.reservedFromStock}</p>
@@ -289,13 +289,14 @@ export default function InventoryPage() {
             ) : (
               notifications.map((notification) => (
                 <div key={notification.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-medium">{notification.title}</p>
                       <p className="text-sm text-muted-foreground">{notification.message}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{formatDate(notification.createdAt)} - {notificationTypeLabel(notification.type)}</p>
                     </div>
                     <Button
+                      className="w-full sm:w-auto"
                       size="sm"
                       variant={notification.readAt ? 'outline' : 'default'}
                       onClick={() => markNotification(notification.id, !notification.readAt)}

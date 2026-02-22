@@ -295,7 +295,7 @@ export default function AdminPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSiteSettingsSubmit}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSiteSettingsSubmit}>
             <div className="grid gap-2">
               <Label htmlFor="site-company-name">Nome da empresa</Label>
               <Input
@@ -340,15 +340,15 @@ export default function AdminPage() {
                 Limpar logo
               </Button>
             </div>
-            <div className="lg:col-span-2">
-              <Button type="submit" disabled={savingSettings}>
+            <div className="md:col-span-2">
+              <Button className="w-full sm:w-auto" type="submit" disabled={savingSettings}>
                 {savingSettings ? 'Salvando identidade...' : 'Salvar identidade'}
               </Button>
             </div>
           </form>
           <div className="rounded-2xl border border-border/70 bg-muted p-4">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pré-visualização</p>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <div className="relative h-12 w-12 rounded-lg border border-border/70 bg-card/50 p-2">
                 <Image
                   src={previewLogo}
@@ -375,7 +375,7 @@ export default function AdminPage() {
           <CardDescription>Crie contas, redefina senhas e atribua roles.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleCreate}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreate}>
             <div className="grid gap-2">
               <Label htmlFor="admin-name">Nome</Label>
               <Input
@@ -420,8 +420,8 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="lg:col-span-2">
-              <Button type="submit" disabled={creating}>
+            <div className="md:col-span-2">
+              <Button className="w-full sm:w-auto" type="submit" disabled={creating}>
                 Criar conta
               </Button>
             </div>
@@ -443,13 +443,13 @@ export default function AdminPage() {
             {sortedUsers.map((account) => (
               <div
                 key={account.id}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-border/70 px-3 py-2"
+                className="flex flex-col items-start gap-3 rounded-md border border-border/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{account.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{account.email}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                   <Select
                     value={roleSelection[account.id] ?? (account.role as Role)}
                     onValueChange={(value) =>
@@ -457,7 +457,7 @@ export default function AdminPage() {
                     }
                     disabled={account.id === authUser.id}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -469,6 +469,7 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                   <Button
+                    className="w-full sm:w-auto"
                     size="sm"
                     onClick={() => handleRoleUpdate(account.id)}
                     disabled={account.id === authUser.id || updatingId === account.id}

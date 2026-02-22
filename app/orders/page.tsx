@@ -459,15 +459,15 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex min-w-0 flex-col">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-3">
                 <div className="ml-0">
                   <Select value={mainView} onValueChange={(v) => setMainView(v as 'open' | 'finalized')}>
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Pedidos" />
                     </SelectTrigger>
                     <SelectContent>
@@ -478,7 +478,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="ml-0">
                   <Select value={subView} onValueChange={(v) => setSubView(v as 'mine' | 'all')}>
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Filtrar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -489,7 +489,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="ml-0">
                   <Select value={mrpView} onValueChange={(value) => setMrpView(value as 'all' | 'mrp' | 'standard')}>
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Origem" />
                     </SelectTrigger>
                     <SelectContent>
@@ -502,8 +502,8 @@ export default function OrdersPage() {
               </div>
               <CardDescription className="mt-2 truncate">Reserva em tempo real (TTL + heartbeat).</CardDescription>
             </div>
-            <div className="ml-2 shrink-0">
-              <Button onClick={handleNewOrder} size="sm">
+            <div className="ml-0 w-full shrink-0 sm:ml-2 sm:w-auto">
+              <Button onClick={handleNewOrder} size="sm" className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Novo
               </Button>
@@ -524,7 +524,7 @@ export default function OrdersPage() {
                   <button
                     key={order.id}
                     onClick={() => setSelectedOrderId(order.id)}
-                    className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${
+                    className={`w-full rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition hover:border-primary sm:p-4 ${
                       selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
                     }`}
                   >
@@ -572,8 +572,8 @@ export default function OrdersPage() {
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={async () => {
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={async () => {
                     try {
                       await deleteOrder(selectedOrder.id);
                       setSelectedOrderId(null);
@@ -594,13 +594,13 @@ export default function OrdersPage() {
                   variant="secondary"
                   onClick={() => selectedOrder && submitOrder(selectedOrder)}
                   disabled={selectedOrder.status !== 'RASCUNHO'}
-                  className="min-w-[160px] font-semibold"
+                  className="w-full font-semibold sm:w-auto sm:min-w-[160px]"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Criar pedido
                 </Button>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <Label>Cliente</Label>
                   <Input
@@ -629,9 +629,9 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Select onValueChange={(value) => addItem(selectedOrder.id, value)}>
-                  <SelectTrigger className="max-w-sm">
+                  <SelectTrigger className="w-full sm:max-w-sm">
                     <SelectValue placeholder="Adicionar material" />
                   </SelectTrigger>
                   <SelectContent>
@@ -642,7 +642,7 @@ export default function OrdersPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" onClick={() => heartbeatOrder(selectedOrder.id)}>Estender reserva por +5 min</Button>
+                <Button className="w-full sm:w-auto" variant="outline" onClick={() => heartbeatOrder(selectedOrder.id)}>Estender reserva por +5 min</Button>
               </div>
 
               <div className="max-h-[360px] overflow-auto">
@@ -703,7 +703,7 @@ export default function OrdersPage() {
                                     }
                                   }}
                                   onBlur={(e) => onQtyBlurReserve(selectedOrder.id, item.id, Number(e.target.value || 0))}
-                                  className="ml-auto w-24 text-right"
+                                  className="ml-auto w-full max-w-[7rem] text-right"
                                 />
                               </TableCell>
                               <TableCell>
@@ -715,7 +715,7 @@ export default function OrdersPage() {
                                     persistOrderItemField(selectedOrder.id, item.id, { shortageAction: action });
                                   }}
                                 >
-                                  <SelectTrigger className="w-28">
+                                  <SelectTrigger className="w-full min-w-[7rem]">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -736,7 +736,7 @@ export default function OrdersPage() {
                                   value={item.color ?? ''}
                                   onChange={(e) => updateOrderItemField(selectedOrder.id, item.id, { color: e.target.value })}
                                   onBlur={(e) => persistOrderItemField(selectedOrder.id, item.id, { color: String(e.target.value ?? '') })}
-                                  className="w-24"
+                                  className="w-full max-w-[7rem]"
                                 />
                               </TableCell>
                               <TableCell className="text-center">
@@ -747,12 +747,12 @@ export default function OrdersPage() {
                             </TableRow>
                             <TableRow>
                               <TableCell colSpan={10} className="bg-muted/30">
-                                <div className="grid gap-3 md:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>Condicao especifica do item</Label>
                                     {item.conditions && item.conditions.length > 0 ? (
                                       item.conditions.map((cond, idx) => (
-                                        <div key={idx} className="flex items-center gap-2">
+                                        <div key={idx} className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                                           <Input
                                             placeholder="Campo (ex: Cor)"
                                             value={cond.key}
@@ -775,6 +775,7 @@ export default function OrdersPage() {
                                       <Button
                                         type="button"
                                         variant="outline"
+                                        className="w-full sm:w-auto"
                                         onClick={() =>
                                           setConditionPickerTarget({ orderId: selectedOrder.id, itemId: item.id })
                                         }
@@ -786,6 +787,7 @@ export default function OrdersPage() {
                                         type="button"
                                         variant="ghost"
                                         size="sm"
+                                        className="w-full sm:w-auto"
                                         onClick={() => addItemCondition(selectedOrder.id, item.id)}
                                       >
                                         Condição livre

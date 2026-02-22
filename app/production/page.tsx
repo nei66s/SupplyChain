@@ -235,7 +235,7 @@ export default function ProductionPage() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="font-headline flex items-center gap-2"><Factory className="h-5 w-5" /> Producao</CardTitle>
             <CardDescription>
@@ -290,14 +290,14 @@ export default function ProductionPage() {
       </CardContent>
       {historyTasks.length > 0 && (
         <CardContent className="pt-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Histórico de produção</p>
               <p className="text-xs text-muted-foreground">
                 Tarefas iniciadas ou concluídas continuam disponíveis aqui.
               </p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => setShowHistory((prev) => !prev)}>
+            <Button className="w-full sm:w-auto" size="sm" variant="outline" onClick={() => setShowHistory((prev) => !prev)}>
               {showHistory ? 'Ocultar histórico' : 'Ver histórico'} ({historyTasks.length})
             </Button>
           </div>

@@ -31,7 +31,7 @@ type DashboardClientProps = {
   data: DashboardData;
 };
 
-const chartPalette = ['#2563eb', '#3b82f6', '#60a5fa', '#94a3b8', '#f59e0b'];
+const chartPalette = ['#6366f1', '#8b5cf6', '#3b82f6', '#0ea5e9', '#ec4899', '#14b8a6'];
 const colorForKey = (key?: string | number) => {
   if (key === undefined || key === null) return chartPalette[0];
   const s = String(key);
@@ -39,6 +39,19 @@ const colorForKey = (key?: string | number) => {
   for (let i = 0; i < s.length; i++) h = (h << 5) - h + s.charCodeAt(i);
   const idx = Math.abs(h) % chartPalette.length;
   return chartPalette[idx];
+};
+
+const glassyTooltipProps = {
+  contentStyle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderRadius: '16px',
+    border: '1px solid rgba(200, 200, 200, 0.3)',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+    color: '#0f172a'
+  },
+  itemStyle: { color: '#0f172a', fontWeight: 500 }
 };
 
 const parseBucketToDate = (label?: string | number) => {
@@ -275,11 +288,22 @@ export default function DashboardClient({ data }: DashboardClientProps) {
   );
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Indicadores</h1>
-          <p className="text-sm text-muted-foreground">Última atualização: {formatDate(new Date().toISOString())}</p>
+    <div className="relative w-full space-y-8 pb-12 animate-in fade-in duration-700">
+      <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/40 pb-5 mb-6 px-1">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 mb-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold tracking-wide uppercase shadow-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            Tempo real
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-slate-900 dark:text-slate-100">
+            Painel de <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-blue-500 dark:from-indigo-400 dark:to-blue-300">Indicadores</span>
+          </h1>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
+            Última atualização: {formatDate(new Date().toISOString())}
+          </p>
         </div>
       </div>
 
@@ -287,7 +311,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
         <section aria-labelledby="overview">
           <h3 id="overview" className="font-headline text-lg">Overview</h3>
           <p className="text-sm text-muted-foreground mt-1">Visão consolidada com KPIs principais e atalhos.</p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <KpiCard
               title="Pedidos abertos"
               value={openOrders}
@@ -334,16 +358,16 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </div>
         </section>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-start justify-between w-full">
+                <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <CardTitle>Volume de pedidos</CardTitle>
                     <CardDescription>Comparativo: Criados / Em separação / Finalizados</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="inline-flex rounded-md border border-border/70 bg-muted/20 p-1">
                       <button
                         className={`px-3 py-1 text-sm ${period === 'month' ? 'bg-muted/80 rounded' : ''}`}
@@ -363,7 +387,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                         type="month"
                         value={selectedMonth}
                         onChange={(event) => setSelectedMonth(event.target.value)}
-                        className="ml-2"
+                        className="w-full min-w-0 sm:w-auto"
                       />
                     )}
                   </div>
@@ -374,15 +398,15 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   <EmptyState title="Sem pedidos recentes" description="Nenhum pedido criado nos últimos dias." />
                 ) : (
                   <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={ordersComparisonSeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={formatBucketLabel} />
-                      <YAxis />
-                      <Tooltip labelFormatter={formatBucketLabel} />
-                      <Legend />
-                      <Line type="monotone" dataKey="created" name="Criados" stroke="#2563eb" dot={false} />
-                      <Line type="monotone" dataKey="inSeparation" name="Em separação" stroke="#f59e0b" dot={false} />
-                      <Line type="monotone" dataKey="finalized" name="Finalizados" stroke="#10b981" dot={false} />
+                    <LineChart data={ordersComparisonSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
+                      <XAxis dataKey="date" tickFormatter={formatBucketLabel} axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dx={-10} />
+                      <Tooltip labelFormatter={formatBucketLabel} {...glassyTooltipProps} />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                      <Line type="monotone" dataKey="created" name="Criados" stroke="#6366f1" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }} />
+                      <Line type="monotone" dataKey="inSeparation" name="Em separação" stroke="#f59e0b" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0, fill: '#f59e0b' }} />
+                      <Line type="monotone" dataKey="finalized" name="Finalizados" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -399,12 +423,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   <EmptyState title="Sem dados de finalização" description="Nenhum pedido finalizado nos últimos dias." />
                 ) : (
                   <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={fulfillmentSeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={(value) => dateFmt.format(new Date(value))} />
-                      <YAxis unit="%" />
-                      <Tooltip labelFormatter={(value) => dateFmt.format(new Date(String(value)))} />
-                      <Line type="monotone" dataKey="rate" stroke="#10b981" />
+                    <LineChart data={fulfillmentSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
+                      <XAxis dataKey="date" tickFormatter={(value) => dateFmt.format(new Date(value))} axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dy={10} />
+                      <YAxis unit="%" axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dx={-10} />
+                      <Tooltip labelFormatter={(value) => dateFmt.format(new Date(String(value)))} {...glassyTooltipProps} cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }} />
+                      <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -433,7 +457,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                         role="button"
                         tabIndex={0}
                         onClick={() => router.push(`/orders/${order.id}`)}
-                        className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-xl border border-border/70 bg-muted/20 p-4 transition"
+                        className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border/70 bg-muted/20 p-3 transition hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between sm:p-4"
                       >
                         <div>
                           <p className="font-medium text-foreground">
@@ -443,15 +467,15 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                             {formatDate(order.orderDate)} - {order.items.length} itens
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Badge variant="outline">{order.status}</Badge>
                           <Badge
                             variant={
                               order.readiness === 'READY_FULL'
                                 ? 'positive'
                                 : order.readiness === 'READY_PARTIAL'
-                                ? 'warning'
-                                : 'outline'
+                                  ? 'warning'
+                                  : 'outline'
                             }
                           >
                             {readinessLabel(order.readiness)}
@@ -479,8 +503,8 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                 ) : (
                   <div className="max-h-48 overflow-y-auto space-y-3">
                     {lowStock.map((entry) => (
-                      <div key={entry.materialId} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                        <div className="flex items-center justify-between">
+                      <div key={entry.materialId} className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="font-medium">{entry.material?.name}</p>
                           <Badge variant={entry.available <= 0 ? 'destructive' : 'warning'}>{entry.available}</Badge>
                         </div>
@@ -509,12 +533,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={ordersStatusCounts} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="value">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dx={-10} />
+                  <Tooltip {...glassyTooltipProps} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                  <Bar dataKey="value" radius={6}>
                     {ordersStatusCounts.map((_, index) => (
                       <Cell key={`status-${index}`} fill={chartPalette[index % chartPalette.length]} />
                     ))}
@@ -535,12 +559,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               <EmptyState title="Sem dados" description="Nenhum pedido." />
             ) : (
               <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={agingBuckets}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="bucket" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                <LineChart data={agingBuckets} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} />
+                  <XAxis dataKey="bucket" axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} dx={-10} />
+                  <Tooltip {...glassyTooltipProps} />
+                  <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4, strokeWidth: 0, fill: '#f43f5e' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -560,10 +584,10 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   data={[{ name: 'Risco', value: gaugeRisk }]}
                   margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
                 >
-                  <XAxis type="number" domain={[0, 100]} />
-                  <YAxis type="category" dataKey="name" />
-                  <Tooltip formatter={(value: number) => `${value}%`} />
-                  <Bar dataKey="value" fill="#ef4444" />
+                  <XAxis type="number" domain={[0, 100]} hide />
+                  <YAxis type="category" dataKey="name" hide />
+                  <Tooltip cursor={{ fill: 'transparent' }} {...glassyTooltipProps} formatter={(value: number) => `${value}%`} />
+                  <Bar dataKey="value" fill={gaugeRisk > 30 ? '#ef4444' : gaugeRisk > 10 ? '#f59e0b' : '#10b981'} radius={4} background={{ fill: 'rgba(0,0,0,0.05)', radius: 4 }} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -583,13 +607,13 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               {ordersBySeller.length === 0 ? (
                 <EmptyState icon={ShoppingCart} title="Sem dados" description="Nenhum pedido registrado." />
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart layout="vertical" data={ordersBySeller} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={120} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="value">
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} />
+                    <YAxis type="category" dataKey="name" width={120} axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12, fontWeight: 500 }} />
+                    <Tooltip {...glassyTooltipProps} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                    <Bar dataKey="value" radius={4}>
                       {ordersBySeller.map((entry) => (
                         <Cell key={`seller-${entry.name}`} fill={colorForKey(entry.name)} />
                       ))}
@@ -611,13 +635,13 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               {ordersByPicker.length === 0 ? (
                 <EmptyState icon={ShoppingCart} title="Sem dados" description="Nenhuma separação registrada." />
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart layout="vertical" data={ordersByPicker} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={120} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="value">
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12 }} />
+                    <YAxis type="category" dataKey="name" width={120} axisLine={false} tickLine={false} tick={{ fill: '#888888', fontSize: 12, fontWeight: 500 }} />
+                    <Tooltip {...glassyTooltipProps} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                    <Bar dataKey="value" radius={4}>
                       {ordersByPicker.map((entry) => (
                         <Cell key={`picker-${entry.name}`} fill={colorForKey(entry.name)} />
                       ))}

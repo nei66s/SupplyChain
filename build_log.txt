@@ -45,7 +45,7 @@ Migrations complete
    - Environments: .env.local, .env
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 26.5s
+ ✓ Compiled successfully in 26.7s
    Linting and checking validity of types ...
 
 ./app/admin/page.tsx
@@ -63,10 +63,10 @@ Migrations complete
 ./app/dashboard/client-dashboard.tsx
 3:61  Warning: 'Plus' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
 4:10  Warning: 'Button' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
-211:9  Warning: 'selectedOrder' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
-213:9  Warning: 'stockByMaterial' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
-225:9  Warning: 'producingSet' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
-236:13  Warning: 'first' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+224:9  Warning: 'selectedOrder' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+226:9  Warning: 'stockByMaterial' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+238:9  Warning: 'producingSet' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+249:13  Warning: 'first' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
 
 ./app/materials/page.tsx
 266:14  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -87,8 +87,8 @@ info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/d
    Generating static pages (16/34) 
 Redis conectado em: 144.91.89.174
    Generating static pages (25/34) 
-[cache][redis] CACHE MISS dashboard:snapshot (836ms)
-[cache][redis] CACHE SET dashboard:snapshot ttl=60s (416ms)
+[cache][redis] CACHE MISS dashboard:snapshot (826ms)
+[cache][redis] CACHE SET dashboard:snapshot ttl=60s (411ms)
  ✓ Generating static pages (34/34)
    Finalizing page optimization ...
    Collecting build traces ...
@@ -96,7 +96,7 @@ Redis conectado em: 144.91.89.174
 Route (app)                                              Size  First Load JS  Revalidate  Expire
 ┌ ○ /                                                   198 B         102 kB
 ├ ○ /_not-found                                          1 kB         103 kB
-├ ○ /admin                                            3.37 kB         154 kB
+├ ○ /admin                                            3.44 kB         154 kB
 ├ ƒ /api/auth/login                                     198 B         102 kB
 ├ ƒ /api/auth/logout                                    198 B         102 kB
 ├ ƒ /api/auth/me                                        198 B         102 kB
@@ -121,18 +121,18 @@ Route (app)                                              Size  First Load JS  Re
 ├ ƒ /api/users                                          198 B         102 kB
 ├ ƒ /api/users/[id]                                     198 B         102 kB
 ├ ƒ /api/users/[id]/avatar                              198 B         102 kB
-├ ○ /clear-data                                         377 B         102 kB
-├ ○ /dashboard                                        9.75 kB         223 kB         15s      1y
-├ ○ /inventory                                        7.31 kB         126 kB
-├ ○ /login                                            5.51 kB         121 kB
-├ ○ /materials                                        20.7 kB         141 kB
-├ ○ /mrp                                                11 kB         238 kB
-├ ○ /orders                                           7.28 kB         153 kB
-├ ○ /orders/trash                                     7.02 kB         117 kB
-├ ○ /picking                                          3.98 kB         265 kB
-├ ○ /production                                       3.83 kB         256 kB
-├ ○ /profile                                          5.87 kB         116 kB
-└ ○ /report                                           2.31 kB         112 kB
+├ ○ /clear-data                                         404 B         102 kB
+├ ○ /dashboard                                        10.6 kB         223 kB         15s      1y
+├ ○ /inventory                                        7.45 kB         126 kB
+├ ○ /login                                            6.75 kB         122 kB
+├ ○ /materials                                        20.8 kB         141 kB
+├ ○ /mrp                                              11.2 kB         238 kB
+├ ○ /orders                                           7.42 kB         153 kB
+├ ○ /orders/trash                                     7.16 kB         117 kB
+├ ○ /picking                                           4.1 kB         265 kB
+├ ○ /production                                       3.85 kB         256 kB
+├ ○ /profile                                          5.99 kB         116 kB
+└ ○ /report                                           2.39 kB         112 kB
 + First Load JS shared by all                          102 kB
   ├ chunks/1255-de0c1abd22c7cccd.js                   45.2 kB
   ├ chunks/4bd1b696-182b6b13bdad92e3.js               54.2 kB

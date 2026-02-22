@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -278,9 +278,10 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl p-0 text-sidebar-foreground [&>button]:hidden"
             side={side}
           >
+            <SheetTitle className="sr-only">Navegação</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -323,7 +324,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-          className="flex h-full w-full flex-col rounded-xl border border-sidebar-border/80 bg-sidebar shadow-sm"
+            className="flex h-full w-full flex-col bg-transparent"
           >
             {children}
           </div>
@@ -347,7 +348,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-9 w-9 rounded-lg border border-transparent hover:border-border", className)}
+      className={cn("h-11 w-11 rounded-lg border border-transparent hover:border-border", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()

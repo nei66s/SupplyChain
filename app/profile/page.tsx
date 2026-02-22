@@ -130,10 +130,10 @@ export default function ProfilePage() {
           <CardDescription>Atualize seus dados pessoais e senha.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSave}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSave}>
             <div className="grid gap-2">
               <Label>Foto de perfil</Label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={previewUrl} alt="preview" className="h-20 w-20 rounded-full object-cover" />
@@ -184,16 +184,16 @@ export default function ProfilePage() {
               <Input id="profile-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             {/* avatar URL input removed; upload flow handles avatar */}
-            <div className="grid gap-2 lg:col-span-2">
+            <div className="grid gap-2 md:col-span-2">
               <Label htmlFor="profile-password">Nova senha (deixe em branco para manter)</Label>
               <Input id="profile-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-            <div className="flex items-center gap-2 lg:col-span-2">
+            <div className="flex flex-wrap items-center gap-2 md:col-span-2">
               <Badge variant="outline">{authUser.role}</Badge>
               <span className="text-sm text-muted-foreground">Perfil vinculado ao banco de dados</span>
             </div>
-            <div className="lg:col-span-2">
-              <Button type="submit" disabled={saving}>
+            <div className="md:col-span-2">
+              <Button className="w-full sm:w-auto" type="submit" disabled={saving}>
                 Salvar perfil
               </Button>
             </div>

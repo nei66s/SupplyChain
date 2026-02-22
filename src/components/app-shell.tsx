@@ -102,182 +102,190 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       // Also persist theme in a cookie so SSR or other contexts can read it
       // Max-Age ~ 1 year
       document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-    } catch {}
+    } catch { }
   }, [theme]);
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <Sidebar className="text-sidebar-foreground shadow-sm lg:w-72">
-        <SidebarHeader className="rounded-3xl border border-sidebar-border/70 bg-sidebar/95 p-4 text-sidebar-foreground">
-          <Logo className="px-1 py-1" />
-        </SidebarHeader>
-        <SidebarContent className="flex flex-col gap-5 rounded-3xl border border-sidebar-border/80 bg-sidebar/90 px-3 py-6">
-          <div className="relative flex flex-col gap-4">
-            {/* Painel group with quick indicators */}
-            <SidebarGroup>
-              <SidebarGroupLabel>Indicadores</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem key="/dashboard">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard')} tooltip="Indicadores">
-                    <Link href="/dashboard">
-                      <AreaChart />
-                      <span>Indicadores</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem key="/orders">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/orders')} tooltip="Pedidos">
-                    <Link href="/orders">
-                      <ShoppingCart />
-                      <span>Pedidos</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+    <div className="relative min-h-svh w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Global Abstract Backgrounds */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-5%] left-[-10%] w-[50%] h-[40%] rounded-full bg-blue-500/10 dark:bg-blue-500/20 blur-[120px]" />
+        <div className="absolute top-[20%] right-[-5%] w-[40%] h-[40%] rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full bg-violet-500/10 dark:bg-violet-500/20 blur-[120px]" />
+      </div>
 
-                <SidebarMenuItem key="/orders/trash">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/orders/trash')} tooltip="Lixeira">
-                    <Link href="/orders/trash">
-                      <Trash2 />
-                      <span>Lixeira</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem key="/mrp">
-                  <SidebarMenuButton asChild isActive={pathname.startsWith('/mrp')} tooltip="Planejamento de Materiais">
-                    <Link href="/mrp">
-                      <AreaChart />
-                      <span>Planejamento de Materiais</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Operacoes</SidebarGroupLabel>
-              <SidebarMenu>
-                {navItems
-                  .filter(
-                    (i) =>
-                      i.href !== '/materials' &&
-                      i.href !== '/admin' &&
-                      i.href !== '/orders' &&
-                      i.href !== '/orders/trash' &&
-                      i.href !== '/dashboard'
-                  )
-                  .map((item) => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
-                        <Link href={item.href}>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-              </SidebarMenu>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Administracao</SidebarGroupLabel>
-            <SidebarMenu>
-              {navItems
-                .filter((i) => i.href === '/materials' || i.href === '/admin')
-                .map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
+      <SidebarProvider defaultOpen={false}>
+        <Sidebar className="text-sidebar-foreground lg:w-72 border-r-0 bg-transparent">
+          <SidebarHeader className="rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl p-4 shadow-sm text-sidebar-foreground">
+            <Logo className="px-1 py-1" />
+          </SidebarHeader>
+          <SidebarContent className="flex flex-col gap-5 rounded-3xl border border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl px-3 py-6 shadow-sm">
+            <div className="relative flex flex-col gap-4">
+              {/* Painel group with quick indicators */}
+              <SidebarGroup>
+                <SidebarGroupLabel>Indicadores</SidebarGroupLabel>
+                <SidebarMenu>
+                  <SidebarMenuItem key="/dashboard">
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard')} tooltip="Indicadores">
+                      <Link href="/dashboard">
+                        <AreaChart />
+                        <span>Indicadores</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-            </SidebarGroup>
-          </div>
-        </SidebarContent>
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
+                <SidebarMenu>
+                  <SidebarMenuItem key="/orders">
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/orders')} tooltip="Pedidos">
+                      <Link href="/orders">
+                        <ShoppingCart />
+                        <span>Pedidos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-        {/* Profile moved to top bar; Sidebar footer removed to avoid duplication */}
-      </Sidebar>
+                  <SidebarMenuItem key="/orders/trash">
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/orders/trash')} tooltip="Lixeira">
+                      <Link href="/orders/trash">
+                        <Trash2 />
+                        <span>Lixeira</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-      <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur-sm">
-          <SidebarTrigger className="lg:hidden" />
+                  <SidebarMenuItem key="/mrp">
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/mrp')} tooltip="Planejamento de Materiais">
+                      <Link href="/mrp">
+                        <AreaChart />
+                        <span>Planejamento de Materiais</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroup>
 
-          <h1 className="text-lg font-semibold font-headline">
-            {navItems.find((item) => pathname.startsWith(item.href))?.label ?? 'Inventário Ágil'}
-          </h1>
+              <SidebarGroup>
+                <SidebarGroupLabel>Operacoes</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems
+                    .filter(
+                      (i) =>
+                        i.href !== '/materials' &&
+                        i.href !== '/admin' &&
+                        i.href !== '/orders' &&
+                        i.href !== '/orders/trash' &&
+                        i.href !== '/dashboard'
+                    )
+                    .map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+                          <Link href={item.href}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+              </SidebarGroup>
 
-          <div className="hidden flex-1 md:flex md:justify-center">
-            <div className="relative w-full max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar pedidos, materiais ou tarefas" className="h-10 pl-9" />
+              <SidebarGroup>
+                <SidebarGroupLabel>Administracao</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems
+                    .filter((i) => i.href === '/materials' || i.href === '/admin')
+                    .map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
+                          <Link href={item.href}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+              </SidebarGroup>
             </div>
-          </div>
+          </SidebarContent>
 
-          <NotificationCenter />
-          <div className="flex items-center gap-2">
-            <PingHealth />
-            <DbHealth />
-          </div>
-          {mounted ? (
-            <Button
-              variant="ghost"
-              className="h-10 w-10 rounded-full p-0"
-              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-          ) : null}
+          {/* Profile moved to top bar; Sidebar footer removed to avoid duplication */}
+        </Sidebar>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 w-10 rounded-full p-0">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={avatarSrc} alt={avatarAlt} />
-                  <AvatarFallback>{avatarInitial}</AvatarFallback>
-                </Avatar>
+        <SidebarInset className="bg-transparent relative overflow-x-hidden">
+
+          <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/40 px-3 py-3 shadow-sm backdrop-blur-xl sm:gap-3 sm:px-6">
+            <SidebarTrigger className="lg:hidden" />
+
+            <h1 className="min-w-0 flex-1 truncate text-lg font-bold font-headline tracking-tight text-slate-800 dark:text-slate-200">
+              {navItems.find((item) => pathname.startsWith(item.href))?.label ?? 'Inventário Ágil'}
+            </h1>
+
+            <div className="hidden flex-1 md:flex md:justify-center">
+              <div className="relative w-full max-w-md">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input placeholder="Buscar pedidos, materiais ou tarefas" className="pl-9 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/60 dark:border-slate-800/60" />
+              </div>
+            </div>
+
+            <NotificationCenter />
+            <div className="hidden items-center gap-2 sm:flex">
+              <PingHealth />
+              <DbHealth />
+            </div>
+            {mounted ? (
+              <Button
+                variant="ghost"
+                className="h-11 w-11 rounded-full p-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm"
+                aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-60" side="bottom" align="end">
-              <DropdownMenuLabel className="space-y-0.5">
-                <div>{userName}</div>
-                <div className="text-xs font-normal text-muted-foreground">{roleLabelText}</div>
-              </DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href="/profile">
-                  <UserCircle2 className="mr-2 h-4 w-4" />
-                  Meu perfil
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            ) : null}
 
-        </header>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-11 w-11 rounded-full p-0 shadow-sm transition-transform hover:scale-105">
+                  <Avatar className="h-9 w-9 border-2 border-white/80 shadow-sm">
+                    <AvatarImage src={avatarSrc} alt={avatarAlt} className="object-cover" />
+                    <AvatarFallback className="bg-indigo-600 text-white font-bold">{avatarInitial}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 max-w-[calc(100vw-1rem)] rounded-2xl border-slate-200/60 shadow-xl backdrop-blur-xl bg-white/90 dark:bg-slate-900/90 dark:border-slate-800/60" side="bottom" align="end">
+                <DropdownMenuLabel className="space-y-0.5 px-3 py-2">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{userName}</div>
+                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{roleLabelText}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuItem asChild className="rounded-xl mx-1 cursor-pointer">
+                  <Link href="/profile">
+                    <UserCircle2 className="mr-2 h-4 w-4" />
+                    Meu perfil
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-slate-200/60 dark:bg-slate-800/60" />
+                <DropdownMenuItem asChild className="rounded-xl mx-1 text-red-600 focus:text-red-600 cursor-pointer">
+                  <Link href="/">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        <main className="page-enter flex-1 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="min-h-[65vh] rounded-[32px] border border-border bg-card p-4 shadow-xl text-card-foreground sm:p-6 lg:p-8">
+          </header>
+
+          <main className="page-enter flex-1 relative z-10 px-4 py-8 sm:px-8 sm:py-10">
+            <div className="mx-auto w-full max-w-full lg:max-w-[1600px]">
               {children}
             </div>
-          </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }

@@ -88,7 +88,7 @@ export function NotificationCenter() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0" aria-label="Notificacoes">
+        <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0" aria-label="Notificacoes">
           <Bell className="h-5 w-5" />
           {mounted && unreadCount > 0 ? (
             <span
@@ -100,7 +100,7 @@ export function NotificationCenter() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="max-h-[70vh] w-[390px] overflow-auto p-2" sideOffset={10}>
+      <DropdownMenuContent className="max-h-[70vh] w-[min(390px,calc(100vw-1rem))] overflow-auto p-2" sideOffset={10}>
         <div className="flex items-center justify-between px-2 py-1">
           <div>
             <h3 className="text-sm font-semibold">Notificacoes</h3>
