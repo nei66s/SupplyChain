@@ -22,11 +22,11 @@ type KpiCardProps = {
 };
 
 const toneStyles: Record<NonNullable<KpiCardProps['tone']>, string> = {
-  default: 'bg-primary/10 text-primary',
-  info: 'bg-sky-100 text-sky-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  success: 'bg-emerald-100 text-emerald-700',
+  default: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+  info: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  danger: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
 };
 
 export function KpiCard({
@@ -66,7 +66,7 @@ export function KpiCard({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     >
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="mb-4 flex items-start justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
           <div
@@ -82,7 +82,7 @@ export function KpiCard({
           <Skeleton className="h-9 w-24" />
         ) : (
           <div>
-            <p className="text-4xl font-bold tracking-tight text-foreground" role="status" aria-live="polite">
+            <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl" role="status" aria-live="polite">
               {value}
               {unit ? <span className="ml-1 text-base font-medium text-muted-foreground">{unit}</span> : null}
             </p>

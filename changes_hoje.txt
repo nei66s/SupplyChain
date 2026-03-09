@@ -1,0 +1,100 @@
+﻿commit a037fef5ffc887798dee82554ac91df2c1fe3d76
+Author: toto289 <bsilva66h@gmail.com>
+Date:   Mon Feb 23 23:40:37 2026 -0300
+
+    feat: mount realtime listener in authenticated layout
+
+ src/app/dashboard/layout.tsx  | 8 +++++++-
+ src/app/inventory/layout.tsx  | 8 +++++++-
+ src/app/orders/layout.tsx     | 8 +++++++-
+ src/app/production/layout.tsx | 8 +++++++-
+ 4 files changed, 28 insertions(+), 4 deletions(-)
+
+commit fa4a4da657972d3b2374d470553dbb6b10cd0f46
+Author: toto289 <bsilva66h@gmail.com>
+Date:   Mon Feb 23 23:29:43 2026 -0300
+
+    feat: add realtime mount debug log
+
+ src/hooks/useRealtime.ts | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 6cbb8b6ec0c7a836139218679398f2dbe3c64d84
+Author: toto289 <bsilva66h@gmail.com>
+Date:   Mon Feb 23 23:17:19 2026 -0300
+
+    chore: fix build errors and finalize realtime implementation
+
+ build.log                                        |  129 +++
+ lint.json                                        |  Bin 0 -> 629418 bytes
+ lint.log                                         |  Bin 0 -> 11234 bytes
+ lint.txt                                         |   65 ++
+ migrations/034_create_inventory_adjustments.sql  |   14 +
+ migrations/035_ensure_stock_balances_unique.sql  |   16 +
+ migrations/036_create_people_activity_log.sql    |   21 +
+ migrations/037_optimize_materials_stock_view.sql |   31 +
+ src/app/api/inventory/route.ts                   |   79 +-
+ src/app/api/orders/[id]/route.ts                 |   21 +-
+ src/app/api/orders/route.ts                      |   14 +-
+ src/app/api/orders/submit/route.ts               |   39 +-
+ src/app/api/people-indicators/route.ts           |   16 +
+ src/app/api/production/[id]/route.ts             |   60 +-
+ src/app/api/production/route.ts                  |    8 +-
+ src/app/api/receipts/[id]/route.ts               |    8 +-
+ src/app/dashboard/client-dashboard.tsx           | 1063 +++++++++++++++-------
+ src/app/dashboard/page.tsx                       |    9 +-
+ src/app/globals.css                              |   28 +-
+ src/app/inventory/page.tsx                       |  262 +++++-
+ src/app/orders/page.tsx                          |  150 ++-
+ src/app/picking/page.tsx                         |  178 ++--
+ src/app/production/page.tsx                      |   47 +-
+ src/components/RealtimeListener.tsx              |    8 +
+ src/components/app-shell.tsx                     |  119 ++-
+ src/components/db-health.tsx                     |    4 +-
+ src/components/ping-health.tsx                   |    2 +-
+ src/hooks/useRealtime.ts                         |   95 ++
+ src/lib/cache.ts                                 |    2 +-
+ src/lib/db.ts                                    |   27 +-
+ src/lib/domain/types.ts                          |   12 +
+ src/lib/log-activity.ts                          |   31 +
+ src/lib/pubsub.ts                                |   26 +
+ src/lib/repository/dashboard.ts                  |   34 +-
+ src/lib/repository/inventory.ts                  |   27 +-
+ src/lib/repository/materials.ts                  |    6 +-
+ src/lib/repository/people-indicators.ts          |  479 ++++++++++
+ tsc.log                                          |    0
+ 38 files changed, 2629 insertions(+), 501 deletions(-)
+
+commit 8a91ae2f508ea8123b8cd19d41f29c0c72b312bc
+Author: toto289 <bsilva66h@gmail.com>
+Date:   Mon Feb 23 00:31:10 2026 -0300
+
+    Optimize Login Shell performance for better FID
+
+ src/app/layout.tsx              | 27 +++++++++++++++++-------
+ src/app/login/login-shell.tsx   | 46 +++++++++++++++++++++++++----------------
+ src/lib/domain/site-settings.ts | 12 +++++++++--
+ tailwind.config.ts              |  8 +++----
+ 4 files changed, 62 insertions(+), 31 deletions(-)
+
+commit 471333aaa62b3ac9df8a6db4ad75c9a9e619f6d9
+Author: toto289 <bsilva66h@gmail.com>
+Date:   Mon Feb 23 00:17:47 2026 -0300
+
+    Fix dashboard status overlap and MRP order visibility
+
+ check_db.ts                            |  16 ++++++
+ clear_dashboard_cache.ts               |  14 +++++
+ db_counts.txt                          |   3 +
+ debug_mrp.ts                           |  21 +++++++
+ debug_mrp_out.txt                      |   8 +++
+ debug_output.txt                       | Bin 0 -> 2408 bytes
+ final_check.txt                        |   7 +++
+ real_orders.txt                        |  27 +++++++++
+ src/app/api/orders/[id]/route.ts       |  33 +++++++----
+ src/app/api/orders/route.ts            |   9 ++-
+ src/app/dashboard/client-dashboard.tsx |  35 ++++++------
+ src/app/inventory/page.tsx             | 100 ++++++++++++++++-----------------
+ src/app/orders/page.tsx                |   1 -
+ view_counts.txt                        |   4 ++
+ 14 files changed, 197 insertions(+), 81 deletions(-)

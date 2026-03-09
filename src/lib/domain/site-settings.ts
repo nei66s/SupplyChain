@@ -2,6 +2,9 @@ import { getPool } from '@/lib/db';
 
 export type SiteSettings = {
   companyName: string;
+  document: string | null;
+  phone: string | null;
+  address: string | null;
   platformLabel: string;
   logoUrl: string | null;
   logoDataUrl: string | null;
@@ -11,6 +14,9 @@ export type SiteSettings = {
 
 export type SiteSettingsUpdate = Partial<{
   companyName: string;
+  document: string | null;
+  phone: string | null;
+  address: string | null;
   platformLabel: string;
   logoUrl: string | null;
   logoData: Buffer | null;
@@ -32,6 +38,9 @@ async function createDefaults() {
 
 function formatRow(row: {
   company_name: string;
+  document: string | null;
+  phone: string | null;
+  address: string | null;
   platform_label: string;
   logo_url: string | null;
   logo_data: Buffer | null;
@@ -40,6 +49,9 @@ function formatRow(row: {
 }): SiteSettings {
   return {
     companyName: row.company_name,
+    document: row.document,
+    phone: row.phone,
+    address: row.address,
     platformLabel: row.platform_label,
     logoUrl: row.logo_url,
     logoDataUrl: row.logo_data
@@ -51,11 +63,19 @@ function formatRow(row: {
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  await createDefaults();
-  const result = await getPool().query(
-    'SELECT company_name, platform_label, logo_url, logo_data, logo_content_type, updated_at FROM site_settings WHERE id = $1',
+  let result = await getPool().query(
+    'SELECT company_name, document, phone, address, platform_label, logo_url, logo_data, logo_content_type, updated_at FROM site_settings WHERE id = $1',
     [PRIMARY_SITE_ID]
   );
+
+  if (result.rowCount === 0) {
+    await createDefaults();
+    result = await getPool().query(
+      'SELECT company_name, document, phone, address, platform_label, logo_url, logo_data, logo_content_type, updated_at FROM site_settings WHERE id = $1',
+      [PRIMARY_SITE_ID]
+    );
+  }
+
   if (result.rowCount === 0) {
     throw new Error('Site settings are not available');
   }
@@ -73,6 +93,21 @@ export async function updateSiteSettings(update: SiteSettingsUpdate): Promise<Si
   if (update.companyName !== undefined) {
     assignments.push(`company_name = $${params.length + 1}`);
     params.push(update.companyName);
+  }
+
+  if (update.document !== undefined) {
+    assignments.push(`document = $${params.length + 1}`);
+    params.push(update.document);
+  }
+
+  if (update.phone !== undefined) {
+    assignments.push(`phone = $${params.length + 1}`);
+    params.push(update.phone);
+  }
+
+  if (update.address !== undefined) {
+    assignments.push(`address = $${params.length + 1}`);
+    params.push(update.address);
   }
 
   if (update.platformLabel !== undefined) {
@@ -106,7 +141,7 @@ export async function updateSiteSettings(update: SiteSettingsUpdate): Promise<Si
       UPDATE site_settings
       SET ${assignments.join(', ')}
       WHERE id = $${params.length + 1}
-      RETURNING company_name, platform_label, logo_url, logo_data, logo_content_type, updated_at
+      RETURNING company_name, document, phone, address, platform_label, logo_url, logo_data, logo_content_type, updated_at
     `,
     [...params, PRIMARY_SITE_ID]
   );

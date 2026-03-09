@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Info, AlertTriangle, CheckCircle, Inbox } from "lucide-react";
+import { Bell, Info, AlertTriangle, CheckCircle, Inbox, Trash2, CheckCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -68,27 +68,34 @@ export function NotificationCenter() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, read: true }),
-      }).catch(() => {});
+      }).catch(() => { });
       setItems((prev) => prev.filter((it) => it.id !== id));
     }, 140);
   };
 
   const handleMarkAll = () => {
     const unread = items.filter((it) => !it.readAt).map((i) => i.id);
-    setItems((prev) => prev.filter((it) => it.readAt));
+    setItems((prev) => prev.filter((it) => it.readAt !== undefined && it.readAt !== null));
     unread.forEach((id) =>
       fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, read: true }),
-      }).catch(() => {})
+      }).catch(() => { })
     );
+  };
+
+  const handleClearAll = () => {
+    setItems([]);
+    fetch('/api/notifications?all=1', {
+      method: 'DELETE',
+    }).catch(() => { });
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0" aria-label="Notificacoes">
+        <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0" aria-label="Notificacoes">
           <Bell className="h-5 w-5" />
           {mounted && unreadCount > 0 ? (
             <span
@@ -100,17 +107,34 @@ export function NotificationCenter() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="max-h-[70vh] w-[390px] overflow-auto p-2" sideOffset={10}>
+      <DropdownMenuContent className="max-h-[70vh] w-[min(390px,calc(100vw-1rem))] overflow-auto p-2" sideOffset={10}>
         <div className="flex items-center justify-between px-2 py-1">
           <div>
             <h3 className="text-sm font-semibold">Notificacoes</h3>
             <p className="text-xs text-muted-foreground">{mounted ? `${unreadCount} nao lida(s)` : ''}</p>
           </div>
-          {unreadCount > 0 ? (
-            <button className="text-xs font-medium text-primary hover:underline" onClick={handleMarkAll}>
-              Marcar todas
-            </button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 ? (
+              <button
+                title="Marcar todas como lidas"
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                onClick={handleMarkAll}
+              >
+                <CheckCheck className="h-3 w-3" />
+                Lidas
+              </button>
+            ) : null}
+            {items.length > 0 ? (
+              <button
+                title="Limpar todas as notificacoes"
+                className="flex items-center gap-1 text-xs font-medium text-destructive hover:underline"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="h-3 w-3" />
+                Limpar
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-2 space-y-1">
@@ -129,9 +153,8 @@ export function NotificationCenter() {
                 <button
                   type="button"
                   key={item.id}
-                  className={`group flex w-full items-start gap-3 rounded-lg border border-transparent p-3 text-left transition-all duration-150 ${
-                    item._removing ? 'translate-x-2 opacity-0' : 'opacity-100'
-                  } ${unread ? 'bg-primary/5' : 'hover:bg-muted/40'}`}
+                  className={`group flex w-full items-start gap-3 rounded-lg border border-transparent p-3 text-left transition-all duration-150 ${item._removing ? 'translate-x-2 opacity-0' : 'opacity-100'
+                    } ${unread ? 'bg-primary/5' : 'hover:bg-muted/40'}`}
                   onClick={() => handleMarkRead(item.id)}
                 >
                   <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">

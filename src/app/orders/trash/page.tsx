@@ -18,11 +18,12 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatDate } from '@/lib/utils';
 import { readinessLabel } from '@/lib/domain/i18n';
-import { Order, StockBalance, User } from '@/lib/domain/types';
+import { Order, StockBalance, StockReservation, User } from '@/lib/domain/types';
 
 export default function OrdersTrashPage() {
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [stockBalances, setStockBalances] = React.useState<StockBalance[]>([]);
+  const [stockReservations, setStockReservations] = React.useState<StockReservation[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
 
   const loadData = React.useCallback(async () => {
@@ -35,10 +36,11 @@ export default function OrdersTrashPage() {
       const data = await ordersRes.json();
       setOrders(Array.isArray(data) ? data : []);
     }
-      if (inventoryRes.ok) {
-        const data = await inventoryRes.json();
-        setStockBalances(Array.isArray(data.stockBalances) ? data.stockBalances : []);
-      }
+    if (inventoryRes.ok) {
+      const data = await inventoryRes.json();
+      setStockBalances(Array.isArray(data.stockBalances) ? data.stockBalances : []);
+      setStockReservations(Array.isArray(data.stockReservations) ? data.stockReservations : []);
+    }
     if (usersRes.ok) {
       const data = await usersRes.json();
       setUsers(Array.isArray(data.users) ? data.users : []);
@@ -77,7 +79,7 @@ export default function OrdersTrashPage() {
   }, [stockBalances]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
@@ -98,7 +100,7 @@ export default function OrdersTrashPage() {
                 <button
                   key={order.id}
                   onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${
+                  className={`w-full rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition hover:border-primary sm:p-4 ${
                     selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
@@ -132,8 +134,8 @@ export default function OrdersTrashPage() {
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={async () => {
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={async () => {
                     try {
                       const res = await fetch(`/api/orders/${selectedOrder.id}`, {
                         method: 'PATCH',
@@ -154,7 +156,7 @@ export default function OrdersTrashPage() {
                   }}>
                     <RotateCcw className="mr-2 h-4 w-4" />Restaurar
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={async () => {
+                  <Button className="w-full sm:w-auto" size="sm" variant="destructive" onClick={async () => {
                     try {
                       const res = await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
                       if (!res.ok) {
@@ -175,7 +177,7 @@ export default function OrdersTrashPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <Label>Cliente</Label>
                   <Input value={selectedOrder.clientName} disabled />

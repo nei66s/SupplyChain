@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, UserX, Trash2, CheckCircle, Save, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,20 +21,10 @@ type AccountForm = {
   password: string;
 };
 
-type AccountRecord = { id: string; name: string; email: string; role: string };
+type AccountRecord = { id: string; name: string; email: string; role: string; isBlocked?: boolean };
 type ApiUsersList = { users: AccountRecord[]; message?: string };
 type ApiUserCreationResponse = { user: AccountRecord; message?: string };
 type ApiUserUpdateResponse = { user: AccountRecord; message?: string };
-type SiteSettingsPayload = {
-  companyName: string;
-  platformLabel: string;
-  logoUrl: string | null;
-  logoDataUrl: string | null;
-};
-type SiteSettingsForm = {
-  companyName: string;
-  logoUrl: string;
-};
 
 const roleOptions: Role[] = ['Admin', 'Manager', 'Seller', 'Input Operator', 'Production Operator', 'Picker'];
 
@@ -52,17 +42,16 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false);
   const [roleSelection, setRoleSelection] = useState<Record<string, Role>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [siteSettings, setSiteSettings] = useState<SiteSettingsPayload | null>(null);
-  const [siteSettingsLoading, setSiteSettingsLoading] = useState(true);
-  const [settingsForm, setSettingsForm] = useState<SiteSettingsForm>({
-    companyName: '',
-    logoUrl: '',
-  });
+  const [companyName, setCompanyName] = useState('');
+  const [document, setDocument] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-  const [logoDataDirty, setLogoDataDirty] = useState(false);
   const [logoFileName, setLogoFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingBranding, setLoadingBranding] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchUsers = useCallback(async () => {
     if (!authUser || authUser.role !== 'Admin') return;
@@ -95,50 +84,110 @@ export default function AdminPage() {
 
   useEffect(() => {
     let active = true;
-    if (!authUser) {
-      setSiteSettingsLoading(false);
-      return;
-    }
-
-    setSiteSettingsLoading(true);
-
     fetch('/api/site', { cache: 'no-store', credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error('Nao foi possivel carregar a marca');
         }
-        return (await response.json()) as SiteSettingsPayload;
+        return (await response.json()) as { companyName: string; document?: string; phone?: string; address?: string; logoDataUrl: string | null };
       })
       .then((payload) => {
         if (!active) return;
-        setSiteSettings(payload);
-        setSettingsForm({
-          companyName: payload.companyName,
-          logoUrl: payload.logoUrl ?? '',
-        });
-        setLogoDataUrl(payload.logoDataUrl ?? null);
-        setLogoDataDirty(false);
-        setLogoFileName(payload.logoDataUrl ? 'Logo atual' : null);
+        setCompanyName(payload.companyName || 'Black Tower X');
+        setDocument(payload.document || '');
+        setPhone(payload.phone || '');
+        setAddress(payload.address || '');
+        setLogoDataUrl(payload.logoDataUrl);
+        setLogoFileName(payload.logoDataUrl ? 'Logo salvo' : null);
+        setLoadingBranding(false);
       })
-      .catch((error) => {
+      .catch(() => {
         if (!active) return;
-        console.error('site settings load error', error);
-        toast({
-          title: 'Erro ao carregar marca',
-          description: 'Verifique a conexao e tente novamente.',
-          variant: 'destructive',
-        });
-      })
-      .finally(() => {
-        if (active) {
-          setSiteSettingsLoading(false);
-        }
+        setCompanyName((prev) => prev || 'Black Tower X');
+        setLoadingBranding(false);
       });
-
     return () => {
       active = false;
     };
-  }, [authUser, toast]);
+  }, []);
+
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setLogoDataUrl(result);
+      setLogoFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSiteSettingsSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!authUser) return;
+
+    const nextCompanyName = companyName.trim();
+    if (!nextCompanyName) {
+      toast({
+        title: 'Nome vazio',
+        description: 'Informe o nome da empresa antes de salvar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!logoDataUrl) {
+      toast({
+        title: 'Logo necessário',
+        description: 'Faça upload do logo para salvar a identidade.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSavingSettings(true);
+    const payload: Record<string, unknown> = {
+      companyName: nextCompanyName,
+      document: document.trim() || null,
+      phone: phone.trim() || null,
+      address: address.trim() || null,
+      platformLabel: 'Plataforma SaaS',
+      logoDataUrl,
+    };
+
+    try {
+      const response = await fetch('/api/site', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message ?? 'Nao foi possivel atualizar a marca');
+      }
+      setCompanyName(result.companyName);
+      setDocument(result.document || '');
+      setPhone(result.phone || '');
+      setAddress(result.address || '');
+      setLogoDataUrl(result.logoDataUrl ?? null);
+      setLogoFileName(result.logoDataUrl ? 'Logo enviado' : null);
+      toast({
+        title: 'Marca atualizada',
+        description: 'Nome e logo personalizados foram salvos.',
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Verifique os dados e tente novamente.';
+      toast({
+        title: 'Erro ao atualizar marca',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -183,81 +232,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setLogoDataUrl(result);
-      setLogoDataDirty(true);
-      setLogoFileName(file.name);
-      setSettingsForm((prev) => ({ ...prev, logoUrl: '' }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSiteSettingsSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!authUser) return;
-
-    const nextCompanyName = settingsForm.companyName.trim();
-    if (!nextCompanyName) {
-      toast({
-        title: 'Nome vazio',
-        description: 'Informe o nome da empresa antes de salvar.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSavingSettings(true);
-    const payload: Record<string, unknown> = {
-      companyName: nextCompanyName,
-      logoUrl: settingsForm.logoUrl.trim() || null,
-      platformLabel: 'Plataforma SaaS',
-    };
-    if (logoDataDirty) {
-      payload.logoDataUrl = logoDataUrl;
-    }
-
-    try {
-      const response = await fetch('/api/site', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message ?? 'Nao foi possivel atualizar a marca');
-      }
-      setSiteSettings(result);
-      setSettingsForm({
-        companyName: result.companyName,
-        logoUrl: result.logoUrl ?? '',
-      });
-      setLogoDataUrl(result.logoDataUrl ?? null);
-      setLogoDataDirty(false);
-      setLogoFileName(
-        result.logoDataUrl ? 'Logo atual' : result.logoUrl ? 'Logo por URL' : null
-      );
-      toast({
-        title: 'Marca atualizada',
-        description: 'Nome e logo personalizados foram salvos.',
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Verifique os dados e tente novamente.';
-      toast({
-        title: 'Erro ao atualizar marca',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   const handleRoleUpdate = async (userId: string) => {
     if (!authUser) return;
     const nextRole = roleSelection[userId];
@@ -293,16 +267,80 @@ export default function AdminPage() {
     }
   };
 
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => a.email.localeCompare(b.email));
-  }, [users]);
+  const handleToggleBlock = async (userId: string, currentBlocked: boolean) => {
+    if (!authUser) return;
+    setUpdatingId(userId);
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isBlocked: !currentBlocked }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message ?? 'Nao foi possivel atualizar o status do usuario');
+      }
+      setUsers((prev) =>
+        prev.map((user) => (user.id === userId ? { ...user, isBlocked: result.user.isBlocked } : user))
+      );
+      toast({
+        title: !currentBlocked ? 'Usuario bloqueado' : 'Usuario desbloqueado',
+        description: `O acesso do usuario foi ${!currentBlocked ? 'bloqueado' : 'restaurado'}.`,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Tente novamente em breve.';
+      toast({
+        title: 'Erro ao alterar status',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
-  const trimmedPreviewName = settingsForm.companyName.trim();
-  const trimmedPreviewLogo = settingsForm.logoUrl.trim();
-  const previewName =
-    trimmedPreviewName || siteSettings?.companyName || 'Black Tower X';
-  const previewLogo =
-    logoDataUrl ?? trimmedPreviewLogo || siteSettings?.logoUrl || '/black-tower-x-transp.png';
+  const handleDelete = async (userId: string) => {
+    if (!authUser) return;
+    if (!confirm('Tem certeza que deseja excluir este usuario? Essa acao nao pode ser desfeita.')) return;
+    setUpdatingId(userId);
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message ?? 'Nao foi possivel excluir o usuario');
+      }
+      setUsers((prev) => prev.filter((user) => user.id !== userId));
+      toast({
+        title: 'Usuario excluido',
+        description: 'O usuario foi removido com sucesso.',
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Tente novamente em breve.';
+      toast({
+        title: 'Erro ao excluir usuario',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const sortedUsers = useMemo(() => {
+    let result = [...users];
+    if (searchTerm.trim()) {
+      const lowerQuery = searchTerm.toLowerCase();
+      result = result.filter(u => u.name.toLowerCase().includes(lowerQuery) || u.email.toLowerCase().includes(lowerQuery));
+    }
+    return result.sort((a, b) => a.email.localeCompare(b.email));
+  }, [users, searchTerm]);
+
+  const previewLogo = logoDataUrl ?? '/black-tower-x-transp.png';
+  const previewCompanyName = loadingBranding ? 'Carregando...' : companyName || 'Black Tower X';
 
   if (authLoading) {
     return (
@@ -332,35 +370,49 @@ export default function AdminPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Marca personalizada</CardTitle>
+          <CardTitle className="font-headline">Informações da empresa</CardTitle>
           <CardDescription>
-            Defina o nome exibido aos operadores e um logo que represente a sua empresa.
+            Defina as informações exibidas aos operadores na plataforma e relatórios, e o logo atualizado.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSiteSettingsSubmit}>
-            <div className="grid gap-2">
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSiteSettingsSubmit}>
+            <div className="grid gap-2 md:col-span-2">
               <Label htmlFor="site-company-name">Nome da empresa</Label>
               <Input
                 id="site-company-name"
-                value={settingsForm.companyName}
-                onChange={(event) =>
-                  setSettingsForm((prev) => ({ ...prev, companyName: event.target.value }))
-                }
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="site-logo-url">URL do logo</Label>
+              <Label htmlFor="site-document">CNPJ / CPF</Label>
               <Input
-                id="site-logo-url"
-                placeholder="https://meusite.com/logo.png"
-                value={settingsForm.logoUrl}
-                onChange={(event) =>
-                  setSettingsForm((prev) => ({ ...prev, logoUrl: event.target.value }))
-                }
+                id="site-document"
+                value={document}
+                onChange={(event) => setDocument(event.target.value)}
+                placeholder="00.000.000/0000-00"
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="site-phone">Telefone / Contato</Label>
+              <Input
+                id="site-phone"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <Label htmlFor="site-address">Endereço completo</Label>
+              <Input
+                id="site-address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Rua, Número - Bairro, Cidade - Estado, CEP"
+              />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
               <Label htmlFor="site-logo-file">Upload do logo</Label>
               <input
                 ref={fileInputRef}
@@ -390,23 +442,21 @@ export default function AdminPage() {
                 onClick={() => {
                   if (fileInputRef.current) fileInputRef.current.value = '';
                   setLogoDataUrl(null);
-                  setLogoDataDirty(true);
                   setLogoFileName(null);
                 }}
-                disabled={!logoFileName && !siteSettings?.logoDataUrl}
               >
-                Limpar logo armazenado
+                Limpar logo
               </Button>
             </div>
-            <div className="lg:col-span-2">
-              <Button type="submit" disabled={savingSettings}>
+            <div className="md:col-span-2">
+              <Button className="w-full sm:w-auto" type="submit" disabled={savingSettings}>
                 {savingSettings ? 'Salvando identidade...' : 'Salvar identidade'}
               </Button>
             </div>
           </form>
           <div className="rounded-2xl border border-border/70 bg-muted p-4">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Pré-visualização</p>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <div className="relative h-12 w-12 rounded-lg border border-border/70 bg-card/50 p-2">
                 <Image
                   src={previewLogo}
@@ -418,11 +468,8 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <p className="text-sm font-semibold">{previewName}</p>
+                <p className="text-sm font-semibold">{companyName}</p>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Plataforma SaaS</p>
-                {siteSettingsLoading && (
-                  <p className="text-[11px] text-muted-foreground">Carregando marca...</p>
-                )}
               </div>
             </div>
           </div>
@@ -433,113 +480,155 @@ export default function AdminPage() {
           <CardTitle className="flex items-center gap-2 font-headline">
             <Shield className="h-5 w-5" /> Administracao de contas
           </CardTitle>
-          <CardDescription>Crie contas, redefina senhas e atribua roles.</CardDescription>
+          <CardDescription>Crie contas e gerencie os usuarios cadastrados e suas permissoes.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleCreate}>
-            <div className="grid gap-2">
-              <Label htmlFor="admin-name">Nome</Label>
-              <Input
-                id="admin-name"
-                value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="admin-email">E-mail</Label>
-              <Input
-                id="admin-email"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="admin-password">Senha</Label>
-              <Input
-                id="admin-password"
-                type="password"
-                value={form.password}
-                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="admin-role">Role</Label>
-              <Select
-                value={form.role}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, role: value as Role }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((roleOption) => (
-                    <SelectItem key={roleOption} value={roleOption}>
-                      {roleLabel(roleOption)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="lg:col-span-2">
-              <Button type="submit" disabled={creating}>
-                Criar conta
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Usuarios cadastrados</CardTitle>
-          <CardDescription>Altere roles rapidamente ou redefina senhas via API.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {loadingUsers && <p className="text-sm text-muted-foreground">Carregando usuarios...</p>}
-          {!loadingUsers && sortedUsers.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum usuario encontrado.</p>
-          )}
-          <div className="space-y-2">
-            {sortedUsers.map((account) => (
-              <div
-                key={account.id}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-border/70 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{account.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{account.email}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={roleSelection[account.id] ?? (account.role as Role)}
-                    onValueChange={(value) =>
-                      setRoleSelection((prev) => ({ ...prev, [account.id]: value as Role }))
-                    }
-                    disabled={account.id === authUser.id}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roleOptions.map((roleOption) => (
-                        <SelectItem key={roleOption} value={roleOption}>
-                          {roleLabel(roleOption)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    onClick={() => handleRoleUpdate(account.id)}
-                    disabled={account.id === authUser.id || updatingId === account.id}
-                  >
-                    Salvar role
-                  </Button>
-                </div>
-                <Badge variant="outline">{account.role}</Badge>
+        <CardContent className="space-y-8">
+          <div className="space-y-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Nova conta</h3>
+            <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreate}>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-name">Nome</Label>
+                <Input
+                  id="admin-name"
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
               </div>
-            ))}
+              <div className="grid gap-2">
+                <Label htmlFor="admin-email">E-mail</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-password">Senha</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="admin-role">Role</Label>
+                <Select
+                  value={form.role}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, role: value as Role }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((roleOption) => (
+                      <SelectItem key={roleOption} value={roleOption}>
+                        {roleLabel(roleOption)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Button className="w-full sm:w-auto" type="submit" disabled={creating}>
+                  Criar conta
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          <hr className="border-border/50" />
+
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Usuarios cadastrados</h3>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou e-mail..."
+                  className="pl-9 h-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {loadingUsers && <p className="text-sm text-muted-foreground">Carregando usuarios...</p>}
+            {!loadingUsers && sortedUsers.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum usuario listado.</p>
+            )}
+            <div className="space-y-2">
+              {sortedUsers.map((account) => (
+                <div
+                  key={account.id}
+                  className="flex flex-col items-start gap-3 rounded-md border border-border/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="min-w-0">
+                      <p className={`truncate text-sm font-semibold ${account.isBlocked ? 'text-muted-foreground line-through' : ''}`}>
+                        {account.name}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{account.email}</p>
+                    </div>
+                    {account.isBlocked && <Badge variant="destructive" className="ml-2 text-[10px]">Bloqueado</Badge>}
+                  </div>
+                  <div className="flex-none flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center justify-center">
+                    <Select
+                      value={roleSelection[account.id] ?? (account.role as Role)}
+                      onValueChange={(value) =>
+                        setRoleSelection((prev) => ({ ...prev, [account.id]: value as Role }))
+                      }
+                      disabled={account.id === authUser.id}
+                    >
+                      <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleOptions.map((roleOption) => (
+                          <SelectItem key={roleOption} value={roleOption}>
+                            {roleLabel(roleOption)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 justify-end">
+                    <Badge variant="outline">{roleLabel(account.role as Role)}</Badge>
+                    <Button
+                      variant="outline"
+                      className="h-8 w-8 text-primary"
+                      size="icon"
+                      onClick={() => handleRoleUpdate(account.id)}
+                      disabled={account.id === authUser.id || updatingId === account.id || roleSelection[account.id] === account.role}
+                      title="Salvar role"
+                    >
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={account.isBlocked ? "outline" : "destructive"}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleToggleBlock(account.id, !!account.isBlocked)}
+                      disabled={account.id === authUser.id || updatingId === account.id}
+                      title={account.isBlocked ? 'Desbloquear usuario' : 'Bloquear usuario'}
+                    >
+                      {account.isBlocked ? <CheckCircle className="h-4 w-4 text-green-500" /> : <UserX className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDelete(account.id)}
+                      disabled={account.id === authUser.id || updatingId === account.id}
+                      title="Excluir usuario"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

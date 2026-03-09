@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { isUnauthorizedError, requireAuth } from '@/lib/auth'
+import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
+import { logActivity } from '@/lib/log-activity'
+import { publishRealtimeEvent } from '@/lib/pubsub'
 
 type ApiOrder = {
   id: string
@@ -35,6 +38,8 @@ type ApiOrder = {
   labelPrintCount: number
   total: number
   trashedAt: string | null
+  hasPendingProduction?: boolean
+  isMrp?: boolean
 }
 
 type OrderRow = {
@@ -67,6 +72,8 @@ type OrderRow = {
   condition_template_name: string | null
   conditions: any | null
   item_description: string | null
+  has_pending_production?: boolean | null
+  order_source: string | null
 }
 
 const statusMap: Record<string, ApiOrder['status']> = {
@@ -89,12 +96,40 @@ function normalizeStatus(status?: string | null): ApiOrder['status'] {
   return statusMap[normalized] ?? (normalized.toUpperCase() as ApiOrder['status'])
 }
 
+const BRAZIL_TIME_ZONE = 'America/Sao_Paulo'
+const brazilDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: BRAZIL_TIME_ZONE })
+
+function formatBrazilianDate(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10)
+  return brazilDateFormatter.format(date)
+}
+
+function getBrazilianDayKey(iso: string) {
+  return formatBrazilianDate(iso).replace(/-/g, '')
+}
+
 function computeReadiness(items: ApiOrder['items']) {
   const totalRequested = items.reduce((acc, item) => acc + item.qtyRequested, 0)
   const totalReserved = items.reduce((acc, item) => acc + item.qtyReservedFromStock, 0)
   if (totalReserved <= 0) return 'NOT_READY'
   if (totalReserved >= totalRequested) return 'READY_FULL'
   return 'READY_PARTIAL'
+}
+
+async function generateManualOrderNumber(createdIso: string) {
+  const dateStr = formatBrazilianDate(createdIso)
+  const dayKey = dateStr.replace(/-/g, '')
+  const counter = await query<{ last_seq: number }>(
+    `INSERT INTO order_number_counters (day, last_seq)
+     VALUES ($1::date, 1)
+     ON CONFLICT (day) DO UPDATE
+       SET last_seq = order_number_counters.last_seq + 1
+     RETURNING last_seq`,
+    [dateStr]
+  )
+  const seq = Number(counter.rows[0]?.last_seq ?? 0)
+  return `${dayKey}${String(seq).padStart(2, '0')}`
 }
 
 const perfEnabled = process.env.NODE_ENV !== 'production' || process.env.DEBUG_PERF === 'true'
@@ -104,10 +139,12 @@ function errorMessage(err: unknown): string {
   return String(err)
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    await requireAuth(request)
     const totalStart = process.hrtime.bigint()
-    const baseQuery = `SELECT
+    const res = await query<OrderRow>(
+      `SELECT
          o.id as order_id,
          o.order_number,
          o.status,
@@ -135,17 +172,18 @@ export async function GET() {
          oi.item_condition,
          oi.condition_template_name,
          oi.item_description,
-         m.name as material_name,
-         m.unit as material_unit
-       FROM orders o
+        m.name as material_name,
+        m.unit as material_unit,
+        o.source AS order_source,
+        pp.has_pending_production AS has_pending_production
+      FROM orders o
        LEFT JOIN order_items oi ON oi.order_id = o.id
-       LEFT JOIN materials m ON m.id = oi.material_id`
-
-     const prodFilter = process.env.NODE_ENV === 'production'
-      ? " WHERE (o.status IS NULL OR lower(o.status) NOT IN ('rascunho','draft'))"
-      : ''
-
-     const res = await query<OrderRow>(`${baseQuery}${prodFilter} ORDER BY o.created_at ASC`)
+       LEFT JOIN materials m ON m.id = oi.material_id
+       LEFT JOIN LATERAL (
+         SELECT EXISTS(SELECT 1 FROM production_tasks pt WHERE pt.order_id = o.id AND pt.status <> 'DONE') AS has_pending_production
+       ) pp ON true
+       ORDER BY o.created_at ASC`
+    )
     const rows = res.rows || []
     const queryMs = res.queryTimeMs
 
@@ -157,8 +195,8 @@ export async function GET() {
       if (r.order_number) orderNumberStored = String(r.order_number)
       if (!map.has(oid)) {
         const created = r.created_at ? new Date(r.created_at) : new Date()
-        const day = created.toISOString().slice(0, 10)
-        const dayKey = day.replace(/-/g, '')
+        const createdIso = created.toISOString()
+        const dayKey = getBrazilianDayKey(createdIso)
         if (orderNumberStored && /^\d{8}\d+$/.test(orderNumberStored)) {
           const storedDay = orderNumberStored.slice(0, 8)
           const storedSeq = Number(orderNumberStored.slice(8)) || 0
@@ -188,6 +226,8 @@ export async function GET() {
           labelPrintCount: Number(r.label_print_count ?? 0),
           total: Number(r.total ?? 0),
           trashedAt: r.trashed_at ? (r.trashed_at instanceof Date ? r.trashed_at.toISOString() : String(r.trashed_at)) : null,
+          hasPendingProduction: Boolean(r.has_pending_production ?? false),
+          isMrp: String(r.order_source ?? '').toLowerCase() === 'mrp',
         })
       }
       if (r.item_id) {
@@ -256,6 +296,10 @@ export async function GET() {
     }
     return NextResponse.json(orders)
   } catch (err: unknown) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+    }
+    console.error('orders GET error', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }
@@ -283,20 +327,11 @@ export async function POST(request: NextRequest) {
     if (source === 'mrp') {
       orderNumber = `MRP-${orderId}`
     } else {
-      const dateStr = createdIso.slice(0, 10)
-      const dateKey = dateStr.replace(/-/g, '')
-      const sameDayRes = await query<{ id: number }>(
-        'SELECT id FROM orders WHERE created_at::date = $1::date ORDER BY created_at ASC',
-        [dateStr]
-      )
-      const ids = sameDayRes.rows.map((r) => Number(r.id))
-      const pos = ids.indexOf(orderId)
-      const seq = pos >= 0 ? pos + 1 : ids.length
-      orderNumber = `${dateKey}${String(seq).padStart(2, '0')}`
+      orderNumber = await generateManualOrderNumber(createdIso)
     }
     await query('UPDATE orders SET order_number = $1 WHERE id = $2', [orderNumber, orderId])
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       id: `O-${orderId}`,
       orderNumber,
       status: normalizeStatus(status),
@@ -313,7 +348,23 @@ export async function POST(request: NextRequest) {
       total: 0,
       trashedAt: null,
     })
+
+    // Background refresh
+    await invalidateDashboardCache()
+    await refreshDashboardSnapshot()
+    revalidateDashboardTag()
+
+    await publishRealtimeEvent('ORDER_CREATED', { orderId })
+
+    // Log activity
+    logActivity(auth.userId, 'ORDER_CREATED', 'order', orderId).catch(console.error)
+
+    return response
   } catch (err: unknown) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+    }
+    console.error('orders POST error', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

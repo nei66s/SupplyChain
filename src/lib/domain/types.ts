@@ -114,6 +114,8 @@ export type OrderItem = {
   qtyToBuy?: number;
   qtySeparated: number;
   separatedWeight?: number;
+  producedQty?: number;
+  producedWeight?: number;
   itemCondition?: string;
   conditionTemplateName?: string;
   // Lista de condições específicas do item (ex: cor: vermelho, lote: 1234)
@@ -214,6 +216,18 @@ export type MetricDaily = {
   ordersCreated: number;
   receiptsPosted: number;
   picksCompleted: number;
+};
+
+export type InventoryAdjustment = {
+  id: string;
+  materialId: string;
+  materialName?: string;
+  qtyBefore: number;
+  qtyAfter: number;
+  adjustmentQty: number;
+  reason: string;
+  actor: string;
+  createdAt: string;
 };
 
 export type PilotDb = {

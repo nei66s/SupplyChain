@@ -6,73 +6,74 @@
 
 @layer base {
   :root {
-    --background: 210 30% 96%;
-    --foreground: 219 20% 18%;
-    --card: 210 20% 98%;
-    --card-foreground: 219 20% 18%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 219 20% 18%;
-    --primary: 215 90% 54%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 208 90% 60%;
+    --secondary: 210 33% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 211 35% 96%;
-    --muted-foreground: 214 13% 46%;
-    --accent: 214 75% 68%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 353 75% 50%;
+    --muted: 210 33% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 33% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 60% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 212 35% 90%;
-    --input: 212 35% 90%;
-    --ring: 215 90% 60%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 60%;
     --radius: 0.75rem;
-    --chart-1: 215 90% 54%;
-    --chart-2: 210 90% 56%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 212 95% 64%;
     --chart-3: 199 89% 48%;
-    --chart-4: 42 78% 55%;
-    --chart-5: 27 88% 59%;
-    --sidebar-background: 210 20% 98%;
-    --sidebar-foreground: 219 20% 18%;
+    --chart-4: 38 80% 52%;
+    --chart-5: 356 62% 54%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-primary: 215 90% 54%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 217 33% 95%;
-    --sidebar-accent-foreground: 215 20% 42%;
-    --sidebar-ring: 215 90% 60%;
+    --sidebar-accent: 220 60% 96%;
+    --sidebar-accent-foreground: 221 83% 42%;
+    --sidebar-ring: 221 83% 60%;
   }
+
   .dark {
-    --background: 220 30% 6%;
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 223 30% 12%;
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 84% 4.9%;
+    --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 214 90% 62%;
+    --primary: 217 91% 60%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 209 32% 20%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 209 30% 15%;
-    --muted-foreground: 210 40% 98%;
-    --accent: 217 42% 26%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 358 75% 50%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 209 30% 20%;
-    --input: 209 30% 20%;
-    --ring: 214 90% 68%;
-    --chart-1: 214 90% 62%;
-    --chart-2: 210 90% 66%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217 91% 68%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 212 95% 66%;
     --chart-3: 199 89% 58%;
     --chart-4: 43 74% 56%;
     --chart-5: 27 87% 57%;
-    --sidebar-background: 223 30% 12%;
+    --sidebar-background: 222.2 84% 4.9%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-border: 209 30% 20%;
-    --sidebar-primary: 214 90% 62%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 220 45% 25%;
+    --sidebar-accent: 220 35% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-ring: 214 90% 68%;
+    --sidebar-ring: 217 91% 68%;
   }
 }
 
@@ -84,75 +85,28 @@
   }
 
   [data-sidebar="sidebar"][data-mobile="true"] {
-    --sidebar-width: 18rem;
+    --sidebar-width: min(18rem, calc(100vw - 1rem));
   }
 
   /* Hero component styles */
   .hero {
-    @apply relative overflow-hidden rounded-lg p-8 md:p-12 shadow-lg bg-gradient-to-r from-primary to-accent text-primary-foreground;
+    @apply relative overflow-hidden rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 shadow-lg bg-gradient-to-r from-primary to-accent text-primary-foreground;
   }
+
   .hero-inner {
-    @apply container flex flex-col md:flex-row items-center justify-between gap-6;
+    @apply flex w-full flex-col items-start justify-between gap-6 md:flex-row md:items-center;
   }
+
   .hero-title {
-    @apply font-headline text-3xl md:text-5xl leading-tight mb-3;
+    @apply mb-3 font-headline text-2xl leading-tight sm:text-3xl md:text-4xl lg:text-5xl;
   }
+
   .hero-subtitle {
-    @apply text-lg md:text-xl text-primary-foreground/90 max-w-2xl;
+    @apply max-w-2xl text-base text-primary-foreground/90 sm:text-lg md:text-xl;
   }
+
   .hero-ctas {
     @apply mt-6 flex flex-wrap gap-3;
-  }
-  .hero-cta {
-    @apply rounded-2xl border font-semibold tracking-wide transition duration-150 ease-out;
-    border-color: transparent;
-  }
-  .hero-cta:hover,
-  .hero-cta:focus-visible {
-    @apply outline-none;
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
-  }
-  .dashboard-hero {
-    @apply rounded-[32px] border border-border/70 bg-white/80 p-6 shadow-lg dark:bg-slate-900/70;
-    backdrop-filter: blur(12px);
-  }
-  .dashboard-hero-inner {
-    @apply flex flex-col gap-6 md:flex-row md:items-center md:justify-between;
-  }
-  .dashboard-hero-stats {
-    @apply mt-4 grid grid-cols-2 gap-3 md:grid-cols-4;
-  }
-  .dashboard-hero-stat {
-    @apply rounded-2xl border border-border/40 bg-background/70 p-3 text-sm;
-  }
-  .dashboard-hero-stat p:first-child {
-    @apply font-headline text-2xl;
-  }
-  .interactive-card {
-    @apply transition-transform duration-150 ease-out;
-  }
-  .interactive-card:hover,
-  .interactive-card:focus-within {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
-  }
-  .chart-card {
-    background-color: rgba(255, 255, 255, 0.92);
-    border-color: rgba(148, 163, 184, 0.5);
-  }
-  .dark .chart-card {
-    background-color: rgba(15, 23, 42, 0.75);
-    border-color: rgba(148, 163, 184, 0.3);
-  }
-  .text-eyebrow {
-    @apply text-xs uppercase tracking-[0.3em] text-muted-foreground;
-  }
-  .text-lead {
-    @apply text-lg font-semibold leading-relaxed text-foreground;
-  }
-  .text-body-2 {
-    @apply text-sm text-muted-foreground;
   }
 }
 
@@ -160,20 +114,31 @@
   * {
     box-sizing: border-box;
   }
+
   body {
     font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground min-h-screen w-full overflow-x-hidden;
     line-height: 1.55;
-    background-image: radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 55%);
+    background-image: radial-gradient(circle at top right, rgba(37, 99, 235, 0.06), transparent 42%);
   }
-  h1,h2,h3,h4,h5 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
     font-family: 'Space Grotesk', Inter, system-ui, sans-serif;
     color: hsl(var(--foreground));
   }
+
   .container {
-    @apply mx-auto px-4 max-w-7xl;
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  * {
+    @apply border-border;
   }
 }
 
@@ -188,8 +153,21 @@
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Hide number input spinners */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
 }

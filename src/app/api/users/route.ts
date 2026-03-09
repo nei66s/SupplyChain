@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { getPool } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
+import { isUnauthorizedError, requireAdmin } from '@/lib/auth';
 import { Role } from '@/lib/domain/types';
 
 const ROLES: Role[] = ['Admin', 'Manager', 'Seller', 'Input Operator', 'Production Operator', 'Picker'];
@@ -10,19 +10,23 @@ const ROLES: Role[] = ['Admin', 'Manager', 'Seller', 'Input Operator', 'Producti
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
-    const result = await getPool().query('SELECT id, name, email, role, avatar_url FROM users ORDER BY role, name');
+    const result = await getPool().query('SELECT id, name, email, role, avatar_url, is_blocked FROM users ORDER BY role, name');
     return NextResponse.json({
-      users: result.rows.map((user) => ({
+      users: result.rows.map((user: { id: string; name: string; email: string; role: Role; avatar_url: string | null; is_blocked: boolean }) => ({
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         avatarUrl: user.avatar_url ?? undefined,
+        isBlocked: user.is_blocked,
       })),
     });
   } catch (err) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ message: 'Nao autorizado' }, { status: 401 });
+    }
     console.error('users GET error', err);
-    return NextResponse.json({ message: 'Nao autorizado' }, { status: 401 });
+    return NextResponse.json({ message: 'Erro interno' }, { status: 500 });
   }
 }
 
@@ -52,8 +56,8 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     await getPool().query(
-      'INSERT INTO users (id, name, email, password_hash, role, avatar_url) VALUES ($1, $2, $3, $4, $5, $6)',
-      [id, name, email, passwordHash, role, avatarUrl]
+      'INSERT INTO users (id, name, email, password_hash, role, avatar_url, is_blocked) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [id, name, email, passwordHash, role, avatarUrl, false]
     );
 
     return NextResponse.json({
@@ -63,9 +67,13 @@ export async function POST(req: NextRequest) {
         email,
         role,
         avatarUrl: avatarUrl || undefined,
+        isBlocked: false,
       },
     }, { status: 201 });
   } catch (err) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ message: 'Nao autorizado' }, { status: 401 });
+    }
     console.error('users POST error', err);
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 });
   }

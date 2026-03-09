@@ -3,7 +3,7 @@ import { getPool } from '@/lib/db'
 
 type Params = { params: { categoryId: string } }
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: any) {
   try {
     const categoryId = Number(params.categoryId)
     if (!Number.isFinite(categoryId) || categoryId <= 0) {

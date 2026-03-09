@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ClipboardList, PackageSearch, PlusCircle, Trash2, X } from 'lucide-react';
+import { ClipboardList, PackageSearch, PlusCircle, Star, Trash2, X, Search, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +43,9 @@ type ConditionPickerTarget = {
 
 const defaultConditionCategories = ['Fibra', 'FibraCor', 'Corda', 'CordaCor', 'Trico', 'TricoCor', 'Fio', 'Fiocor'];
 
+const isMrpOrder = (order: Order) =>
+  Boolean(order.isMrp ?? String(order.orderNumber ?? '').startsWith('MRP-'));
+
 export default function OrdersPage() {
   const [db, setDb] = React.useState<{
     orders: Order[];
@@ -54,6 +57,7 @@ export default function OrdersPage() {
 
   const { user: authUser } = useAuthUser();
   const currentUserId = authUser?.id ?? '';
+  const { toast } = useToast();
 
   const refreshOrders = React.useCallback(async () => {
     const res = await fetch('/api/orders', { cache: 'no-store' });
@@ -80,8 +84,6 @@ export default function OrdersPage() {
     const data = await res.json();
     setDb((prev) => ({ ...prev, users: Array.isArray(data.users) ? data.users : [] }));
   }, []);
-
-  
 
   const createDraftOrder = React.useCallback(async () => {
     const res = await fetch('/api/orders', {
@@ -246,6 +248,7 @@ export default function OrdersPage() {
     });
     await refreshInventory();
   }, [refreshInventory]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const submitOrder = React.useCallback(async (order: Order) => {
     const errors: string[] = [];
@@ -254,17 +257,24 @@ export default function OrdersPage() {
     }
     if (!order.items || order.items.length === 0) {
       errors.push('Adicione ao menos um item.');
+    } else {
+      order.items.forEach((item, idx) => {
+        if (Number(item.qtyRequested) <= 0) {
+          errors.push(`Item ${idx + 1}: Quantidade maior que zero.`);
+        }
+        if (!item.color || item.color.trim().length === 0) {
+          errors.push(`Item ${idx + 1}: Cor obrigatória.`);
+        }
+      });
     }
-    const invalidQty = (order.items || []).filter((item) => Number(item.qtyRequested) <= 0);
-    if (invalidQty.length > 0) {
-      errors.push('Quantidade precisa ser maior que zero.');
-    }
+
     if (errors.length > 0) {
-      toast({ title: 'Nao foi possivel enviar', description: errors.join(' '), variant: 'destructive' });
+      toast({ title: 'Campos obrigatórios', description: errors.join(' '), variant: 'destructive' });
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const res = await fetch(`/api/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -279,14 +289,17 @@ export default function OrdersPage() {
     } catch (err) {
       const message = getFirstApiErrorMessage(err) ?? 'Falha ao enviar pedido';
       toast({ title: 'Erro', description: message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [refreshOrders, toast]);
 
   const [mainView, setMainView] = React.useState<'open' | 'finalized'>('open');
+  const [searchTerm, setSearchTerm] = React.useState('');
   // default to show all orders ("Todos") instead of "Meus pedidos"
   const [subView, setSubView] = React.useState<'mine' | 'all'>('all');
+  const [mrpView, setMrpView] = React.useState<'all' | 'mrp' | 'standard'>('all');
   const [mounted, setMounted] = React.useState(false);
-  const { toast } = useToast();
   const [preconditionCategories, setPreconditionCategories] = React.useState<ConditionCategory[]>([]);
   const [conditionsLoading, setConditionsLoading] = React.useState(false);
   const [conditionPickerTarget, setConditionPickerTarget] = React.useState<ConditionPickerTarget | null>(null);
@@ -400,12 +413,21 @@ export default function OrdersPage() {
   );
 
   const filteredOrders = React.useMemo(() => {
-    // hide MRP orders that have no pending production tasks (server provides `hasPendingProduction`)
     return db.orders.filter((order) => {
       if (order.trashedAt) return false;
-      // Detect MRP-created orders by orderNumber prefix `MRP-`.
-      const isMrpOrder = String(order.orderNumber ?? '').startsWith('MRP-');
-      if (isMrpOrder && !order.hasPendingProduction) return false;
+      const orderIsMrp = isMrpOrder(order);
+      if (mrpView === 'mrp' && !orderIsMrp) return false;
+      if (mrpView === 'standard' && orderIsMrp) return false;
+
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        if (
+          !(order.orderNumber && String(order.orderNumber).toLowerCase().includes(q)) &&
+          !(order.clientName && String(order.clientName).toLowerCase().includes(q))
+        ) {
+          return false;
+        }
+      }
 
       const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA';
       if (mainView === 'open' && isFinalized) return false;
@@ -413,7 +435,7 @@ export default function OrdersPage() {
       if (subView === 'mine') return order.createdBy === currentUserId;
       return true;
     });
-  }, [db.orders, mainView, subView, currentUserId]);
+  }, [db.orders, mainView, subView, currentUserId, mrpView, searchTerm]);
 
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(filteredOrders[0]?.id ?? null);
 
@@ -425,16 +447,17 @@ export default function OrdersPage() {
   }, [filteredOrders]);
 
   const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
+  const selectedOrderIsMrp = selectedOrder ? isMrpOrder(selectedOrder) : false;
 
   React.useEffect(() => {
-    if (!selectedOrderId) {
+    if (!selectedOrder) {
       if (conditionPickerTarget) setConditionPickerTarget(null);
       return;
     }
-    if (conditionPickerTarget && conditionPickerTarget.orderId !== selectedOrderId) {
+    if (conditionPickerTarget && conditionPickerTarget.orderId !== selectedOrder.id) {
       setConditionPickerTarget(null);
     }
-  }, [selectedOrderId, conditionPickerTarget]);
+  }, [selectedOrder?.id, conditionPickerTarget]);
 
   const stockByMaterial = React.useMemo(() => {
     const map = new Map<string, { onHand: number; reservedTotal: number; productionReserved: number; available: number }>();
@@ -456,15 +479,15 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex min-w-0 flex-col">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-3">
                 <div className="ml-0">
                   <Select value={mainView} onValueChange={(v) => setMainView(v as 'open' | 'finalized')}>
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Pedidos" />
                     </SelectTrigger>
                     <SelectContent>
@@ -475,7 +498,7 @@ export default function OrdersPage() {
                 </div>
                 <div className="ml-0">
                   <Select value={subView} onValueChange={(v) => setSubView(v as 'mine' | 'all')}>
-                    <SelectTrigger className="w-36">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Filtrar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -484,11 +507,32 @@ export default function OrdersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="ml-0">
+                  <Select value={mrpView} onValueChange={(value) => setMrpView(value as 'all' | 'mrp' | 'standard')}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="mrp">Somente MRP</SelectItem>
+                      <SelectItem value="standard">Pedidos normais</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="ml-0 w-full sm:w-auto relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Pesquisar..."
+                    className="pl-8 bg-background"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
               <CardDescription className="mt-2 truncate">Reserva em tempo real (TTL + heartbeat).</CardDescription>
             </div>
-            <div className="ml-2 shrink-0">
-              <Button onClick={handleNewOrder} size="sm">
+            <div className="ml-0 w-full shrink-0 sm:ml-2 sm:w-auto mt-2 sm:mt-0">
+              <Button onClick={handleNewOrder} size="sm" className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Novo
               </Button>
@@ -503,26 +547,29 @@ export default function OrdersPage() {
             <EmptyState icon={ClipboardList} title="Nenhum pedido na visualizacao" description="Ajuste os filtros ou crie um novo pedido para iniciar." className="min-h-[120px]" />
           ) : (
             <div className="max-h-[420px] overflow-y-auto space-y-2">
-              {filteredOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full rounded-xl border border-border/70 bg-muted/20 p-4 text-left transition hover:border-primary ${
-                    selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
-                  }`}
-                >
-                  <p className="font-medium">
-                    {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
-                  <div className="mt-2 flex gap-2">
-                    <Badge variant="outline">{order.status}</Badge>
-                    <Badge variant={order.readiness === 'READY_FULL' ? 'positive' : order.readiness === 'READY_PARTIAL' ? 'warning' : 'outline'}>
-                      {readinessLabel(order.readiness)}
-                    </Badge>
-                  </div>
-                </button>
-              ))}
+              {filteredOrders.map((order) => {
+                const orderIsMrp = isMrpOrder(order);
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => setSelectedOrderId(order.id)}
+                    className={`w-full rounded-xl border border-border/70 bg-muted/20 p-3 text-left transition hover:border-primary sm:p-4 ${selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''
+                      }`}
+                  >
+                    <p className="font-medium flex flex-wrap items-center gap-1">
+                      {orderIsMrp && <Star className="h-4 w-4 text-amber-500" aria-label="Pedido MRP" />}
+                      {order.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === order.createdBy)?.name ?? order.createdBy}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{order.clientName} - {formatDate(order.orderDate)}</p>
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant="outline">{order.status}</Badge>
+                      <Badge variant={order.readiness === 'READY_FULL' ? 'positive' : order.readiness === 'READY_PARTIAL' ? 'warning' : 'outline'}>
+                        {readinessLabel(order.readiness)}
+                      </Badge>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -544,14 +591,17 @@ export default function OrdersPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle>
-                    {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      {selectedOrderIsMrp && <Star className="h-4 w-4 text-amber-500" aria-label="Pedido MRP" />}
+                      {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{db.users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
+                    </span>
                   </CardTitle>
                   <CardDescription>
                     Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={async () => {
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={async () => {
                     try {
                       await deleteOrder(selectedOrder.id);
                       setSelectedOrderId(null);
@@ -569,31 +619,52 @@ export default function OrdersPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-end">
                 <Button
+                  id="btn-create-order"
                   variant="secondary"
                   onClick={() => selectedOrder && submitOrder(selectedOrder)}
-                  disabled={selectedOrder.status !== 'RASCUNHO'}
-                  className="min-w-[160px] font-semibold"
+                  disabled={selectedOrder.status !== 'RASCUNHO' || isSubmitting}
+                  className="w-full font-semibold sm:w-auto sm:min-w-[160px] focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
                 >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Criar pedido
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                  {isSubmitting ? 'Enviando...' : 'Criar pedido'}
                 </Button>
               </div>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div>
-                  <Label>Cliente</Label>
+                  <Label>Cliente <span className="text-destructive">*</span></Label>
                   <Input
+                    id="order-client-name"
                     value={selectedOrder.clientName}
                     onChange={(e) => updateOrderClientName(selectedOrder.id, e.target.value)}
                     onBlur={(e) => persistOrderClientName(selectedOrder.id, e.target.value)}
-                    placeholder="Digite o nome do cliente"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Focus the first item qty if it exists
+                        if (selectedOrder.items.length > 0) {
+                          document.getElementById(`qty-${selectedOrder.items[0].id}`)?.focus();
+                        }
+                      }
+                    }}
+                    placeholder="Nome do cliente"
                   />
                 </div>
                 <div>
-                  <Label>Data de entrega</Label>
+                  <Label>Entrega</Label>
                   <Input
                     type="date"
+                    className="w-[140px]"
                     value={selectedOrder.dueDate.slice(0, 10)}
-                    onChange={(e) => updateOrderMeta(selectedOrder.id, { dueDate: `${e.target.value}T12:00:00.000Z` })}
+                    onChange={(e) => {
+                      const val = `${e.target.value}T12:00:00.000Z`;
+                      setDb((prev) => ({
+                        ...prev,
+                        orders: prev.orders.map((o) =>
+                          o.id === selectedOrder.id ? { ...o, dueDate: val } : o
+                        ),
+                      }));
+                    }}
+                    onBlur={(e) => updateOrderMeta(selectedOrder.id, { dueDate: `${e.target.value}T12:00:00.000Z` })}
                   />
                 </div>
                 <div>
@@ -601,15 +672,26 @@ export default function OrdersPage() {
                   <Input
                     type="number"
                     min={1}
+                    className="w-[80px]"
                     value={selectedOrder.volumeCount}
-                    onChange={(e) => updateOrderMeta(selectedOrder.id, { volumeCount: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setDb((prev) => ({
+                        ...prev,
+                        orders: prev.orders.map((o) =>
+                          o.id === selectedOrder.id ? { ...o, volumeCount: val } : o
+                        ),
+                      }));
+                    }}
+                    onBlur={(e) => updateOrderMeta(selectedOrder.id, { volumeCount: Number(e.target.value) })}
+                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Select onValueChange={(value) => addItem(selectedOrder.id, value)}>
-                  <SelectTrigger className="max-w-sm">
+                  <SelectTrigger className="w-full sm:max-w-sm">
                     <SelectValue placeholder="Adicionar material" />
                   </SelectTrigger>
                   <SelectContent>
@@ -620,23 +702,23 @@ export default function OrdersPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" onClick={() => heartbeatOrder(selectedOrder.id)}>Estender reserva por +5 min</Button>
+                <Button className="w-full sm:w-auto" variant="outline" onClick={() => heartbeatOrder(selectedOrder.id)}>Estender reserva por +5 min</Button>
               </div>
 
               <div className="max-h-[360px] overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead className="text-right">Qtd. solicitada</TableHead>
-                      <TableHead>Faltante</TableHead>
-                      <TableHead className="text-right">Em estoque</TableHead>
-                      <TableHead className="text-right">Reservado (outros pedidos)</TableHead>
-                      <TableHead className="text-right">Disponivel para este pedido</TableHead>
-                      <TableHead className="text-right">Qtd. reservada (estoque)</TableHead>
-                      <TableHead className="text-right">Qtd. para produzir</TableHead>
-                      <TableHead>Cor</TableHead>
-                      <TableHead className="text-center">Ações</TableHead>
+                      <TableHead className="w-[180px]">Material</TableHead>
+                      <TableHead className="text-right w-[90px]" title="Quantidade solicitada">Qtd. Sol.</TableHead>
+                      <TableHead className="w-[110px]" title="Ação de falta de estoque">Ação</TableHead>
+                      <TableHead className="text-right w-[70px]" title="Quantidade em estoque">Estoque</TableHead>
+                      <TableHead className="text-right w-[80px]" title="Reservado por outros pedidos">Reserv. (Outros)</TableHead>
+                      <TableHead className="text-right w-[100px] leading-tight" title="Disponível para este pedido">Disp. P/</TableHead>
+                      <TableHead className="text-right w-[90px] leading-tight" title="Quantidade reservada do estoque">Qtd. Res. (Est.)</TableHead>
+                      <TableHead className="text-right w-[90px] leading-tight" title="Quantidade para produzir">Qtd. Prod.</TableHead>
+                      <TableHead className="w-[100px]">Cor</TableHead>
+                      <TableHead className="text-center w-[50px]">Atos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -668,6 +750,7 @@ export default function OrdersPage() {
                               {/* `Cor` column removed; prefer item.conditions for color */}
                               <TableCell className="text-right">
                                 <Input
+                                  id={`qty-${item.id}`}
                                   type="number"
                                   value={item.qtyRequested}
                                   onChange={(e) => {
@@ -676,12 +759,15 @@ export default function OrdersPage() {
                                     updateOrderItemField(selectedOrder.id, item.id, {
                                       qtyRequested: Number.isFinite(qty) ? qty : 0,
                                     });
-                                    if (raw !== '' && Number.isFinite(qty)) {
-                                      onQtyBlurReserve(selectedOrder.id, item.id, qty);
-                                    }
                                   }}
                                   onBlur={(e) => onQtyBlurReserve(selectedOrder.id, item.id, Number(e.target.value || 0))}
-                                  className="ml-auto w-24 text-right"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      document.getElementById(`color-${item.id}`)?.focus();
+                                    }
+                                  }}
+                                  className="ml-auto w-full max-w-[7rem] text-right"
                                 />
                               </TableCell>
                               <TableCell>
@@ -693,7 +779,7 @@ export default function OrdersPage() {
                                     persistOrderItemField(selectedOrder.id, item.id, { shortageAction: action });
                                   }}
                                 >
-                                  <SelectTrigger className="w-28">
+                                  <SelectTrigger className="w-full min-w-[7rem]">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -710,11 +796,26 @@ export default function OrdersPage() {
                               </TableCell>
                               <TableCell>
                                 <Input
+                                  id={`color-${item.id}`}
                                   placeholder="Cor"
                                   value={item.color ?? ''}
                                   onChange={(e) => updateOrderItemField(selectedOrder.id, item.id, { color: e.target.value })}
                                   onBlur={(e) => persistOrderItemField(selectedOrder.id, item.id, { color: String(e.target.value ?? '') })}
-                                  className="w-24"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const btn = document.getElementById('btn-create-order');
+                                      if (btn) {
+                                        btn.focus();
+                                        btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      }
+                                      toast({
+                                        title: 'Item pronto!',
+                                        description: 'Agora clique em "Criar pedido" para finalizar.',
+                                      });
+                                    }
+                                  }}
+                                  className="w-full max-w-[7rem]"
                                 />
                               </TableCell>
                               <TableCell className="text-center">
@@ -725,21 +826,62 @@ export default function OrdersPage() {
                             </TableRow>
                             <TableRow>
                               <TableCell colSpan={10} className="bg-muted/30">
-                                <div className="grid gap-3 md:grid-cols-2">
+                                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>Condicao especifica do item</Label>
                                     {item.conditions && item.conditions.length > 0 ? (
                                       item.conditions.map((cond, idx) => (
-                                        <div key={idx} className="flex items-center gap-2">
+                                        <div key={idx} className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                                           <Input
                                             placeholder="Campo (ex: Cor)"
                                             value={cond.key}
-                                            onChange={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { key: e.target.value })}
+                                            onChange={(e) => {
+                                              const nextVal = e.target.value;
+                                              setDb((prev) => ({
+                                                ...prev,
+                                                orders: prev.orders.map((o) => {
+                                                  if (o.id !== selectedOrder.id) return o;
+                                                  return {
+                                                    ...o,
+                                                    items: o.items.map((it) => {
+                                                      if (it.id !== item.id) return it;
+                                                      const nextConditions = [...(it.conditions || [])];
+                                                      if (nextConditions[idx]) {
+                                                        nextConditions[idx] = { ...nextConditions[idx], key: nextVal };
+                                                      }
+                                                      return { ...it, conditions: nextConditions };
+                                                    }),
+                                                  };
+                                                }),
+                                              }));
+                                            }}
+                                            onBlur={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { key: e.target.value })}
+                                            className="h-8"
                                           />
                                           <Input
                                             placeholder="Valor (ex: Vermelho)"
                                             value={cond.value}
-                                            onChange={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { value: e.target.value })}
+                                            onChange={(e) => {
+                                              const nextVal = e.target.value;
+                                              setDb((prev) => ({
+                                                ...prev,
+                                                orders: prev.orders.map((o) => {
+                                                  if (o.id !== selectedOrder.id) return o;
+                                                  return {
+                                                    ...o,
+                                                    items: o.items.map((it) => {
+                                                      if (it.id !== item.id) return it;
+                                                      const nextConditions = [...(it.conditions || [])];
+                                                      if (nextConditions[idx]) {
+                                                        nextConditions[idx] = { ...nextConditions[idx], value: nextVal };
+                                                      }
+                                                      return { ...it, conditions: nextConditions };
+                                                    }),
+                                                  };
+                                                }),
+                                              }));
+                                            }}
+                                            onBlur={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { value: e.target.value })}
                                           />
                                           <Button variant="ghost" onClick={() => removeItemCondition(selectedOrder.id, item.id, idx)}>
                                             <Trash2 className="h-4 w-4" />
@@ -753,12 +895,22 @@ export default function OrdersPage() {
                                       <Button
                                         type="button"
                                         variant="outline"
+                                        className="w-full sm:w-auto"
                                         onClick={() =>
                                           setConditionPickerTarget({ orderId: selectedOrder.id, itemId: item.id })
                                         }
                                       >
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         Adicionar condição
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full sm:w-auto"
+                                        onClick={() => addItemCondition(selectedOrder.id, item.id)}
+                                      >
+                                        Condição livre
                                       </Button>
                                     </div>
                                     {isPickerOpen && (
@@ -897,6 +1049,6 @@ export default function OrdersPage() {
           </>
         )}
       </Card>
-    </div>
+    </div >
   );
 }

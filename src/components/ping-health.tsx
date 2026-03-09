@@ -44,7 +44,7 @@ export default function PingHealth() {
     };
 
     measurePing();
-    const id = window.setInterval(measurePing, 15000);
+    const id = window.setInterval(measurePing, 120000);
     return () => {
       mounted = false;
       window.clearInterval(id);

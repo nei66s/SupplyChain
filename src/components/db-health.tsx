@@ -34,7 +34,7 @@ export default function DbHealth() {
 
     const check = async () => {
       try {
-        const res = await fetch('/api/inventory', { cache: 'no-store' });
+        const res = await fetch('/api/ping', { cache: 'no-store' });
         if (!mounted) return;
         setStatus(res.ok ? 'connected' : 'disconnected');
       } catch {
@@ -44,7 +44,7 @@ export default function DbHealth() {
     };
 
     check();
-    const id = window.setInterval(check, 15000);
+    const id = window.setInterval(check, 120000);
     return () => {
       mounted = false;
       window.clearInterval(id);

@@ -1,0 +1,65 @@
+
+> nextn@0.1.0 lint
+> eslint src eslint.config.mjs next.config.ts tailwind.config.ts --ext .ts,.tsx,.mjs
+
+
+C:\dev\Inventario-Agil\src\app\admin\page.tsx
+  343:9  warning  'previewCompanyName' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\api\auth\logout\route.ts
+  1:10  warning  'NextRequest' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\api\preconditions\[categoryId]\values\[valueId]\route.ts
+  4:6  warning  'Params' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\api\preconditions\[categoryId]\values\route.ts
+  4:6  warning  'Params' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\dashboard\client-dashboard.tsx
+    3:61  warning  'Plus' is defined but never used. Allowed unused vars must match /^_/u                                   @typescript-eslint/no-unused-vars
+    4:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u                                 @typescript-eslint/no-unused-vars
+   11:29  warning  'TabsList' is defined but never used. Allowed unused vars must match /^_/u                               @typescript-eslint/no-unused-vars
+   11:39  warning  'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+  281:9   warning  'selectedOrder' is assigned a value but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  283:9   warning  'stockByMaterial' is assigned a value but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  295:9   warning  'producingSet' is assigned a value but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+  306:13  warning  'first' is assigned a value but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+  335:6   warning  React Hook useMemo has a missing dependency: 'orders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\dev\Inventario-Agil\src\app\inventory\page.tsx
+    5:86  warning  'Save' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   31:29  warning  'TabsList' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   31:39  warning  'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  323:48  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                react/no-unescaped-entities
+  323:50  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                react/no-unescaped-entities
+  380:27  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                react/no-unescaped-entities
+  380:40  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                react/no-unescaped-entities
+
+C:\dev\Inventario-Agil\src\app\materials\page.tsx
+  266:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\orders\page.tsx
+  460:6  warning  React Hook React.useEffect has a missing dependency: 'selectedOrder'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\dev\Inventario-Agil\src\app\orders\trash\page.tsx
+  26:10  warning  'stockReservations' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\picking\page.tsx
+  18:10  warning  'Tabs' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  18:16  warning  'TabsList' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  18:26  warning  'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\app\production\page.tsx
+  23:3   warning  'Dialog' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  24:3   warning  'DialogContent' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  25:3   warning  'DialogDescription' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  26:3   warning  'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  27:3   warning  'DialogHeader' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  28:3   warning  'DialogTitle' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  31:10  warning  'Label' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+
+C:\dev\Inventario-Agil\src\lib\domain\labels.ts
+  92:16  warning  'addQr' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+✖ 34 problems (4 errors, 30 warnings)
+

@@ -37,7 +37,6 @@
     "next_build/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "src/app"
+    "node_modules"
   ]
 }

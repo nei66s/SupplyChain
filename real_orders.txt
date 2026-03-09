@@ -1,0 +1,27 @@
+[
+  {
+    "id": 91,
+    "status": "draft",
+    "trashed_at": null
+  },
+  {
+    "id": 54,
+    "status": "FINALIZADO",
+    "trashed_at": null
+  },
+  {
+    "id": 70,
+    "status": "aberto",
+    "trashed_at": null
+  },
+  {
+    "id": 65,
+    "status": "aberto",
+    "trashed_at": null
+  },
+  {
+    "id": 64,
+    "status": "aberto",
+    "trashed_at": null
+  }
+]

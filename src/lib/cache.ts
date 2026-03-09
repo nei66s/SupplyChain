@@ -29,7 +29,7 @@ function createClient(): Redis {
   return client
 }
 
-function getClient(): Redis {
+export function getClient(): Redis {
   if (cachedClient) return cachedClient
   cachedClient = createClient()
   return cachedClient

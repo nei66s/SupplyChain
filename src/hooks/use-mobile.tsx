@@ -3,6 +3,7 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 1024
 
 export function useIsMobile() {
+  // Keep the first client render identical to SSR to avoid hydration mismatch.
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {

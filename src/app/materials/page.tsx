@@ -263,7 +263,7 @@ export default function MaterialsPage() {
       }
       toast({ title: 'Material removido', description: 'Material excluído com sucesso', variant: 'success' });
       await fetchMaterials();
-    } catch {
+    } catch (e) {
       toast({ title: 'Erro', description: 'Erro ao remover material', variant: 'destructive' });
     }
   };
@@ -364,13 +364,13 @@ export default function MaterialsPage() {
   return (
     <>
         <Card>
-          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+          <CardHeader className="flex-col items-start justify-between gap-3 space-y-0 sm:flex-row sm:items-center">
             <div>
               <CardTitle className="font-headline">Materiais</CardTitle>
               <CardDescription>Gerencie materiais cadastrados no sistema.</CardDescription>
             </div>
             <div>
-              <Button onClick={openNew}>Novo material</Button>
+              <Button className="w-full sm:w-auto" onClick={openNew}>Novo material</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -445,12 +445,12 @@ export default function MaterialsPage() {
 
         <div className="mt-6 space-y-4">
           <Card>
-            <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+            <CardHeader className="flex-col items-start justify-between gap-3 space-y-0 sm:flex-row sm:items-center">
               <div>
                 <CardTitle className="font-headline">Pré-condições</CardTitle>
                 <CardDescription>Categorias globais com os valores possíveis.</CardDescription>
               </div>
-              <Button onClick={() => setCategoryDialogOpen(true)} disabled={isUsingFallbackData}>
+              <Button className="w-full sm:w-auto" onClick={() => setCategoryDialogOpen(true)} disabled={isUsingFallbackData}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Criar condição
               </Button>
@@ -471,7 +471,7 @@ export default function MaterialsPage() {
                   className="min-h-[140px]"
                 />
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {preconditionCategories.map((category) => {
                     const values = category.values ?? [];
                     const isExpanded = expandedCategoryId === category.id;
@@ -504,14 +504,14 @@ export default function MaterialsPage() {
                       <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{expandedCategory.name}</p>
                       <p className="text-sm text-muted-foreground">Edite os itens dessa Pré-condição.</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <Input
                         value={newConditionInput[expandedCategory.id] ?? ''}
                         onChange={(event) =>
                           setNewConditionInput((prev) => ({ ...prev, [expandedCategory.id]: event.target.value }))
                         }
                         placeholder="Adicionar item"
-                        className="h-8 text-xs"
+                        className="text-sm"
                         disabled={isUsingFallbackData}
                       />
                       <Button
@@ -589,7 +589,7 @@ export default function MaterialsPage() {
                 <FormMessage />
               </FormItem>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <FormItem>
                   <FormLabel>Estoque mínimo</FormLabel>
                   <FormControl>
@@ -606,7 +606,7 @@ export default function MaterialsPage() {
                 </FormItem>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <FormItem>
                   <FormLabel>Preparação (min)</FormLabel>
                   <FormControl>

@@ -3,11 +3,24 @@ import jwt from 'jsonwebtoken';
 
 const AUTH_COOKIE_NAME = 'sc-session';
 const AUTH_TOKEN_TTL_SECONDS = 60 * 60 * 8;
+const UNAUTHORIZED_ERROR_MESSAGE = 'Unauthorized';
 
 type AuthPayload = {
   userId: string;
   role: string;
 };
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super(UNAUTHORIZED_ERROR_MESSAGE);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+export function isUnauthorizedError(err: unknown): boolean {
+  if (err instanceof UnauthorizedError) return true;
+  return err instanceof Error && err.message === UNAUTHORIZED_ERROR_MESSAGE;
+}
 
 function getAuthSecret(): string {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -64,7 +77,7 @@ export function clearAuthCookie() {
 export async function requireAuth(req: NextRequest): Promise<AuthPayload> {
   const payload = getAuthPayload(req);
   if (!payload) {
-    throw new Error('Unauthorized');
+    throw new UnauthorizedError();
   }
   return payload;
 }
@@ -72,7 +85,7 @@ export async function requireAuth(req: NextRequest): Promise<AuthPayload> {
 export async function requireAdmin(req: NextRequest): Promise<AuthPayload> {
   const payload = await requireAuth(req);
   if (payload.role !== 'Admin') {
-    throw new Error('Unauthorized');
+    throw new UnauthorizedError();
   }
   return payload;
 }

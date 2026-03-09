@@ -1,0 +1,129 @@
+
+> nextn@0.1.0 prebuild
+> npm run db:migrate
+
+
+> nextn@0.1.0 db:migrate
+> node ./scripts/run-migrations.js
+
+Skipping 001_init.sql
+Skipping 002_material_fields.sql
+Skipping 003_add_trashed_at.sql
+Skipping 004_add_order_number.sql
+Skipping 005_create_production_tasks.sql
+Skipping 006_drop_unused_warehouses.sql
+Skipping 007_create_users.sql
+Skipping 008_add_material_metadata.sql
+Skipping 009_preconditions.sql
+Skipping 010_add_optimizations.sql
+Skipping 011_add_order_item_conditions.sql
+Skipping 012_create_production_reservations.sql
+Skipping 013_full_persistence.sql
+Skipping 014_add_order_source.sql
+Skipping 015_manual_order_counters.sql
+Skipping 016_realign_order_counters_timezone.sql
+Skipping 017_add_notifications_user_target.sql
+Skipping 018_unique_notification_dedupe.sql
+Skipping 019_add_order_item_description.sql
+Skipping 020_seed_admin_gmail.sql
+Skipping 021_add_mrp_suggestions.sql
+Skipping 022_add_mrp_suggestions_status.sql
+Skipping 023_ensure_mrp_suggestions_columns.sql
+Skipping 024_convert_mrp_material_id.sql
+Skipping 025_add_mrp_suggestions_unique_material.sql
+Skipping 026_make_mrp_material_id_unique.sql
+Skipping 027_dashboard_materialized_views.sql
+Skipping 028_site_settings.sql
+Skipping 029_add_site_logo_blob.sql
+Skipping 030_inventory_receipts_snapshot_view.sql
+Skipping 031_add_user_is_blocked.sql
+Skipping 032_company_details.sql
+Skipping 033_add_production_task_produced_fields.sql
+Skipping 034_create_inventory_adjustments.sql
+Skipping 035_ensure_stock_balances_unique.sql
+Skipping 036_create_people_activity_log.sql
+Skipping 037_optimize_materials_stock_view.sql
+Migrations complete
+
+> nextn@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 9.7s
+   Linting and checking validity of types ...
+
+./src/app/admin/page.tsx
+343:9  Warning: 'previewCompanyName' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/api/auth/logout/route.ts
+1:10  Warning: 'NextRequest' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/api/preconditions/[categoryId]/values/route.ts
+4:6  Warning: 'Params' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/api/preconditions/[categoryId]/values/[valueId]/route.ts
+4:6  Warning: 'Params' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/dashboard/client-dashboard.tsx
+3:61  Warning: 'Plus' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+4:10  Warning: 'Button' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+11:29  Warning: 'TabsList' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+11:39  Warning: 'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+281:9  Warning: 'selectedOrder' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+283:9  Warning: 'stockByMaterial' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+295:9  Warning: 'producingSet' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+306:13  Warning: 'first' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+335:6  Warning: React Hook useMemo has a missing dependency: 'orders'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/inventory/page.tsx
+5:86  Warning: 'Save' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+31:29  Warning: 'TabsList' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+31:39  Warning: 'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/materials/page.tsx
+266:14  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/orders/page.tsx
+460:6  Warning: React Hook React.useEffect has a missing dependency: 'selectedOrder'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/orders/trash/page.tsx
+26:10  Warning: 'stockReservations' is assigned a value but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/picking/page.tsx
+18:10  Warning: 'Tabs' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+18:16  Warning: 'TabsList' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+18:26  Warning: 'TabsTrigger' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/production/page.tsx
+23:3  Warning: 'Dialog' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'DialogContent' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+25:3  Warning: 'DialogDescription' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+26:3  Warning: 'DialogFooter' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+27:3  Warning: 'DialogHeader' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+28:3  Warning: 'DialogTitle' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+31:10  Warning: 'Label' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/lib/domain/labels.ts
+92:16  Warning: 'addQr' is defined but never used. Allowed unused vars must match /^_/u.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/35) ...
+   Generating static pages (8/35) 
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/report". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at g (C:\dev\Inventario-Agil\next_build\server\chunks\9839.js:1:73288)
+    at m (C:\dev\Inventario-Agil\next_build\server\chunks\9839.js:9:14921)
+    at aT (C:\dev\Inventario-Agil\next_build\server\chunks\5320.js:1:30273)
+    at n3 (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:82831)
+    at n6 (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:84601)
+    at n6 (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:101560)
+    at n5 (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:104801)
+    at n7 (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:102219)
+    at aa (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:108211)
+    at ae (C:\dev\Inventario-Agil\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:106833)
+Error occurred prerendering page "/report". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /report/page: /report, exiting the build.
+ ⨯ Next.js build worker exited with code: 1 and signal: null

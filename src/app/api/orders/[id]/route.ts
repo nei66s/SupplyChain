@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { isUnauthorizedError, requireAuth } from '@/lib/auth'
+import { notifyOrderCompleted } from '@/lib/notifications'
+import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
+import { logActivity } from '@/lib/log-activity'
+import { publishRealtimeEvent } from '@/lib/pubsub'
 
 type RouteParams = { id: string }
 
@@ -25,7 +29,7 @@ async function resolveMaterialId(client: import('pg').Pool | import('pg').PoolCl
   if (!raw) return null
   const m = raw.match(/\d+/)
   if (m) return Number(m[0])
-  const lookup = await client.query<{ id: number }>(
+  const lookup = await client.query(
     'SELECT id FROM materials WHERE sku = $1 OR name = $1 LIMIT 1',
     [raw]
   )
@@ -87,14 +91,10 @@ async function recalcReservationForItem(
   itemId: number,
   userId: string | null
 ) {
-  const itemRes = await client.query<{
-    material_id: number
-    quantity: string | number
-    shortage_action: string | null
-  }>(
+  const itemRes = await client.query(
     `SELECT material_id, quantity, shortage_action
-     FROM order_items
-     WHERE id = $1 AND order_id = $2`,
+       FROM order_items
+       WHERE id = $1 AND order_id = $2`,
     [itemId, orderId]
   )
   if (itemRes.rowCount === 0) return
@@ -103,29 +103,15 @@ async function recalcReservationForItem(
   const qtyRequested = Number(itemRes.rows[0].quantity ?? 0)
   const shortageAction = String(itemRes.rows[0].shortage_action ?? 'PRODUCE').toUpperCase()
 
-  const orderStatusRes = await client.query<{ status: string }>('SELECT status FROM orders WHERE id = $1', [orderId])
-  const orderStatus = String(orderStatusRes.rows[0]?.status ?? '').toUpperCase()
-  if (['RASCUNHO', 'DRAFT'].includes(orderStatus)) {
-    await client.query(
-      `UPDATE order_items SET qty_reserved_from_stock = 0, qty_to_produce = 0
-       WHERE id = $1 AND order_id = $2`,
-      [itemId, orderId]
-    )
-    await client.query('DELETE FROM stock_reservations WHERE order_id = $1 AND material_id = $2', [orderId, materialId])
-    await client.query('DELETE FROM production_tasks WHERE order_id = $1 AND material_id = $2', [orderId, materialId])
-    await client.query('DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2', [orderId, materialId])
-    return
-  }
-
-  const balRes = await client.query<{ on_hand: string | number }>(
+  const balRes = await client.query(
     'SELECT COALESCE(on_hand,0) AS on_hand FROM stock_balances WHERE material_id = $1',
     [materialId]
   )
   const onHand = Number(balRes.rows[0]?.on_hand ?? 0)
-  const otherRes = await client.query<{ reserved: string | number }>(
+  const otherRes = await client.query(
     `SELECT COALESCE(SUM(qty),0) AS reserved
-     FROM stock_reservations
-     WHERE material_id = $1 AND order_id <> $2 AND expires_at > now()`,
+       FROM stock_reservations
+       WHERE material_id = $1 AND order_id <> $2 AND expires_at > now()`,
     [materialId, orderId]
   )
   const reservedOther = Number(otherRes.rows[0]?.reserved ?? 0)
@@ -157,22 +143,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     try {
       await client.query('BEGIN')
 
-      const orderRow = await client.query<{ status: string }>('SELECT status FROM orders WHERE id = $1', [orderId])
-      const currentStatusRaw = String(orderRow.rows[0]?.status ?? '').trim().toLowerCase()
-      const isDraftOrder = ['rascunho', 'draft'].includes(currentStatusRaw)
-
       if (action === 'update_meta') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const updates: string[] = []
         const values: unknown[] = []
         if (body.clientId) {
           const clientIdNum = Number(String(body.clientId).replace(/\D+/g, ''))
           updates.push(`client_id = $${values.length + 1}`)
           values.push(clientIdNum)
-          const nameRes = await client.query<{ name: string }>('SELECT name FROM clients WHERE id = $1', [clientIdNum])
+          const nameRes = await client.query('SELECT name FROM clients WHERE id = $1', [clientIdNum])
           updates.push(`client_name = $${values.length + 1}`)
           values.push(nameRes.rows[0]?.name ?? null)
         }
@@ -193,23 +171,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           await client.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${values.length}`, values)
         }
       } else if (action === 'update_client') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const nextName = typeof body.clientName === 'string' ? body.clientName.trim() : ''
         await client.query('UPDATE orders SET client_name = $2 WHERE id = $1', [orderId, nextName])
       } else if (action === 'add_item') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const materialId = await resolveMaterialId(client, body.materialId)
         if (!materialId) {
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'materialId invalido' }, { status: 400 })
         }
-        const descRes = await client.query<{ description: string | null }>(
+        const descRes = await client.query(
           'SELECT description FROM materials WHERE id = $1',
           [materialId]
         )
@@ -220,16 +190,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           [orderId, materialId, 0, 0, '', 'PRODUCE', materialDescription]
         )
       } else if (action === 'remove_item') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const itemId = parseItemId(body.itemId ?? '')
         if (!itemId) {
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
-        const itemRes = await client.query<{ material_id: number }>(
+        const itemRes = await client.query(
           'SELECT material_id FROM order_items WHERE id = $1 AND order_id = $2',
           [itemId, orderId]
         )
@@ -241,10 +207,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           await client.query('DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2', [orderId, materialId])
         }
       } else if (action === 'update_item') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const itemId = parseItemId(body.itemId ?? '')
         if (!itemId) {
           await client.query('ROLLBACK')
@@ -283,16 +245,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
         await recalcReservationForItem(client, orderId, itemId, auth.userId)
       } else if (action === 'add_item_condition' || action === 'update_item_condition' || action === 'remove_item_condition') {
-        if (!isDraftOrder) {
-          await client.query('ROLLBACK')
-          return NextResponse.json({ error: 'Pedido bloqueado para alteração' }, { status: 403 })
-        }
         const itemId = parseItemId(body.itemId ?? '')
         if (!itemId) {
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
-        const res = await client.query<{ conditions: any }>(
+        const res = await client.query(
           'SELECT conditions FROM order_items WHERE id = $1 AND order_id = $2',
           [itemId, orderId]
         )
@@ -344,7 +302,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           return NextResponse.json({ error: 'itemId invalido' }, { status: 400 })
         }
         if (action === 'update_separated_qty') {
-          const row = await client.query<{ qty_reserved_from_stock: string | number }>(
+          const row = await client.query(
             'SELECT qty_reserved_from_stock FROM order_items WHERE id = $1 AND order_id = $2',
             [itemId, orderId]
           )
@@ -363,13 +321,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           ])
         }
       } else if (action === 'complete_picking') {
-        const items = await client.query<{
-          id: number
-          material_id: number
-          qty_separated: string | number
-          qty_reserved_from_stock: string | number
-          quantity: string | number
-        }>('SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity FROM order_items WHERE order_id = $1', [orderId])
+        const items = await client.query('SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity FROM order_items WHERE order_id = $1', [orderId])
 
         for (const item of items.rows) {
           const qtySeparated = Math.max(0, Number(item.qty_separated ?? 0))
@@ -395,11 +347,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           )
         }
 
-        const allItems = await client.query<{ quantity: string | number; qty_separated: string | number }>(
+        const allItems = await client.query(
           'SELECT quantity, qty_separated FROM order_items WHERE order_id = $1',
           [orderId]
         )
-        const allSeparated = allItems.rows.every(
+        const allItemsRows = allItems.rows as { quantity: string | number; qty_separated: string | number }[]
+        const allSeparated = allItemsRows.every(
           (row) => Number(row.qty_separated ?? 0) >= Number(row.quantity ?? 0)
         )
         const nextStatus = allSeparated ? 'FINALIZADO' : 'SAIDA_CONCLUIDA'
@@ -413,6 +366,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
            VALUES ($1, $2, $3, now(), $4)`,
           [orderId, 'PICKING_COMPLETED', auth.userId, `Pedido concluido com status ${nextStatus}.`]
         )
+        const orderMeta = await client.query(
+          'SELECT created_by, order_number FROM orders WHERE id = $1',
+          [orderId]
+        )
+        await notifyOrderCompleted(
+          {
+            orderId,
+            orderNumber: orderMeta.rows[0]?.order_number ?? null,
+            status: nextStatus,
+            userTarget: orderMeta.rows[0]?.created_by ?? null,
+          },
+          client
+        )
+        // Log activity — pick completed
+        logActivity(auth.userId, 'PICK_COMPLETED', 'pick', orderId).catch(console.error)
+        await publishRealtimeEvent('PICKING_COMPLETED', { orderId })
       } else if (action === 'register_label_print') {
         await client.query('UPDATE orders SET label_print_count = COALESCE(label_print_count,0) + 1 WHERE id = $1', [
           orderId,
@@ -443,20 +412,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
       await client.query('COMMIT')
     } catch (err) {
-      await client.query('ROLLBACK').catch(() => {})
+      await client.query('ROLLBACK').catch(() => { })
       throw err
     } finally {
       client.release()
     }
 
+    // Background refresh
+    await invalidateDashboardCache()
+    await refreshDashboardSnapshot()
+    revalidateDashboardTag()
+
+    await publishRealtimeEvent('ORDER_UPDATED', { orderId, action })
+
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+    }
+    console.error('orders PATCH error', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<RouteParams> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
   try {
+    await requireAuth(request)
     const resolvedParams = await params
     const orderId = parseOrderId(resolvedParams.id)
     if (Number.isNaN(orderId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
@@ -464,8 +445,19 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     await getPool().query('DELETE FROM order_items WHERE order_id = $1', [orderId])
     await getPool().query('DELETE FROM orders WHERE id = $1', [orderId])
 
+    // Background refresh
+    await invalidateDashboardCache()
+    await refreshDashboardSnapshot()
+    revalidateDashboardTag()
+
+    await publishRealtimeEvent('ORDER_DELETED', { orderId })
+
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {
+    if (isUnauthorizedError(err)) {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+    }
+    console.error('orders DELETE error', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

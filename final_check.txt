@@ -1,0 +1,7 @@
+[
+  {
+    "id": 91,
+    "status": "CANCELADO",
+    "trashed_at": "2026-02-23T03:03:52.460Z"
+  }
+]

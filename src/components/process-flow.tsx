@@ -41,7 +41,7 @@ export const ProcessFlow: React.FC<Props> = ({
         <CardDescription>Visao do progresso de separacao e producao por pedido.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-lg border border-border/70 bg-muted/10 p-4 text-center">
             <p className="text-sm text-muted-foreground">Total</p>
             <p className="text-2xl font-semibold">{ordersCount}</p>

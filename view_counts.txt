@@ -1,0 +1,4 @@
+ABERTO: 3
+CANCELADO: 7
+FINALIZADO: 7
+aberto: 4

@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
       items: [] as any[],
     }))
     if (receipts.length > 0) {
-      const ids = receipts.map((r) => Number(String(r.id).replace(/^IR-/, ''))).filter((n) => !Number.isNaN(n))
+      const ids = receipts
+        .map((r: { id: string }) => Number(String(r.id).replace(/^IR-/, '')))
+        .filter((n: number) => !Number.isNaN(n))
       const itemsRes = await getPool().query(
         `SELECT iri.receipt_id, iri.material_id, iri.qty, iri.uom, m.name AS material_name
          FROM inventory_receipt_items iri

@@ -62,6 +62,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       values.push(nextRole);
     }
 
+    if (typeof body.isBlocked === 'boolean' && auth.role === 'Admin') {
+      updates.push(`is_blocked = $${values.length + 1}`);
+      values.push(body.isBlocked);
+    }
+
     if (updates.length === 0) {
       return NextResponse.json({ message: 'Nada para atualizar' }, { status: 400 });
     }
@@ -69,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     values.push(targetId);
     await getPool().query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
 
-    const updated = await getPool().query('SELECT id, name, email, role, avatar_url FROM users WHERE id = $1', [targetId]);
+    const updated = await getPool().query('SELECT id, name, email, role, avatar_url, is_blocked FROM users WHERE id = $1', [targetId]);
     if (updated.rowCount === 0) {
       return NextResponse.json({ message: 'Usuario nao encontrado' }, { status: 404 });
     }
@@ -82,10 +87,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         email: user.email,
         role: user.role,
         avatarUrl: user.avatar_url ?? undefined,
+        isBlocked: user.is_blocked,
       },
     });
   } catch (err) {
     console.error('users PATCH error', err);
     return NextResponse.json({ message: 'Nao autorizado' }, { status: 401 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireAuth(req);
+    const awaitedParams = (await params) as { id: string };
+    const targetId = awaitedParams.id;
+
+    if (auth.role !== 'Admin') {
+      return NextResponse.json({ message: 'Nao autorizado' }, { status: 403 });
+    }
+
+    if (targetId === auth.userId) {
+      return NextResponse.json({ message: 'Nao pode excluir o seu proprio usuario' }, { status: 400 });
+    }
+
+    await getPool().query('DELETE FROM users WHERE id = $1', [targetId]);
+
+    return NextResponse.json({ message: 'Usuario excluido com sucesso' });
+  } catch (err) {
+    console.error('users DELETE error', err);
+    return NextResponse.json({ message: 'Erro ao excluir usuario' }, { status: 500 });
   }
 }

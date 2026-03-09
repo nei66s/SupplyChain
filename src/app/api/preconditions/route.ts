@@ -9,7 +9,7 @@ type PreconditionRow = {
 
 export async function GET() {
   try {
-    const result = await getPool().query<PreconditionRow>(
+    const result = await getPool().query(
       `SELECT
          c.id,
          c.name,
@@ -22,7 +22,7 @@ export async function GET() {
        GROUP BY c.id
        ORDER BY c.name`
     )
-    const rows = result.rows || []
+    const rows = (result.rows as PreconditionRow[]) || []
     const categories = rows.map((row) => ({
       id: row.id,
       name: row.name,

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -22,6 +22,39 @@ import {
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const SIDEBAR_HOVER_CONFIG = {
+  EDGE_TRIGGER_PX: 28,
+  CLOSE_DELAY_MS: 500,
+} as const
+
+type SidebarSide = "left" | "right"
+
+function getSidebarSideFromDom(): SidebarSide {
+  const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
+  const sideEl = sidebarEl?.closest("[data-side]") as HTMLElement | null
+  return sideEl?.getAttribute("data-side") === "right" ? "right" : "left"
+}
+
+function isAtEdgeTrigger(cursorX: number, viewportWidth: number, side: SidebarSide): boolean {
+  if (side === "left") {
+    return cursorX <= SIDEBAR_HOVER_CONFIG.EDGE_TRIGGER_PX
+  }
+
+  return cursorX >= viewportWidth - SIDEBAR_HOVER_CONFIG.EDGE_TRIGGER_PX
+}
+
+function isCursorOverSidebar(cursorX: number, cursorY: number): boolean {
+  const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
+  if (!sidebarEl) return false
+
+  const rect = sidebarEl.getBoundingClientRect()
+  return (
+    cursorX >= rect.left &&
+    cursorX <= rect.right &&
+    cursorY >= rect.top &&
+    cursorY <= rect.bottom
+  )
+}
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
@@ -71,80 +104,89 @@ const SidebarProvider = React.forwardRef<
     const [_open, _setOpen] = React.useState(defaultOpen)
     // Hover state: when hovering the sidebar area on desktop we show it temporarily
     const [hoverOpen, setHoverOpen] = React.useState(false)
+    const hoverOpenRef = React.useRef(false)
     // Timer ref to debounce mouse leave so sidebar doesn't disappear immediately
-    const leaveTimerRef = React.useRef<number | null>(null)
-    // Cleanup timer on unmount
-    React.useEffect(() => {
-      return () => {
-        if (leaveTimerRef.current) {
-          window.clearTimeout(leaveTimerRef.current)
-          leaveTimerRef.current = null
-        }
+    const closeTimerRef = React.useRef<number | null>(null)
+
+    const setDesktopHoverOpen = React.useCallback((next: boolean) => {
+      hoverOpenRef.current = next
+      setHoverOpen(next)
+    }, [])
+
+    const clearCloseTimer = React.useCallback(() => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
       }
     }, [])
 
+    React.useEffect(() => {
+      hoverOpenRef.current = hoverOpen
+    }, [hoverOpen])
+
+    // Cleanup timer on unmount
+    React.useEffect(() => {
+      return () => {
+        clearCloseTimer()
+      }
+    }, [clearCloseTimer])
+
     // Track pointer movements to determine if the cursor is over the sidebar element itself.
     React.useEffect(() => {
-      if (isMobile) return
+      const openByHover = () => {
+        clearCloseTimer()
+        if (isMobile) {
+          setOpenMobile(true)
+          return
+        }
 
-      // Determine which side the sidebar is on (default left)
-      let sidebarSide: "left" | "right" = "left"
-      try {
-        const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
-        const sideEl = sidebarEl?.closest("[data-side]") as HTMLElement | null
-        const attr = sideEl?.getAttribute("data-side")
-        if (attr === "right") sidebarSide = "right"
-      } catch {
-        // ignore
+        if (!hoverOpenRef.current) {
+          setDesktopHoverOpen(true)
+        }
       }
 
-      const EDGE_THRESHOLD = 32
+      const closeByHover = () => {
+        if (isMobile) {
+          setOpenMobile(false)
+          return
+        }
+
+        if (hoverOpenRef.current) {
+          setDesktopHoverOpen(false)
+        }
+      }
+
+      const scheduleClose = () => {
+        if (closeTimerRef.current) {
+          return
+        }
+
+        closeTimerRef.current = window.setTimeout(() => {
+          closeTimerRef.current = null
+          closeByHover()
+        }, SIDEBAR_HOVER_CONFIG.CLOSE_DELAY_MS)
+      }
 
       const onMove = (e: MouseEvent) => {
-        const target = e.target as Element | null
-        const overSidebar = target?.closest('[data-sidebar="sidebar"]') != null
-
-        if (overSidebar) {
-          if (leaveTimerRef.current) {
-            window.clearTimeout(leaveTimerRef.current)
-            leaveTimerRef.current = null
-          }
-          setHoverOpen(true)
-          return
-        }
-
-        // Open when cursor is near the configured edge
         const cx = e.clientX
-        const atLeftEdge = cx <= EDGE_THRESHOLD
-        const atRightEdge = cx >= window.innerWidth - EDGE_THRESHOLD
+        const cy = e.clientY
+        const viewportWidth = window.innerWidth
+        const side = getSidebarSideFromDom()
+        const overSidebar = isCursorOverSidebar(cx, cy)
+        const atEdge = isAtEdgeTrigger(cx, viewportWidth, side)
 
-        if ((sidebarSide === "left" && atLeftEdge) || (sidebarSide === "right" && atRightEdge)) {
-          if (leaveTimerRef.current) {
-            window.clearTimeout(leaveTimerRef.current)
-            leaveTimerRef.current = null
-          }
-          setHoverOpen(true)
+        if (overSidebar || atEdge) {
+          openByHover()
           return
         }
 
-        if (leaveTimerRef.current) {
-          window.clearTimeout(leaveTimerRef.current)
-        }
-        // Hide immediately when cursor leaves sidebar/edge trigger area
-        leaveTimerRef.current = window.setTimeout(() => {
-          setHoverOpen(false)
-          leaveTimerRef.current = null
-        }, 0)
+        scheduleClose()
       }
 
       const onOut = (e: MouseEvent) => {
         // If relatedTarget is null, the pointer left the window.
         if (!e.relatedTarget) {
-          if (leaveTimerRef.current) {
-            window.clearTimeout(leaveTimerRef.current)
-            leaveTimerRef.current = null
-          }
-          setHoverOpen(false)
+          scheduleClose()
         }
       }
 
@@ -154,12 +196,9 @@ const SidebarProvider = React.forwardRef<
       return () => {
         document.removeEventListener("mousemove", onMove)
         window.removeEventListener("mouseout", onOut)
-        if (leaveTimerRef.current) {
-          window.clearTimeout(leaveTimerRef.current)
-          leaveTimerRef.current = null
-        }
+        clearCloseTimer()
       }
-    }, [isMobile])
+    }, [clearCloseTimer, isMobile, setDesktopHoverOpen])
     const open = openProp ?? (_open || hoverOpen)
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
@@ -278,9 +317,14 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className={cn(
+              "w-[--sidebar-width] !border-0 !shadow-none bg-white dark:bg-slate-950 p-0 text-sidebar-foreground [&>button]:hidden",
+              side === "left" ? "rounded-r-3xl" : "rounded-l-3xl",
+              className
+            )}
             side={side}
           >
+            <SheetTitle className="sr-only">Navegação</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -308,14 +352,14 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] transition-[left,right,width,transform] ease-linear lg:flex",
+            "duration-200 fixed inset-y-0 z-50 hidden h-svh w-[--sidebar-width] transition-[left,right,width,transform] ease-linear lg:flex",
             side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas]:-translate-x-[var(--sidebar-width)]"
-              : "right-0 group-data-[collapsible=offcanvas]:translate-x-[var(--sidebar-width)]",
+              ? "left-0 rounded-r-3xl group-data-[collapsible=offcanvas]:-translate-x-[var(--sidebar-width)]"
+              : "right-0 rounded-l-3xl group-data-[collapsible=offcanvas]:translate-x-[var(--sidebar-width)]",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
             "group-data-[collapsible=offcanvas]:pointer-events-none group-data-[collapsible=offcanvas]:opacity-0 group-data-[collapsible=offcanvas]:shadow-none",
             className
           )}
@@ -323,7 +367,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-          className="flex h-full w-full flex-col rounded-xl border border-sidebar-border/80 bg-sidebar shadow-sm"
+            className="flex h-full w-full flex-col overflow-hidden bg-transparent"
           >
             {children}
           </div>
@@ -347,7 +391,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-9 w-9 rounded-lg border border-transparent hover:border-border", className)}
+      className={cn("h-11 w-11 rounded-lg border border-transparent hover:border-border", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()

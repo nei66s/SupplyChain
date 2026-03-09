@@ -1,0 +1,8 @@
+ALL ORDERS:
+Order 54 (2026021807): status=FINALIZADO, source=manual, hasPending=false, trashed=false
+Order 70 (MRP-70): status=aberto, source=mrp, hasPending=false, trashed=false
+Order 65 (MRP-65): status=aberto, source=mrp, hasPending=false, trashed=false
+  Tasks: DONE
+Order 91 (2026022202): status=CANCELADO, source=manual, hasPending=false, trashed=true
+Order 64 (MRP-64): status=aberto, source=mrp, hasPending=false, trashed=false
+  Tasks: DONE

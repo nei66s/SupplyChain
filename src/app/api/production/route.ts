@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPool } from '@/lib/db'
+import { notifyProductionTaskCreated } from '@/lib/notifications'
+import { publishRealtimeEvent } from '@/lib/pubsub'
 
 type DbRow = {
   id: number
@@ -12,8 +14,24 @@ type DbRow = {
   order_number: string | null
   material_name: string | null
   order_source: string | null
-  pending_receipt_id?: number | null
+  color?: string | null
   description?: string | null
+  conditions?: string | { key: string; value: string }[] | null
+  produced_qty?: string | number | null
+  produced_weight?: string | number | null
+  label_printed: boolean
+}
+
+function parseJson<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return fallback
+    }
+  }
+  return value as T
 }
 
 function toApiTask(row: DbRow) {
@@ -27,9 +45,13 @@ function toApiTask(row: DbRow) {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    pendingReceiptId: row.pending_receipt_id ? `IR-${row.pending_receipt_id}` : null,
     isMrp: String(row.order_source ?? '').toLowerCase() === 'mrp',
+    color: row.color ?? '',
     description: row.description ?? undefined,
+    conditions: parseJson(row.conditions, []),
+    producedQty: row.produced_qty !== null ? Number(row.produced_qty) : undefined,
+    producedWeight: row.produced_weight !== null ? Number(row.produced_weight) : undefined,
+    labelPrinted: row.label_printed,
   }
 }
 
@@ -40,41 +62,40 @@ function errorMessage(err: unknown): string {
 
 export async function GET() {
   try {
-    const res = await getPool().query<DbRow>(
+    const res = await getPool().query(
       `SELECT
          pt.id,
          pt.order_id,
          pt.material_id,
          pt.qty_to_produce,
          pt.status,
+         pt.produced_qty,
+         pt.produced_weight,
+         pt.label_printed,
          pt.created_at,
-      pt.updated_at,
+         pt.updated_at,
        o.order_number,
        o.source AS order_source,
        m.name AS material_name,
-        (
-          SELECT ir.id
-          FROM inventory_receipts ir
-          JOIN inventory_receipt_items iri ON iri.receipt_id = ir.id
-          WHERE ir.status = 'DRAFT'
-            AND UPPER(ir.type) = 'PRODUCTION'
-            AND iri.material_id = pt.material_id
-            AND ir.source_ref = COALESCE(o.order_number, CONCAT('O-', pt.order_id))
-          ORDER BY ir.created_at DESC, ir.id DESC
-          LIMIT 1
-        ) AS pending_receipt_id
-        ,
-        (SELECT oi.item_description FROM order_items oi WHERE oi.order_id = pt.order_id AND oi.material_id = pt.material_id LIMIT 1) AS description
-      FROM production_tasks pt
-      JOIN orders o ON o.id = pt.order_id
+        oi.color AS color,
+        oi.item_description AS description,
+        oi.conditions AS conditions
+       FROM production_tasks pt
+       LEFT JOIN orders o ON o.id = pt.order_id
        LEFT JOIN materials m ON m.id = pt.material_id
+       LEFT JOIN order_items oi ON oi.order_id = pt.order_id AND oi.material_id = pt.material_id
        WHERE o.trashed_at IS NULL
-        AND (o.status IS NULL OR lower(o.status) NOT IN ('cancelado', 'finalizado', 'rascunho', 'draft'))
-        AND (o.source IS NULL OR lower(o.source) = 'mrp')
+         AND (o.status IS NULL OR lower(o.status) NOT IN ('cancelado', 'finalizado'))
+         -- allow MRP-created orders to appear even if their status is 'RASCUNHO' or 'DRAFT'
+         AND NOT (
+           lower(coalesce(o.status, '')) IN ('rascunho', 'draft')
+           AND lower(coalesce(o.source, '')) <> 'mrp'
+         )
        ORDER BY pt.created_at ASC, pt.id ASC`
     )
 
-    return NextResponse.json(res.rows.map(toApiTask))
+    const rows = res.rows as DbRow[]
+    return NextResponse.json(rows.map(toApiTask))
   } catch (err: unknown) {
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
@@ -93,16 +114,7 @@ export async function POST(request: Request) {
     if (Number.isNaN(qtyToProduce) || qtyToProduce <= 0) errors.qtyToProduce = 'qtyToProduce deve ser maior que zero'
     if (Object.keys(errors).length > 0) return NextResponse.json({ errors }, { status: 400 })
 
-    const orderStatusRes = await getPool().query<{ status: string; source: string }>('SELECT status, source FROM orders WHERE id = $1', [orderId])
-    if (orderStatusRes.rowCount === 0) return NextResponse.json({ error: 'order not found' }, { status: 400 })
-    const os = String(orderStatusRes.rows[0]?.status ?? '').toUpperCase()
-    const orderSource = String(orderStatusRes.rows[0]?.source ?? '').toLowerCase()
-    // Allow creating production tasks for draft orders when the order was created by MRP
-    if (['RASCUNHO', 'DRAFT'].includes(os) && orderSource !== 'mrp') {
-      return NextResponse.json({ error: 'Cannot create production task for draft order' }, { status: 403 })
-    }
-
-    const res = await getPool().query<DbRow>(
+    const res = await getPool().query(
       `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
        VALUES ($1, $2, $3, 'PENDING')
        ON CONFLICT (order_id, material_id)
@@ -113,45 +125,49 @@ export async function POST(request: Request) {
            ELSE 'PENDING'
          END,
          updated_at = now()
-        RETURNING id, order_id, material_id, qty_to_produce, status, created_at, updated_at,
-          (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
-          (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
-          (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name,
-          (SELECT item_description FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS description`
+       RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
+         (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
+         (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
+        (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name,
+        (SELECT color FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS color,
+        (SELECT item_description FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS description,
+        (SELECT conditions FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS conditions`
+      ,
       [orderId, materialId, qtyToProduce]
     )
-    // If this request is coming from MRP and the order doesn't have an item for this material,
-    // create or update an order_items row so the order shows the item/quantity in the orders list.
+    const createdRow = res.rows[0] as DbRow
+    // If this was created for an MRP order, ensure the order has an order_items row
     try {
-      const resultingQty = Number(res.rows[0].qty_to_produce ?? 0)
-      if (orderSource === 'mrp') {
-        const matRes = await getPool().query<{ description: string | null }>('SELECT description FROM materials WHERE id = $1', [materialId])
-        const materialDescription = matRes.rows[0]?.description ?? null
-        const existing = await getPool().query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [orderId, materialId])
+      const orderSrcRes = await getPool().query<{ source: string }>('SELECT source FROM orders WHERE id = $1', [createdRow.order_id])
+      const orderSource = String(orderSrcRes.rows[0]?.source ?? '').toLowerCase()
+      const resultingQty = Number(createdRow.qty_to_produce ?? 0)
+      if (orderSource === 'mrp' && resultingQty > 0) {
+        const existing = await getPool().query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [createdRow.order_id, createdRow.material_id])
         if (existing.rowCount > 0) {
           await getPool().query(
             'UPDATE order_items SET quantity = $3, item_description = COALESCE($4, item_description) WHERE order_id = $1 AND material_id = $2',
-            [orderId, materialId, resultingQty, materialDescription]
+            [createdRow.order_id, createdRow.material_id, resultingQty, createdRow.description ?? null]
           )
         } else {
           await getPool().query(
             `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description)
              VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-            [orderId, materialId, resultingQty, 0, '', 'PRODUCE', materialDescription]
+            [createdRow.order_id, createdRow.material_id, resultingQty, 0, '', 'PRODUCE', createdRow.description ?? null]
           )
         }
       }
     } catch (e) {
-      console.error('upsert order_items for production task error', e)
+      console.error('upsert order_items for production task (app) error', e)
     }
+
     // Also create/update a production reservation tied to this order/material
     try {
-      if (Number(res.rows[0].qty_to_produce ?? 0) > 0) {
+      if (Number(createdRow.qty_to_produce ?? 0) > 0) {
         await getPool().query(
           `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
            VALUES ($1, $2, $3, now(), now())
            ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
-          [orderId, materialId, Number(res.rows[0].qty_to_produce ?? 0)]
+          [orderId, materialId, Number(createdRow.qty_to_produce ?? 0)]
         )
       } else {
         // If qty is zero, ensure no lingering reservation remains
@@ -161,8 +177,34 @@ export async function POST(request: Request) {
       // don't fail the whole request for reservation write issues; log and continue
       console.error('production reservation upsert error', e)
     }
+    const createdQty = Number(res.rows[0].qty_to_produce ?? 0)
+    // ensure order_items exist for MRP-created tasks even if qty is zero
+    try {
+      const orderSrc = String(createdRow.order_source ?? '').toLowerCase()
+      if (orderSrc === 'mrp') {
+        const existing = await getPool().query('SELECT id FROM order_items WHERE order_id = $1 AND material_id = $2 LIMIT 1', [createdRow.order_id, createdRow.material_id])
+        if (existing.rowCount > 0) {
+          await getPool().query('UPDATE order_items SET quantity = $3, item_description = COALESCE($4, item_description) WHERE order_id = $1 AND material_id = $2', [createdRow.order_id, createdRow.material_id, createdQty, createdRow.description ?? null])
+        } else {
+          await getPool().query(`INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [createdRow.order_id, createdRow.material_id, createdQty, 0, '', 'PRODUCE', createdRow.description ?? null])
+        }
+      }
+    } catch (e) {
+      console.error('upsert order_items for production task (app) error', e)
+    }
+    if (createdQty > 0) {
+      await notifyProductionTaskCreated({
+        orderId,
+        materialId,
+        orderNumber: createdRow.order_number,
+        materialName: createdRow.material_name,
+        qty: createdQty,
+      })
+    }
 
-    return NextResponse.json(toApiTask(res.rows[0]), { status: 201 })
+    await publishRealtimeEvent('PRODUCTION_TASK_CREATED', { orderId, materialId })
+
+    return NextResponse.json(toApiTask(createdRow), { status: 201 })
   } catch (err: unknown) {
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }

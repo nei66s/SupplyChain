@@ -479,7 +479,7 @@ export default function MrpPanel() {
                   return (
                     <React.Fragment key={s.materialId}>
                       <TableRow>
-                        <TableCell className="max-w-[220px]">
+                        <TableCell className="max-w-[180px] sm:max-w-[220px]">
                           <div className="font-semibold">{s.material?.name ?? s.materialId}</div>
                           <p className="text-xs text-muted-foreground">
                             {s.material?.sku ? `${s.material.sku} • ` : ''}
@@ -514,7 +514,7 @@ export default function MrpPanel() {
                           <p className="text-[11px] text-muted-foreground">{s.persistedRationale}</p>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -551,7 +551,7 @@ export default function MrpPanel() {
                       </TableRow>
                       {expandedMaterialId === s.materialId && (
                         <TableRow>
-                          <TableCell colSpan={8} className="border-none p-4">
+                          <TableCell colSpan={8} className="border-none p-3 sm:p-4">
                             <div className="rounded-md border border-border/70 bg-muted/20 p-4">
                               <div className="font-medium mb-2">{s.material?.name ?? s.materialId}</div>
                               <div className="h-56">
@@ -600,7 +600,7 @@ export default function MrpPanel() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Criar ordem de produção</DialogTitle>
             <DialogDescription>
@@ -641,7 +641,7 @@ export default function MrpPanel() {
         </DialogContent>
       </Dialog>
       <Dialog open={suggestionDialogOpen} onOpenChange={handleSuggestionDialogOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Confirmar sugestão</DialogTitle>
             <DialogDescription>
@@ -649,7 +649,7 @@ export default function MrpPanel() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <p className="text-xs text-muted-foreground">Consumo médio</p>
                 <p className="font-semibold">

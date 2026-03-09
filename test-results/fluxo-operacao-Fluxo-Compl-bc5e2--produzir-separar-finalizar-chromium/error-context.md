@@ -1,0 +1,186 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - img "São Jose Cordas logo"
+              - generic:
+                - generic: São Jose Cordas
+                - generic: Plataforma SaaS
+          - generic:
+            - generic:
+              - generic:
+                - generic: Indicadores
+                - list:
+                  - listitem:
+                    - link "Indicadores":
+                      - /url: /dashboard
+                      - img
+                      - generic: Indicadores
+              - generic:
+                - generic: Pedidos
+                - list:
+                  - listitem:
+                    - link "Pedidos":
+                      - /url: /orders
+                      - img
+                      - generic: Pedidos
+                  - listitem:
+                    - link "Lixeira":
+                      - /url: /orders/trash
+                      - img
+                      - generic: Lixeira
+                  - listitem:
+                    - link "Planejamento de Materiais":
+                      - /url: /mrp
+                      - img
+                      - generic: Planejamento de Materiais
+              - generic:
+                - generic: Operacoes
+                - list:
+                  - listitem:
+                    - link "Estoque":
+                      - /url: /inventory
+                      - img
+                      - generic: Estoque
+                  - listitem:
+                    - link "Producao":
+                      - /url: /production
+                      - img
+                      - generic: Producao
+                  - listitem:
+                    - link "Relatório":
+                      - /url: /report
+                      - img
+                      - generic: Relatório
+                  - listitem:
+                    - link "Separacao":
+                      - /url: /picking
+                      - img
+                      - generic: Separacao
+              - generic:
+                - generic: Administracao
+                - list:
+                  - listitem:
+                    - link "Materiais":
+                      - /url: /materials
+                      - img
+                      - generic: Materiais
+                  - listitem:
+                    - link "Administracao":
+                      - /url: /admin
+                      - img
+                      - generic: Administracao
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - heading "Pedidos" [level=1] [ref=e6]
+        - generic [ref=e8]:
+          - img
+          - textbox "Buscar pedidos, materiais ou tarefas" [ref=e9]
+        - button "Notificacoes" [ref=e10] [cursor=pointer]:
+          - img
+        - generic [ref=e11]:
+          - status "Ping OK" [ref=e12]:
+            - img [ref=e13]
+            - generic [ref=e17]: Ping OK
+          - 'status "Banco de dados: Conectado" [ref=e18]':
+            - img [ref=e19]
+            - generic [ref=e23]: Conectado
+        - button "Ativar modo escuro" [ref=e24] [cursor=pointer]:
+          - img
+        - button "Admin" [ref=e25] [cursor=pointer]:
+          - img "Admin" [ref=e27]
+      - main [ref=e28]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - generic [ref=e35]:
+                  - combobox [ref=e37] [cursor=pointer]:
+                    - generic: Pedidos
+                    - img [ref=e38]
+                  - combobox [ref=e41] [cursor=pointer]:
+                    - generic: Todos
+                    - img [ref=e42]
+                  - combobox [ref=e45] [cursor=pointer]:
+                    - generic: Todos
+                    - img [ref=e46]
+                - paragraph [ref=e48]: Reserva em tempo real (TTL + heartbeat).
+              - button "Novo" [active] [ref=e50] [cursor=pointer]:
+                - img
+                - text: Novo
+            - generic [ref=e52]:
+              - button "2026022107 — Admin - 21/02/2026 RASCUNHO Não pronto" [ref=e53] [cursor=pointer]:
+                - paragraph [ref=e54]:
+                  - text: 2026022107 —
+                  - generic [ref=e55]: Admin
+                - paragraph [ref=e56]: "- 21/02/2026"
+                - generic [ref=e57]:
+                  - generic [ref=e58]: RASCUNHO
+                  - generic [ref=e59]: Não pronto
+              - button "2026022201 — Admin - 22/02/2026 RASCUNHO Não pronto" [ref=e60] [cursor=pointer]:
+                - paragraph [ref=e61]:
+                  - text: 2026022201 —
+                  - generic [ref=e62]: Admin
+                - paragraph [ref=e63]: "- 22/02/2026"
+                - generic [ref=e64]:
+                  - generic [ref=e65]: RASCUNHO
+                  - generic [ref=e66]: Não pronto
+          - generic [ref=e67]:
+            - generic [ref=e69]:
+              - generic [ref=e70]:
+                - heading "2026022201 — Admin" [level=3] [ref=e71]:
+                  - generic [ref=e72]:
+                    - text: 2026022201 —
+                    - generic [ref=e73]: Admin
+                - paragraph [ref=e74]: Status RASCUNHO - Pronto Não pronto
+              - button "Excluir" [ref=e76] [cursor=pointer]:
+                - img
+                - text: Excluir
+            - generic [ref=e77]:
+              - button "Criar pedido" [ref=e79] [cursor=pointer]:
+                - img
+                - text: Criar pedido
+              - generic [ref=e80]:
+                - generic [ref=e81]:
+                  - text: Cliente
+                  - textbox "Digite o nome do cliente" [ref=e82]
+                - generic [ref=e83]:
+                  - text: Data de entrega
+                  - textbox [ref=e84]: 2026-02-22
+                - generic [ref=e85]:
+                  - text: Volumes
+                  - spinbutton [ref=e86]: "1"
+              - generic [ref=e87]:
+                - combobox [ref=e88] [cursor=pointer]:
+                  - generic: Adicionar material
+                  - img [ref=e89]
+                - button "Estender reserva por +5 min" [ref=e91] [cursor=pointer]
+              - table [ref=e94]:
+                - rowgroup [ref=e95]:
+                  - row "Material Qtd. solicitada Faltante Em estoque Reservado (outros pedidos) Disponivel para este pedido Qtd. reservada (estoque) Qtd. para produzir Cor Ações" [ref=e96]:
+                    - columnheader "Material" [ref=e97]
+                    - columnheader "Qtd. solicitada" [ref=e98]
+                    - columnheader "Faltante" [ref=e99]
+                    - columnheader "Em estoque" [ref=e100]
+                    - columnheader "Reservado (outros pedidos)" [ref=e101]
+                    - columnheader "Disponivel para este pedido" [ref=e102]
+                    - columnheader "Qtd. reservada (estoque)" [ref=e103]
+                    - columnheader "Qtd. para produzir" [ref=e104]
+                    - columnheader "Cor" [ref=e105]
+                    - columnheader "Ações" [ref=e106]
+                - rowgroup [ref=e107]:
+                  - row "Adicione itens para iniciar a reserva." [ref=e108]:
+                    - cell "Adicione itens para iniciar a reserva." [ref=e109]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e115] [cursor=pointer]:
+    - img [ref=e116]
+  - alert [ref=e119]
+```

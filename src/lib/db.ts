@@ -24,9 +24,23 @@ function toPositiveInt(rawValue: string | undefined, fallback: number): number {
 
 export function getPoolConfig(): PoolConfig {
   const baseConfig: PoolConfig = {
-    max: toPositiveInt(process.env.PG_POOL_MAX, 10),
-    idleTimeoutMillis: toPositiveInt(process.env.PG_IDLE_TIMEOUT_MS, 30_000),
-    connectionTimeoutMillis: toPositiveInt(process.env.PG_CONNECTION_TIMEOUT_MS, 20_000),
+    // VERCEL SERVERLESS + PGBOUNCER CONFIGURATION
+
+    // As conexões na Vercel são efêmeras (Lambdas/Edge functions morrem e nascem contínuamente).
+    // O pool mínimo de instâncias idle OBRIGATORIAMENTE deve ser 0 para evitar que o pg fique 
+    // segurando conexões "zumbis" de funções que já dormiram, lotando o PgBouncer por exaustão.
+    min: toPositiveInt(process.env.PG_POOL_MIN, 0),
+
+    // Contenção agressiva de concorrência por Lambda.
+    // O Next.js (Serverless) deve abrir no máximo 2 portas pro banco na mesma requisição simultânea.
+    // O afunilamento real de requisições globais ocorre no PgBouncer na VPS, e não no backend Vercel.
+    max: toPositiveInt(process.env.PG_POOL_MAX, 2),
+
+    // Timeouts muito agressivos. 
+    // Em Serverless, as conexões devem ser mortas (release in pool) rapidamente quando ociosas
+    // para limpar a esteira do PgBouncer. E timeouts de conexão curtos evitam hang da API.
+    idleTimeoutMillis: toPositiveInt(process.env.PG_IDLE_TIMEOUT_MS, 10_000), // 10s
+    connectionTimeoutMillis: toPositiveInt(process.env.PG_CONNECTION_TIMEOUT_MS, 5_000), // 5s
   }
 
   if (process.env.DATABASE_URL) {
@@ -89,6 +103,13 @@ function createPoolInstance(): Pool {
   pool.on('connect', () => logPoolEvent('connect'))
   pool.on('acquire', () => logPoolEvent('acquire'))
   pool.on('remove', () => logPoolEvent('remove'))
+
+  // VERCEL / SERVERLESS: Warmups Foram Removidos
+  // O pool.query('SELECT 1') no boot da instância foi descartado propositalmente.
+  // Como as lambdas da Vercel escalam velozmente durante picos (cold starts massivos),
+  // executar "prefetch" em cada inicialização multiplicaria conexões de lixo no PgBouncer 
+  // gerando latência artificial. Em cloud serverless, "Lazy connection" pura é a única via segura.
+
   return pool
 }
 

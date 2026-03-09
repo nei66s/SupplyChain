@@ -1,4 +1,4 @@
-import { unstable_cache } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 import { query } from '../db'
 import { logRepoPerf } from './perf'
 import { ConditionVariant, Material, StockBalance } from '../domain/types'
@@ -163,8 +163,8 @@ export const getMaterialsSnapshot = unstable_cache(async () => {
     stockBalances: snapshot.stockBalances,
     conditionVariants: snapshot.conditionVariants,
   }
-}, [], { revalidate: 30 })
+}, ['materials-snapshot'], { revalidate: 30, tags: ['materials'] })
 
 export async function refreshMaterialsSnapshot() {
-  await (getMaterialsSnapshot as any).revalidate()
+  revalidateTag('materials')
 }
