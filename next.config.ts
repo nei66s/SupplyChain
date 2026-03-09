@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingRoot: path.resolve(__dirname),
+  output: 'standalone',
 };
 
 export default nextConfig;
