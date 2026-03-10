@@ -63,5 +63,22 @@ export const asaas = {
 
     async getCustomer(id: string): Promise<AsaasCustomer> {
         return asaasFetch(`/customers/${id}`);
+    },
+
+    async createCombinedPayment(data: {
+        customer: string;
+        billingType: 'UNDEFINED' | 'PIX' | 'BOLETO' | 'CREDIT_CARD';
+        value: number;
+        nextDueDate: string;
+        description: string;
+        externalReference?: string;
+    }) {
+        return asaasFetch('/payments', {
+            method: 'POST',
+            body: JSON.stringify({
+                ...data,
+                dueDate: data.nextDueDate,
+            }),
+        });
     }
 };

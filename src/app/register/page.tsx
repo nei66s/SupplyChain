@@ -60,10 +60,10 @@ export default function RegisterPage() {
             }
 
             setSuccess(true);
-            // Redireciona para o pagamento do Asaas passando o email via URL para evitar erro de rastreio
+            // Redireciona para o pagamento dinâmico do Asaas
             setTimeout(() => {
-                const asaasUrl = `https://www.asaas.com/c/9acmyekjvena8wub?email=${encodeURIComponent(formData.adminEmail)}`;
-                window.location.href = asaasUrl;
+                const fallbackUrl = `https://www.asaas.com/c/9acmyekjvena8wub?email=${encodeURIComponent(formData.adminEmail)}`;
+                window.location.href = data.checkoutUrl || fallbackUrl;
             }, 3000);
 
         } catch (err: any) {
