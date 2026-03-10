@@ -16,7 +16,9 @@ Este documento detalha as tarefas necessárias para transformar as promessas do 
 - [x] **Módulo de Faturamento / Billing (MVP)**
   - [x] Lógica de aprovação manual via Painel Super Admin (Tenants iniciam como PENDING).
   - [x] Bloqueio automático de login para tenants BLOCKED ou PENDING.
+  - [x] Dashboard de crescimento (Gráficos Recharts) no Painel Super Admin.
   - [ ] Integração com gateway de pagamentos (Stripe/Asaas).
+
 - [x] **Onboarding Seed Data**
   - [x] Criação automática de UOMs (UN, KG, MT, PCT) para novos tenants.
 

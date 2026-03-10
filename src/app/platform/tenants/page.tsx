@@ -19,6 +19,18 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    AreaChart,
+    Area,
+} from 'recharts';
+
 
 type Tenant = {
     id: string;
@@ -71,6 +83,63 @@ function statusIcon(status: Tenant['status']) {
 function formatDate(iso: string | null) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function StatsChart({ data, title, color }: { data: any[], title: string, color: string }) {
+    return (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-6 uppercase tracking-wider flex items-center gap-2">
+                <Activity className="w-4 h-4" /> {title}
+            </h3>
+            <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data}>
+                        <defs>
+                            <linearGradient id={`color-${color}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+                        <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: '#94A3B8' }}
+                            minTickGap={30}
+                            tickFormatter={(val) => new Date(val).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        />
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: '#94A3B8' }}
+                        />
+                        <Tooltip
+                            contentStyle={{
+                                borderRadius: '16px',
+                                border: 'none',
+                                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                backgroundColor: '#1E293B',
+                                color: '#fff'
+                            }}
+                            itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                            labelStyle={{ color: '#94A3B8', fontSize: '10px', marginBottom: '4px' }}
+                            labelFormatter={(val) => new Date(val).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="count"
+                            stroke={color}
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill={`url(#color-${color})`}
+                            animationDuration={1500}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
 }
 
 function TenantCard({
@@ -250,6 +319,8 @@ export default function PlatformTenantsPage() {
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [refreshing, setRefreshing] = useState(false);
+    const [showDashboard, setShowDashboard] = useState(true);
+    const [statsData, setStatsData] = useState<{ tenantGrowth: any[], userGrowth: any[] } | null>(null);
 
     const [notLoggedIn, setNotLoggedIn] = useState(false);
 
@@ -269,7 +340,11 @@ export default function PlatformTenantsPage() {
             }
             const data = await res.json();
             setTenants(data.tenants);
+            if (data.stats) {
+                setStatsData(data.stats);
+            }
             setError('');
+
         } catch {
             setError('Erro de conexão ao carregar tenants');
         } finally {
@@ -365,18 +440,48 @@ export default function PlatformTenantsPage() {
                             <p className="text-[11px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold">Black Tower X Platform</p>
                         </div>
                     </div>
-                    <button
-                        onClick={fetchTenants}
-                        disabled={refreshing}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
-                        Atualizar
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowDashboard(!showDashboard)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all",
+                                showDashboard
+                                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300"
+                                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            )}
+                        >
+                            <Activity className="w-4 h-4" />
+                            Dashboard
+                        </button>
+                        <button
+                            onClick={fetchTenants}
+                            disabled={refreshing}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                        >
+                            <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
+                            Atualizar
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+                {/* Dashboard Charts */}
+                {showDashboard && statsData && (
+                    <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <StatsChart
+                            title="Novas Empresas (30 dias)"
+                            data={statsData.tenantGrowth}
+                            color="#6366f1"
+                        />
+                        <StatsChart
+                            title="Novos Usuários (30 dias)"
+                            data={statsData.userGrowth}
+                            color="#10b981"
+                        />
+                    </div>
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[

@@ -45,7 +45,35 @@ export async function GET(req: NextRequest) {
       ORDER BY t.is_platform_owner DESC, t.created_at ASC
     `);
 
-        return NextResponse.json({ tenants: result.rows });
+        // Fetch growth stats for the last 30 days
+        const tenantGrowth = await pool.query(`
+      SELECT 
+        DATE(created_at) as date, 
+        COUNT(*) as count
+      FROM tenants
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(created_at)
+      ORDER BY DATE(created_at) ASC
+    `);
+
+        const userGrowth = await pool.query(`
+      SELECT 
+        DATE(created_at) as date, 
+        COUNT(*) as count
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(created_at)
+      ORDER BY DATE(created_at) ASC
+    `);
+
+        return NextResponse.json({
+            tenants: result.rows,
+            stats: {
+                tenantGrowth: tenantGrowth.rows,
+                userGrowth: userGrowth.rows
+            }
+        });
+
     } catch (err) {
         console.error('[platform/tenants GET]', err);
         return NextResponse.json({ message: 'Erro ao buscar tenants' }, { status: 500 });
