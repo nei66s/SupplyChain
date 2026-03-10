@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 import { Button } from './ui/button';
+import { WhatsAppButton } from './WhatsAppButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,6 +71,8 @@ import { useAuthUser } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
+import { useTheme } from '@/hooks/use-theme';
+
 
 const navItems = [
   { href: '/dashboard', icon: AreaChart, label: 'Indicadores' },
@@ -85,7 +88,7 @@ const navItems = [
 function MobileBottomNav() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  
+
   const items = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Painel' },
     { href: '/orders', icon: ShoppingCart, label: 'Pedidos' },
@@ -98,7 +101,7 @@ function MobileBottomNav() {
         {items.map(item => {
           const isActive = pathname.startsWith(item.href);
           return (
-            <Link 
+            <Link
               key={item.href}
               href={item.href}
               className={cn(
@@ -116,7 +119,7 @@ function MobileBottomNav() {
             </Link>
           )
         })}
-        <button 
+        <button
           onClick={() => setOpenMobile(true)}
           className="flex flex-col items-center gap-1 min-w-[64px] py-1 rounded-xl text-slate-500 dark:text-slate-400 transition-all active:scale-90"
         >
@@ -177,23 +180,23 @@ function AppSidebar() {
           <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
           <SheetDescription className="sr-only">Acesse todos os módulos e configurações do sistema</SheetDescription>
           <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200/60 dark:bg-slate-800/60 flex-shrink-0" />
-          
+
           <div className="flex-1 overflow-y-auto px-6 py-6 pb-24">
             <div className="grid grid-cols-3 gap-3">
               {mobileItems.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 const isLogout = (item as any).isAction && item.href === '/logout-trigger';
-                
+
                 return (
                   <Link
                     key={item.href}
                     href={isLogout ? '#' : item.href}
                     onClick={(e) => {
-                        if (isLogout) {
-                            e.preventDefault();
-                            handleLogout();
-                        }
-                        setOpenMobile(false);
+                      if (isLogout) {
+                        e.preventDefault();
+                        handleLogout();
+                      }
+                      setOpenMobile(false);
                     }}
                     className={cn(
                       "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95",
@@ -279,7 +282,7 @@ function AppSidebar() {
   }
 
   return (
-    <Sidebar className="text-sidebar-foreground lg:w-72 border-0 shadow-none bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0">
+    <Sidebar className="text-sidebar-foreground border-0 shadow-none bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl group-data-[side=left]:border-r-0 group-data-[side=right]:border-l-0">
       <SidebarHeader className="p-0 px-4 pt-5 pb-4 border-0 shadow-none text-sidebar-foreground">
         <div className="flex items-center justify-between gap-2">
           <Logo className="px-1 py-1" />
@@ -444,8 +447,7 @@ function AppSidebar() {
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = React.useState(false);
-  const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
+  const { theme, setTheme, mounted } = useTheme();
   const { user: authUser, loading: authLoading } = useAuthUser();
 
   const displayUser = authUser ?? null;
@@ -458,38 +460,23 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const avatarInitial = headerIsHydrated ? displayUser?.name?.charAt(0)?.toUpperCase() ?? 'U' : 'U';
 
   React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    const saved = window.localStorage.getItem('theme');
-    const initialTheme =
-      saved === 'dark' || saved === 'light'
-        ? saved
-        : window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light';
-
-    setTheme(initialTheme);
-  }, []);
-
-  React.useEffect(() => {
-    const isDark = theme === 'dark';
-    document.documentElement.classList.toggle('dark', isDark);
-    window.localStorage.setItem('theme', theme);
-    try {
-      // Also persist theme in a cookie so SSR or other contexts can read it
-      // Max-Age ~ 1 year
-      document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-    } catch { }
-  }, [theme]);
-
-  React.useEffect(() => {
     if (!mounted || authLoading) return;
     if (!authUser) {
       router.replace('/login');
+      return;
     }
-  }, [authLoading, authUser, mounted, router]);
+
+    // Billing Enforcement: Redirect to billing if status is INCOMPLETE
+    // Bypass for billing page itself, profile (user needs to logout/change password)
+    // and platform management pages.
+    const isBillingPage = pathname.startsWith('/dashboard/billing');
+    const isExcluded = pathname.startsWith('/profile') || pathname.startsWith('/platform');
+
+    if (authUser.subscriptionStatus === 'INCOMPLETE' && !isBillingPage && !isExcluded) {
+      router.replace('/dashboard/billing');
+    }
+  }, [authLoading, authUser, mounted, router, pathname]);
+
 
   const isInventoryActive = pathname.startsWith('/inventory');
 
@@ -505,6 +492,21 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [router]);
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+          <p className="text-sm font-medium text-slate-500 animate-pulse">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return null;
+  }
 
   return (
     <div className="relative min-h-svh w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
@@ -522,7 +524,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
           <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/40 px-3 py-3 shadow-sm backdrop-blur-xl sm:gap-3 sm:px-6">
             <SidebarTrigger className="hidden lg:inline-flex" />
-            
+
             <h1 className="min-w-0 flex-1 truncate text-lg font-bold font-headline tracking-tight text-slate-800 dark:text-slate-200 ml-1">
               {navItems.find((item) => pathname.startsWith(item.href))?.label ?? (isInventoryActive ? 'Estoque' : 'Inventário Ágil')}
             </h1>
@@ -578,7 +580,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
           </header>
 
           <MobileBottomNav />
@@ -594,6 +595,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           </main>
         </SidebarInset>
       </SidebarProvider>
+      <WhatsAppButton />
     </div>
   );
 }

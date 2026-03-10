@@ -15,7 +15,7 @@ const DEFAULT_LOGO_URL = '/black-tower-x-transp.png';
 
 const DEFAULT_SITE_SETTINGS: SiteSettingsPayload = {
   companyName: 'Black Tower X',
-  platformLabel: 'Plataforma SaaS',
+  platformLabel: 'Inventário Ágil',
   logoUrl: DEFAULT_LOGO_URL,
   logoDataUrl: null,
 };

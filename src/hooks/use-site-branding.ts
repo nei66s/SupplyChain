@@ -17,7 +17,7 @@ export type SiteBranding = {
 
 const FALLBACK_BRANDING: SiteBranding = {
   companyName: 'Black Tower X',
-  platformLabel: 'Plataforma SaaS',
+  platformLabel: 'Inventário Ágil',
   logoSrc: '/black-tower-x-transp.png',
 };
 
@@ -36,7 +36,7 @@ export function useSiteBranding() {
         throw new Error('Falha ao carregar identidade');
       }
       const payload = (await response.json()) as SiteBrandingResponse;
-      
+
       if (!active) return;
 
       const logoDataUrl =
@@ -51,15 +51,15 @@ export function useSiteBranding() {
       };
 
       setBranding(newBranding);
-      
+
       // Persist to local storage for instant client-side retrieval
       localStorage.setItem(CACHE_KEY, JSON.stringify(newBranding));
-      
+
       // Persist to cookies for potential SSR support (matching theme pattern)
       try {
         const cookieValue = btoa(JSON.stringify(newBranding));
         document.cookie = `${COOKIE_KEY}=${cookieValue};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-      } catch {}
+      } catch { }
 
     } catch (error) {
       console.error('Branding fetch error:', error);
@@ -72,13 +72,13 @@ export function useSiteBranding() {
 
   useEffect(() => {
     let active = true;
-    
+
     // 1. Initial hydration on client: read from cache immediately after mount
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         setBranding(JSON.parse(cached));
-      } catch {}
+      } catch { }
     }
     setHasHydrated(true);
 
@@ -90,7 +90,7 @@ export function useSiteBranding() {
       if (e.key === CACHE_KEY && e.newValue) {
         try {
           setBranding(JSON.parse(e.newValue));
-        } catch {}
+        } catch { }
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -101,10 +101,10 @@ export function useSiteBranding() {
     };
   }, [fetchBranding]);
 
-  return { 
-    branding, 
-    loading: loading && !hasHydrated, 
+  return {
+    branding,
+    loading: loading && !hasHydrated,
     hasHydrated,
-    refreshBranding: () => fetchBranding(true) 
+    refreshBranding: () => fetchBranding(true)
   };
 }

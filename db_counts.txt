@@ -1,3 +1,0 @@
-FINALIZADO (trashed: true): 1
-aberto (trashed: true): 3
-draft (trashed: true): 1

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { getSiteSettings, updateSiteSettings } from '@/lib/domain/site-settings';
 
-const FALLBACK_PLATFORM_LABEL = 'Plataforma SaaS';
+const FALLBACK_PLATFORM_LABEL = 'Inventário Ágil';
 const FALLBACK_SETTINGS = {
   companyName: 'Black Tower X',
   document: null,

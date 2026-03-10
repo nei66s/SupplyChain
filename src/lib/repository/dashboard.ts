@@ -120,6 +120,7 @@ type UserRow = {
   name: string
   email: string
   role: User['role']
+  tenant_id: string
   avatar_url: string | null
 }
 
@@ -360,7 +361,7 @@ async function loadMaterialsWithStock(): Promise<
 
 async function loadUsers(): Promise<LoadResult<{ items: User[] }>> {
   const res = await query<UserRow>(`
-    SELECT id, name, email, role, avatar_url
+    SELECT id, name, email, role, tenant_id, avatar_url
     FROM users
     ORDER BY name ASC
   `)
@@ -370,6 +371,7 @@ async function loadUsers(): Promise<LoadResult<{ items: User[] }>> {
     name: row.name,
     email: row.email,
     role: row.role,
+    tenantId: row.tenant_id,
     avatarUrl: row.avatar_url ?? undefined,
   }))
 

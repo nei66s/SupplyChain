@@ -78,7 +78,7 @@
 /* Sidebar default widths and mobile override */
 @layer components {
   .sidebar-root {
-    --sidebar-width: 16rem;
+    --sidebar-width: 18rem;
     --sidebar-width-icon: 4.5rem;
   }
 

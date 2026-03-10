@@ -153,7 +153,7 @@ export default function AdminPage() {
       document: document.trim() || null,
       phone: phone.trim() || null,
       address: address.trim() || null,
-      platformLabel: 'Plataforma SaaS',
+      platformLabel: 'Inventário Ágil',
       logoDataUrl,
     };
 
@@ -174,7 +174,7 @@ export default function AdminPage() {
       setAddress(result.address || '');
       setLogoDataUrl(result.logoDataUrl ?? null);
       setLogoFileName(result.logoDataUrl ? 'Logo enviado' : null);
-      
+
       // Refresh global branding state/cache
       refreshBranding();
 
@@ -473,7 +473,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold">{companyName}</p>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Plataforma SaaS</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Inventário Ágil</p>
               </div>
             </div>
           </div>
@@ -566,28 +566,28 @@ export default function AdminPage() {
               {sortedUsers.map((account) => {
                 const isAuthUser = account.id === authUser?.id;
                 const isRoleChanged = roleSelection[account.id] !== undefined && roleSelection[account.id] !== account.role;
-                
+
                 return (
                   <div
                     key={account.id}
                     className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/5 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-3">
-                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400 font-bold shrink-0">
-                          {account.name.charAt(0).toUpperCase()}
-                       </div>
-                       <div className="min-w-0">
-                          <p className={`truncate text-sm font-bold text-slate-900 dark:text-slate-100 ${account.isBlocked ? 'line-through text-muted-foreground' : ''}`}>
-                            {account.name} {isAuthUser && '(Você)'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                             <p className="truncate text-[11px] text-muted-foreground">{account.email}</p>
-                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider">
-                               {roleLabel(account.role as Role)}
-                             </Badge>
-                             {account.isBlocked && <Badge variant="destructive" className="h-4 text-[9px]">Bloqueado</Badge>}
-                          </div>
-                       </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900/40 dark:text-slate-400 font-bold shrink-0">
+                        {account.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`truncate text-sm font-bold text-slate-900 dark:text-slate-100 ${account.isBlocked ? 'line-through text-muted-foreground' : ''}`}>
+                          {account.name} {isAuthUser && '(Você)'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="truncate text-[11px] text-muted-foreground">{account.email}</p>
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider">
+                            {roleLabel(account.role as Role)}
+                          </Badge>
+                          {account.isBlocked && <Badge variant="destructive" className="h-4 text-[9px]">Bloqueado</Badge>}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3 sm:border-t-0 sm:pt-0">

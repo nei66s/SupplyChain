@@ -8,6 +8,7 @@ export type AuthUser = {
   email: string;
   role: string;
   avatarUrl?: string;
+  subscriptionStatus?: string;
 };
 
 export function useAuthUser() {

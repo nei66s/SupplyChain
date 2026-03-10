@@ -26,8 +26,16 @@ yarn-debug.log*
 yarn-error.log*
 *.err.log
 *.out.log
+*.log
+*.txt
 dev.err
 dev.log
+/tmp_logs/
+/Yes/
+.modified
+/lint.json
+/lint.log
+/tsc.log
 
 # local env files
 .env
@@ -43,10 +51,6 @@ dev.log
 *.tsbuildinfo
 next-env.d.ts
 
-# PM2
-/Yes/
-.modified
-
 # IDE / tools
 /.idx
 /.next-pilot
@@ -55,3 +59,5 @@ next-env.d.ts
 
 # test projects
 /testbuild
+/test-results/
+/playwright-report/

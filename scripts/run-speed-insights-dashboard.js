@@ -46,7 +46,7 @@ const runSpeedInsights = () => {
     "desktop",
   ];
 
-  const child = spawn("npx", args, { stdio: "inherit" });
+  const child = spawn("npx", args, { stdio: "inherit", shell: true });
 
   child.on("close", (code) => {
     if (code !== 0) {

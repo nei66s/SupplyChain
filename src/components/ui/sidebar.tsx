@@ -22,39 +22,6 @@ import {
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
-const SIDEBAR_HOVER_CONFIG = {
-  EDGE_TRIGGER_PX: 28,
-  CLOSE_DELAY_MS: 500,
-} as const
-
-type SidebarSide = "left" | "right"
-
-function getSidebarSideFromDom(): SidebarSide {
-  const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
-  const sideEl = sidebarEl?.closest("[data-side]") as HTMLElement | null
-  return sideEl?.getAttribute("data-side") === "right" ? "right" : "left"
-}
-
-function isAtEdgeTrigger(cursorX: number, viewportWidth: number, side: SidebarSide): boolean {
-  if (side === "left") {
-    return cursorX <= SIDEBAR_HOVER_CONFIG.EDGE_TRIGGER_PX
-  }
-
-  return cursorX >= viewportWidth - SIDEBAR_HOVER_CONFIG.EDGE_TRIGGER_PX
-}
-
-function isCursorOverSidebar(cursorX: number, cursorY: number): boolean {
-  const sidebarEl = document.querySelector('[data-sidebar="sidebar"]') as HTMLElement | null
-  if (!sidebarEl) return false
-
-  const rect = sidebarEl.getBoundingClientRect()
-  return (
-    cursorX >= rect.left &&
-    cursorX <= rect.right &&
-    cursorY >= rect.top &&
-    cursorY <= rect.bottom
-  )
-}
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
@@ -102,105 +69,7 @@ const SidebarProvider = React.forwardRef<
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(defaultOpen)
-    // Hover state: when hovering the sidebar area on desktop we show it temporarily
-    const [hoverOpen, setHoverOpen] = React.useState(false)
-    const hoverOpenRef = React.useRef(false)
-    // Timer ref to debounce mouse leave so sidebar doesn't disappear immediately
-    const closeTimerRef = React.useRef<number | null>(null)
-
-    const setDesktopHoverOpen = React.useCallback((next: boolean) => {
-      hoverOpenRef.current = next
-      setHoverOpen(next)
-    }, [])
-
-    const clearCloseTimer = React.useCallback(() => {
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current)
-        closeTimerRef.current = null
-      }
-    }, [])
-
-    React.useEffect(() => {
-      hoverOpenRef.current = hoverOpen
-    }, [hoverOpen])
-
-    // Cleanup timer on unmount
-    React.useEffect(() => {
-      return () => {
-        clearCloseTimer()
-      }
-    }, [clearCloseTimer])
-
-    // Track pointer movements to determine if the cursor is over the sidebar element itself.
-    React.useEffect(() => {
-      const openByHover = () => {
-        clearCloseTimer()
-        if (isMobile) {
-          setOpenMobile(true)
-          return
-        }
-
-        if (!hoverOpenRef.current) {
-          setDesktopHoverOpen(true)
-        }
-      }
-
-      const closeByHover = () => {
-        if (isMobile) {
-          setOpenMobile(false)
-          return
-        }
-
-        if (hoverOpenRef.current) {
-          setDesktopHoverOpen(false)
-        }
-      }
-
-      const scheduleClose = () => {
-        if (closeTimerRef.current) {
-          return
-        }
-
-        closeTimerRef.current = window.setTimeout(() => {
-          closeTimerRef.current = null
-          closeByHover()
-        }, SIDEBAR_HOVER_CONFIG.CLOSE_DELAY_MS)
-      }
-
-      const onMove = (e: MouseEvent) => {
-        if (isMobile) return
-        const cx = e.clientX
-        const cy = e.clientY
-        const viewportWidth = window.innerWidth
-        const side = getSidebarSideFromDom()
-        const overSidebar = isCursorOverSidebar(cx, cy)
-        const atEdge = isAtEdgeTrigger(cx, viewportWidth, side)
-
-        if (overSidebar || atEdge) {
-          openByHover()
-          return
-        }
-
-        scheduleClose()
-      }
-
-      const onOut = (e: MouseEvent) => {
-        // If relatedTarget is null, the pointer left the window.
-        if (!e.relatedTarget) {
-          scheduleClose()
-        }
-      }
-
-      document.addEventListener("mousemove", onMove)
-      window.addEventListener("mouseout", onOut)
-
-      return () => {
-        document.removeEventListener("mousemove", onMove)
-        window.removeEventListener("mouseout", onOut)
-        clearCloseTimer()
-      }
-    }, [clearCloseTimer, isMobile, setDesktopHoverOpen])
-    const open = openProp ?? (_open || hoverOpen)
+    const open = openProp ?? _open
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
@@ -341,10 +210,11 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
       >
-        {/* Spacer removed so sidebar overlays content instead of pushing it */}
+        {/* Spacer to push content so sidebar doesn't overlay it */}
         <div
           className={cn(
-            "duration-200 relative h-svh w-0 bg-transparent transition-[width] ease-linear",
+            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"

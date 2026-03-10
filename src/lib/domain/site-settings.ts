@@ -1,4 +1,4 @@
-import { getPool } from '@/lib/db';
+import { query } from '@/lib/db';
 
 export type SiteSettings = {
   companyName: string;
@@ -24,17 +24,6 @@ export type SiteSettingsUpdate = Partial<{
 }>;
 
 const PRIMARY_SITE_ID = 'primary';
-
-async function createDefaults() {
-  await getPool().query(
-    `
-      INSERT INTO site_settings (id, company_name, platform_label)
-      VALUES ($1, 'Black Tower X', 'Plataforma SaaS')
-      ON CONFLICT (id) DO NOTHING
-    `,
-    [PRIMARY_SITE_ID]
-  );
-}
 
 function formatRow(row: {
   company_name: string;
@@ -63,22 +52,27 @@ function formatRow(row: {
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  let result = await getPool().query(
+  // Tenta buscar no Tenant Atual da Sessão (O wrapper query aplica o RLS)
+  const result = await query(
     'SELECT company_name, document, phone, address, platform_label, logo_url, logo_data, logo_content_type, updated_at FROM site_settings WHERE id = $1',
     [PRIMARY_SITE_ID]
   );
 
   if (result.rowCount === 0) {
-    await createDefaults();
-    result = await getPool().query(
-      'SELECT company_name, document, phone, address, platform_label, logo_url, logo_data, logo_content_type, updated_at FROM site_settings WHERE id = $1',
-      [PRIMARY_SITE_ID]
-    );
+    // Retorna um fallback vazio mas estruturado se nada existir para esse tenant
+    return {
+      companyName: 'Nova Empresa',
+      document: null,
+      phone: null,
+      address: null,
+      platformLabel: 'Inventário Ágil',
+      logoUrl: '/black-tower-x-transp.png',
+      logoDataUrl: null,
+      logoContentType: null,
+      updatedAt: new Date().toISOString(),
+    };
   }
 
-  if (result.rowCount === 0) {
-    throw new Error('Site settings are not available');
-  }
   return formatRow(result.rows[0]);
 }
 
@@ -136,7 +130,7 @@ export async function updateSiteSettings(update: SiteSettingsUpdate): Promise<Si
     return getSiteSettings();
   }
 
-  const result = await getPool().query(
+  const result = await query(
     `
       UPDATE site_settings
       SET ${assignments.join(', ')}
@@ -145,6 +139,7 @@ export async function updateSiteSettings(update: SiteSettingsUpdate): Promise<Si
     `,
     [...params, PRIMARY_SITE_ID]
   );
+
 
   if (result.rowCount === 0) {
     throw new Error('Site settings not found');

@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await getPool().query(
-      'SELECT id, name, email, role, avatar_url FROM users WHERE id = $1',
+      `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status
+       FROM users u
+       JOIN tenants t ON t.id = u.tenant_id
+       WHERE u.id = $1`,
       [payload.userId]
     );
     if (result.rowCount === 0) {
@@ -24,9 +27,12 @@ export async function GET(req: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
+        tenantId: user.tenant_id,
         avatarUrl: user.avatar_url ?? undefined,
+        subscriptionStatus: user.subscription_status,
       },
     });
+
   } catch (err) {
     console.error('me endpoint error', err);
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 });

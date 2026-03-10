@@ -1,14 +1,16 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Home } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/hooks/use-theme';
 
 export type LoginBranding = {
   companyName: string;
@@ -23,8 +25,7 @@ type LoginShellProps = {
 export function LoginShell({ branding }: LoginShellProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [mounted, setMounted] = useState(false);
+  const { theme, toggleTheme, mounted } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,30 +33,6 @@ export function LoginShell({ branding }: LoginShellProps) {
   const themeIcon = mounted
     ? theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
     : null;
-
-  // Read initial theme from document element (already set by layout.tsx script)
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setTheme(isDark ? 'dark' : 'light');
-
-    // Defer mounting state to next frame to keep main thread free for interaction
-    const frame = requestAnimationFrame(() => {
-      setMounted(true);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // Simplified theme toggle effect - only updates state and storage
-  useEffect(() => {
-    if (!mounted) return;
-
-    const isDark = theme === 'dark';
-    document.documentElement.classList.toggle('dark', isDark);
-    window.localStorage.setItem('theme', theme);
-    document.cookie = `theme=${theme};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-  }, [theme, mounted]);
-
-  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,21 +87,20 @@ export function LoginShell({ branding }: LoginShellProps) {
       <div className="hidden md:flex flex-col justify-between w-1/2 bg-slate-950 p-12 text-white relative overflow-hidden">
         {/* Abstract background elements */}
         <div className="absolute inset-0 z-0 opacity-30">
-          <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-indigo-600/30 blur-[120px]" />
-          <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] rounded-full bg-blue-600/20 blur-[100px]" />
-          <div className="absolute top-[40%] right-[10%] w-[40%] h-[40%] rounded-full bg-violet-600/20 blur-[100px]" />
+          <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-indigo-600/30 blur-[80px]" />
+          <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] rounded-full bg-blue-600/20 blur-[64px]" />
+          <div className="absolute top-[40%] right-[10%] w-[40%] h-[40%] rounded-full bg-violet-600/20 blur-[64px]" />
         </div>
 
         <div className="relative z-10 flex items-center gap-4">
           <div className="relative h-12 w-12 bg-white/10 p-2 rounded-xl backdrop-blur-sm border border-white/10">
             <Image
               src={branding.logoSrc}
-              alt={branding.companyName}
+              alt={`${branding.companyName} logo`}
               fill
               sizes="48px"
               className="object-contain p-1 dark:brightness-200 dark:invert-0 brightness-0 invert"
               priority
-              unoptimized
             />
           </div>
           <div>
@@ -159,25 +135,30 @@ export function LoginShell({ branding }: LoginShellProps) {
 
       {/* Right side - Login Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative bg-slate-50 dark:bg-slate-950">
-        <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-8">
+        <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-8 flex items-center gap-2">
+          <Button
+            variant="ghost"
+            asChild
+            className="rounded-full flex items-center gap-2 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-200 dark:hover:bg-slate-800 backdrop-blur-md px-4"
+          >
+            <Link href="/">
+              <Home className="h-4 w-4" />
+              <span className="text-xs font-semibold">Início</span>
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full w-10 h-10 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-200 dark:hover:bg-slate-800 backdrop-blur-md"
+            className="rounded-full bg-white/50 dark:bg-slate-900/50 hover:bg-slate-200 dark:hover:bg-slate-800 backdrop-blur-md"
             aria-label={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
             onClick={toggleTheme}
           >
-            {themeIcon}
+            {mounted ? themeIcon : <div className="h-4 w-4" />}
           </Button>
         </div>
 
         <div
-          className="w-full max-w-[420px] space-y-8 opacity-0 mounted:opacity-100 mounted:animate-in mounted:fade-in mounted:slide-in-from-bottom-4 duration-500 ease-out"
-          style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(1rem)',
-            transition: 'opacity 0.5s ease-out, transform 0.5s ease-out'
-          }}
+          className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
         >
           <div className="bg-white dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-[32px] p-8 sm:p-10 border border-slate-200/60 dark:border-slate-800/60 transition-opacity duration-300">
             <div className="flex flex-col items-center space-y-6 mb-10">
@@ -189,7 +170,6 @@ export function LoginShell({ branding }: LoginShellProps) {
                   sizes="64px"
                   className="object-contain p-2 dark:brightness-200 dark:invert-0"
                   priority
-                  unoptimized
                 />
               </div>
               <div className="text-center space-y-2">

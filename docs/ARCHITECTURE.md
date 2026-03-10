@@ -54,11 +54,49 @@ Atualmente gerenciado via tabelas para:
 - `inventory_receipts`: Controle de entradas.
 - `production_tasks`: Gerenciamento de fila de fábrica.
 
-## 🚀 Estratégia de Deploy
+## 🌐 Camada SaaS & Marketing
 
-- **PM2**: Utilizado para gerenciar instâncias em servidores Linux/Windows.
-- **Cluster Mode**: Maximiza o uso de CPU.
-- **Scripts**: `npm run pm2:start` inicia o processo com as configurações em `ecosystem.config.js`.
+O sistema evoluiu para uma estrutura SaaS (Software as a Service) com suporte a multi-branding e páginas institucionais:
+
+- **Site Branding**: Gerenciado dinamicamente via `useSiteBranding()` e tabela `site_settings`. Permite personalizar o nome da empresa e logo sem alteração de código.
+- **Landing Page**: Implementada no `src/app/page.tsx` com componentes modulares para marketing (Hero, Features, Pricing).
+- **Roadmap & Security**: Páginas dedicadas para transparência técnica e retenção de leads B2B.
+
+---
+
+## 🔐 Segurança e Autenticação
+
+O sistema utiliza uma estratégia de **Zero-Flash Auth Redirection** para garantir uma experiência de usuário premium e proteger rotas privadas.
+
+### Prevenção de "Flash" de Conteúdo
+Para evitar que partes da interface protegida apareçam antes do redirecionamento para o login, utilizamos três camadas de proteção:
+
+1.  **Middleware (Edge Level)**: Localizado em `src/middleware.ts`, intercepta a requisição antes que ela chegue ao navegador. Se o token de sessão estiver ausente, o Next.js redireciona instantaneamente no lado do servidor.
+2.  **Server-Side Layout Guard**: Todos os `layout.tsx` de rotas protegidas verificam a presença do cookie de sessão. Por serem *Server Components*, eles bloqueiam a renderização de qualquer HTML se o usuário não estiver autenticado, executando um `redirect()` imediato.
+3.  **AppShell Validation**: No lado do cliente, o componente `AppShell` mantém o estado de `authLoading` e não renderiza os `children` até que a validação da sessão seja confirmada pelo hook `useAuthUser`.
+
+### Fluxo de Acesso
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant M as Middleware (Server)
+    participant L as Layout (Server)
+    participant C as Component (Client)
+
+    U->>M: Requisição /dashboard
+    alt Sem Token
+        M-->>U: 302 Redirect /login
+    else Com Token
+        M->>L: Prossegue para Layout
+        L->>L: Valida Cookie
+        L-->>U: Envia HTML estrutural
+        U->>C: Hidratação e useAuthUser
+        C->>C: Renderiza conteúdo final
+    end
+```
+
+---
+## 🚀 Estratégia de Deploy
 
 ---
 Consulte o arquivo [blueprint.md](./blueprint.md) para os requisitos originais de design.

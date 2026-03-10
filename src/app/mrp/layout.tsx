@@ -1,5 +1,18 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 
-export default function MrpLayout({ children }: { children: React.ReactNode }) {
+export default async function MRPLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('sc-session')?.value;
+
+  if (!token) {
+    redirect('/login');
+  }
+
   return <AppShell>{children}</AppShell>;
 }

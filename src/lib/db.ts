@@ -179,14 +179,30 @@ function buildQueryConfig(text: string | QueryConfigWithSimple, params?: unknown
   }
 }
 
+import { getTenantContext } from './tenant-context'
+import { getTenantFromSession } from './auth'
+
 export async function query<T extends QueryResultRow = any>(text: string | QueryConfig, params?: unknown[]) {
   const totalStart = process.hrtime.bigint()
   const config = buildQueryConfig(text, params)
   let retried = false
 
   while (true) {
+    const client = await getPool().connect()
     try {
-      const result = await getPool().query<T>(config)
+      // Tenta pegar o tenant do AsyncLocalStorage ou diretamente da Session (Cookies)
+      let tenantId = getTenantContext()?.tenantId || null
+      if (!tenantId) {
+        tenantId = await getTenantFromSession()
+      }
+
+      if (tenantId) {
+        await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(tenantId)}`)
+      } else {
+        await client.query('RESET app.current_tenant_id')
+      }
+
+      const result = await client.query<T>(config)
       const queryDurationMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000
       const textSummary = config.text?.split('\n')[0].trim() ?? ''
 
@@ -208,6 +224,8 @@ export async function query<T extends QueryResultRow = any>(text: string | Query
       }
 
       throw error
+    } finally {
+      client.release()
     }
   }
 }
