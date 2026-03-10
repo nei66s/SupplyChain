@@ -17,6 +17,17 @@ module.exports = {
       },
       watch: false,
       max_memory_restart: "500M"
+    },
+    {
+      name: "monitor-service",
+      script: "scripts/monitor-service.ts",
+      interpreter: "node",
+      interpreter_args: "--import tsx",
+      env: {
+        NODE_ENV: "production"
+      },
+      watch: false,
+      autorestart: true
     }
   ]
 };

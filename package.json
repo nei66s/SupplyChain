@@ -21,7 +21,10 @@
     "typecheck": "tsc --noEmit",
     "clear-db": "node ./scripts/clear-db.js",
     "db:migrate": "node ./scripts/run-migrations.js",
-    "audit:dashboard": "node scripts/run-speed-insights-dashboard.js"
+    "audit:dashboard": "node scripts/run-speed-insights-dashboard.js",
+    "monitor:check": "npx tsx scripts/watchdog.ts",
+    "monitor:report": "npx tsx scripts/watchdog.ts --report",
+    "monitor:service": "npx tsx scripts/monitor-service.ts"
   },
   "dependencies": {
     "@flags-sdk/vercel": "^1.0.1",
