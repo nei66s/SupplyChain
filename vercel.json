@@ -3,10 +3,6 @@
   "outputDirectory": "next_build",
   "crons": [
     {
-      "path": "/api/monitor?type=check",
-      "schedule": "*/10 * * * *"
-    },
-    {
       "path": "/api/monitor?type=report",
       "schedule": "0 10 * * *"
     }
