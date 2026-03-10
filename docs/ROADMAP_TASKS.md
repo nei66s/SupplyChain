@@ -7,13 +7,14 @@ Este documento detalha as tarefas necessárias para transformar as promessas do 
 ## 🚨 Prioridade Zero: Consistência da Landing Page
 *Objetivo: Integrar as funcionalidades prometidas no marketing que ainda não existem no sistema operacional.*
 
-- [ ] **Interface de Suporte Real**
-  - [ ] Integrar botão de WhatsApp flutuante na página principal.
-  - [ ] Configurar roteamento de suporte para o time da Black Tower X.
+- [x] **Interface de Suporte Real**
+  - [x] Integrar botão de WhatsApp flutuante na página principal.
+  - [x] Configurar roteamento de suporte para o time da Black Tower X.
+- [x] **Infraestrutura Escalável**
+  - [x] Migrar para um setup multitenant via RLS (Row-Level Security)
+  - [x] Criar formulário de self-service onboarding.
 - [ ] **Módulo de Faturamento / Billing (MVP)**
-  - [ ] Desenvolver a lógica de ativação de conta via assinatura em vez de apenas login fixo.
-- [ ] **Infraestrutura Escalável**
-  - [ ] Migrar para um setup multitenant (atualmente single-tenant).
+  - [ ] Desenvolver a lógica de ativação de conta ativa e gerir bloqueios via sistema de pagamentos ou ativação manual do admin.
 
 ---
 

@@ -36,6 +36,6 @@ Estes itens estão na Landing Page mas NÃO possuem funcionalidade no backend:
 
 ## 🚀 Plano de Ação Imediato
 Para que a Landing Page seja 100% honesta, devemos:
-1.  Priorizar o **Módulo de Billing** para que o botão "Começar Agora" funcione de verdade.
-2.  Adicionar um **Botão de WhatsApp** flutuante na Landing para cumprir a promessa de suporte.
-3.  Ajustar o texto da Landing de "App Mobile" para "Web App Mobile Optimized" até que o nativo saia.
+1.  Priorizar o **Módulo de Billing** para que o botão "Começar Agora" funcione de verdade cobrando o usuário, em vez de dar acesso automático no sistema SaaS. (Pendente)
+2.  ~~Adicionar um **Botão de WhatsApp** flutuante na Landing para cumprir a promessa de suporte.~~ (Feito)
+3.  ~~Ajustar o texto da Landing de "App Mobile" para "Web App Mobile Optimized" até que o nativo saia.~~ (Feito)
