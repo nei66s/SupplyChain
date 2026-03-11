@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
                 await pool.query(
                     `UPDATE tenants 
                      SET subscription_status = 'ACTIVE', 
+                         status = 'ACTIVE',
                          subscription_expires_at = NOW() + INTERVAL '32 days',
                          stripe_customer_id = $1,
                          stripe_subscription_id = $2
