@@ -15,6 +15,7 @@ import {
   StockReservation,
   User,
 } from '../domain/types'
+import { getTenantFromSession } from '../auth'
 
 const statusMap: Record<string, OrderStatus> = {
   draft: 'RASCUNHO',
@@ -206,6 +207,7 @@ async function loadOrders(): Promise<LoadResult<{ items: Order[] }>> {
   const res = await query<OrderRow>(`
     SELECT *
     FROM dashboard_orders_view
+    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
     ORDER BY created_at ASC
   `)
 
@@ -291,6 +293,7 @@ async function loadProductionTasks(): Promise<LoadResult<{ items: ProductionTask
   const res = await query<ProductionTaskRow>(
     `SELECT *
      FROM dashboard_production_tasks_view
+     WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
      ORDER BY created_at ASC, id ASC`
   )
 
@@ -319,6 +322,7 @@ async function loadMaterialsWithStock(): Promise<
   const res = await query<MaterialStockRow>(`
     SELECT *
     FROM dashboard_materials_stock_view
+    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
   `)
 
   const materials = res.rows.map((row) => {
@@ -397,6 +401,7 @@ async function loadStockReservations(): Promise<LoadResult<{ items: StockReserva
     FROM stock_reservations sr
     LEFT JOIN users u ON u.id = sr.user_id
     WHERE sr.expires_at > now()
+      AND sr.tenant_id = current_setting('app.current_tenant_id')::uuid
     ORDER BY sr.expires_at ASC
   `)
 
@@ -423,6 +428,7 @@ async function loadInventoryReceipts(): Promise<LoadResult<{ items: InventoryRec
   const res = await query<InventoryReceiptSnapshotRow>(`
     SELECT *
     FROM mv_inventory_receipts_snapshot
+    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
     ORDER BY created_at DESC
   `)
 
@@ -459,6 +465,7 @@ async function loadNotifications(): Promise<LoadResult<{ items: Notification[] }
   const res = await query<NotificationRow>(`
     SELECT id, type, title, message, created_at, read_at, role_target, order_id, material_id, dedupe_key
     FROM notifications
+    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
     ORDER BY created_at DESC
   `)
   const items = res.rows.map((row) => ({
@@ -546,22 +553,29 @@ function logDashboardSnapshotQueryProfile(queryProfiles: QueryProfileEntry[], to
 
 // Keep dashboard data fresh-ish (~15s) while reusing the cached snapshot and Redis fallback.
 async function loadDashboardSnapshot(): Promise<DashboardData> {
+  const tenantId = await getTenantFromSession()
+  const tenantCacheKey = `${DASHBOARD_CACHE_KEY}:${tenantId ?? 'global'}`
+
   const skipCache = bypassRedisCache
   bypassRedisCache = false
   if (!skipCache) {
-    const cached = await getJsonCache<DashboardData>(DASHBOARD_CACHE_KEY)
+    const cached = await getJsonCache<DashboardData>(tenantCacheKey)
     if (cached) return cached
   }
   const snapshot = await createDashboardSnapshotInternal()
-  await setJsonCache(DASHBOARD_CACHE_KEY, snapshot)
+  await setJsonCache(tenantCacheKey, snapshot)
   return snapshot
 }
 
-export const getDashboardSnapshot = unstable_cache(
-  async () => loadDashboardSnapshot(),
-  ['dashboard'],
-  { tags: ['dashboard'] }
-)
+// Next.js unstable_cache wrapper
+export async function getDashboardSnapshot() {
+  const tenantId = await getTenantFromSession()
+  return unstable_cache(
+    async () => loadDashboardSnapshot(),
+    [`dashboard-${tenantId}`], // Per-tenant key
+    { tags: ['dashboard', `dashboard-${tenantId}`] }
+  )()
+}
 
 export function revalidateDashboardTag() {
   try {
@@ -572,7 +586,9 @@ export function revalidateDashboardTag() {
 }
 
 export async function invalidateDashboardCache() {
-  await invalidateCache(DASHBOARD_CACHE_KEY)
+  const tenantId = await getTenantFromSession()
+  const tenantCacheKey = `${DASHBOARD_CACHE_KEY}:${tenantId ?? 'global'}`
+  await invalidateCache(tenantCacheKey)
 }
 
 let pendingMaterializedRefresh: Promise<void> | null = null
