@@ -204,12 +204,15 @@ const MATERIALIZED_VIEWS = [
 let bypassRedisCache = false
 
 async function loadOrders(): Promise<LoadResult<{ items: Order[] }>> {
+  const tenantId = await getTenantFromSession()
+  if (!tenantId) throw new Error('Missing tenant context for dashboard query')
+
   const res = await query<OrderRow>(`
     SELECT *
     FROM dashboard_orders_view
-    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
+    WHERE tenant_id = $1::uuid
     ORDER BY created_at ASC
-  `)
+  `, [tenantId])
 
   const map = new Map<number, Order>()
   const dayCounters = new Map<string, number>()
@@ -290,11 +293,14 @@ async function loadOrders(): Promise<LoadResult<{ items: Order[] }>> {
 }
 
 async function loadProductionTasks(): Promise<LoadResult<{ items: ProductionTask[] }>> {
+  const tenantId = await getTenantFromSession()
+  if (!tenantId) throw new Error('Missing tenant context for production tasks query')
+
   const res = await query<ProductionTaskRow>(
     `SELECT *
      FROM dashboard_production_tasks_view
-     WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
-     ORDER BY created_at ASC, id ASC`
+     WHERE tenant_id = $1::uuid
+     ORDER BY created_at ASC, id ASC`, [tenantId]
   )
 
   const items = res.rows.map((row) => ({
@@ -319,11 +325,14 @@ async function loadProductionTasks(): Promise<LoadResult<{ items: ProductionTask
 async function loadMaterialsWithStock(): Promise<
   LoadResult<{ materials: Material[]; stockBalances: StockBalance[] }>
 > {
+  const tenantId = await getTenantFromSession()
+  if (!tenantId) throw new Error('Missing tenant context for materials query')
+
   const res = await query<MaterialStockRow>(`
     SELECT *
     FROM dashboard_materials_stock_view
-    WHERE tenant_id = current_setting('app.current_tenant_id')::uuid
-  `)
+    WHERE tenant_id = $1::uuid
+  `, [tenantId])
 
   const materials = res.rows.map((row) => {
     const colorOptionsRaw = parseJson<unknown>(row.color_options, [])
@@ -552,9 +561,11 @@ function logDashboardSnapshotQueryProfile(queryProfiles: QueryProfileEntry[], to
 }
 
 // Keep dashboard data fresh-ish (~15s) while reusing the cached snapshot and Redis fallback.
-async function loadDashboardSnapshot(): Promise<DashboardData> {
+async function loadDashboardSnapshot(): Promise<DashboardData | null> {
   const tenantId = await getTenantFromSession()
-  const tenantCacheKey = `${DASHBOARD_CACHE_KEY}:${tenantId ?? 'global'}`
+  if (!tenantId) return null
+
+  const tenantCacheKey = `${DASHBOARD_CACHE_KEY}:${tenantId}`
 
   const skipCache = bypassRedisCache
   bypassRedisCache = false
@@ -570,10 +581,16 @@ async function loadDashboardSnapshot(): Promise<DashboardData> {
 // Next.js unstable_cache wrapper
 export async function getDashboardSnapshot() {
   const tenantId = await getTenantFromSession()
+  if (!tenantId) throw new Error('Unauthorized');
+
   return unstable_cache(
-    async () => loadDashboardSnapshot(),
+    async () => {
+      const data = await loadDashboardSnapshot();
+      if (!data) throw new Error('No dashboard data');
+      return data;
+    },
     [`dashboard-${tenantId}`], // Per-tenant key
-    { tags: ['dashboard', `dashboard-${tenantId}`] }
+    { tags: ['dashboard', `dashboard-${tenantId}`], revalidate: 15 }
   )()
 }
 
