@@ -1,6 +1,8 @@
 import { Pool, PoolClient } from 'pg'
-import { getPool } from '@/lib/db'
+import { getPool, query as dbQuery } from '@/lib/db'
 import { NotificationType, Role } from '@/lib/domain/types'
+import { getTenantFromSession } from './auth'
+import { publishRealtimeEvent } from './pubsub'
 
 export type NotificationDraft = {
   type: NotificationType
@@ -11,6 +13,7 @@ export type NotificationDraft = {
   orderId?: number
   materialId?: number
   dedupeKey?: string
+  tenantId?: string
 }
 
 async function execQuery(query: string, params: unknown[], executor?: Pool | PoolClient) {
@@ -19,6 +22,8 @@ async function execQuery(query: string, params: unknown[], executor?: Pool | Poo
 }
 
 export async function publishNotification(draft: NotificationDraft, executor?: Pool | PoolClient) {
+  const tenantId = draft.tenantId || (await getTenantFromSession())
+  
   const params = [
     draft.type,
     draft.title,
@@ -27,10 +32,19 @@ export async function publishNotification(draft: NotificationDraft, executor?: P
     draft.userTarget ?? null,
     draft.orderId ?? null,
     draft.materialId ?? null,
+    tenantId,
   ]
-  if (draft.dedupeKey) {
-    const client = executor ?? getPool()
 
+  const client = executor ?? getPool()
+  
+  // Set tenant context if using a pool client
+  if (tenantId && executor && 'escapeLiteral' in executor) {
+    try {
+      await executor.query(`SET app.current_tenant_id = ${executor.escapeLiteral(tenantId)}`)
+    } catch { /* ignore */ }
+  }
+
+  if (draft.dedupeKey) {
     const updateQuery = `
       UPDATE notifications SET
         type = $1,
@@ -42,24 +56,29 @@ export async function publishNotification(draft: NotificationDraft, executor?: P
         material_id = $7,
         created_at = now(),
         read_at = NULL
-      WHERE dedupe_key = $8
+      WHERE dedupe_key = $9 AND tenant_id = $8
     `
 
     const updateRes = await client.query(updateQuery, [...params, draft.dedupeKey])
-    if (updateRes.rowCount > 0) return
+    if (updateRes.rowCount > 0) {
+      await publishRealtimeEvent('NOTIFICATION_CREATED', { type: draft.type, title: draft.title, tenantId })
+      return
+    }
 
     const insertQuery = `
-      INSERT INTO notifications (type, title, message, role_target, user_target, order_id, material_id, dedupe_key)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      INSERT INTO notifications (type, title, message, role_target, user_target, order_id, material_id, tenant_id, dedupe_key)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     `
     await client.query(insertQuery, [...params, draft.dedupeKey])
+    await publishRealtimeEvent('NOTIFICATION_CREATED', { type: draft.type, title: draft.title, tenantId })
     return
   }
-  const query = `
-    INSERT INTO notifications (type, title, message, role_target, user_target, order_id, material_id, dedupe_key)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,NULL)
+  const insertQuery = `
+    INSERT INTO notifications (type, title, message, role_target, user_target, order_id, material_id, tenant_id, dedupe_key)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NULL)
   `
-  await execQuery(query, params, executor)
+  await execQuery(insertQuery, params, executor)
+  await publishRealtimeEvent('NOTIFICATION_CREATED', { type: draft.type, title: draft.title, tenantId })
 }
 
 const formatQty = (value: number) => {

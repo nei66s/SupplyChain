@@ -1,109 +1,75 @@
 import Redis from 'ioredis'
 
-let cachedClient: Redis | null = null
+// Cache em Memória Local (RAM)
+// Este módulo removeu a dependência do Redis Externo para o cache de dados (JSON)
+// para evitar latência de rede (RTT). O Redis agora é usado apenas para Realtime (PubSub).
 
-// Memória local para evitar viagens de rede até o Redis em dados muito frequentes
 const LOCAL_CACHE = new Map<string, { value: any; expiry: number }>()
-const LOCAL_TTL_MS = 5000 // 5 segundos de cache local é seguro para a maioria dos casos
+const DEFAULT_TTL_MS = 60000 // 1 minuto padrão para a maioria dos dados
 
-function ensureConfig(): { host: string; port: number; password?: string } {
-  const host = process.env.REDIS_HOST
-  if (!host) {
-    throw new Error('REDIS_HOST não definido')
-  }
-  const port = Number(process.env.REDIS_PORT ?? '6379')
-  if (Number.isNaN(port) || port <= 0) {
-    throw new Error('REDIS_PORT inválido')
-  }
-  const password = process.env.REDIS_PASSWORD
-  return { host, port, password: password || undefined }
-}
-
-function createClient(): Redis {
-  const config = ensureConfig()
-  const client = new Redis({
-    host: config.host,
-    port: config.port,
-    password: config.password,
-  })
-  client.on('error', (error) => {
-    console.error('[cache][redis] connection error', error)
-  })
-  console.log('Redis conectado em:', config.host)
-  return client
-}
+let redisClient: Redis | undefined
 
 export function getClient(): Redis {
-  if (cachedClient) return cachedClient
-  cachedClient = createClient()
-  return cachedClient
+  if (redisClient) return redisClient
+
+  const host = process.env.REDIS_HOST
+  const port = Number(process.env.REDIS_PORT || 6379)
+  const password = process.env.REDIS_PASSWORD
+
+  if (!host) {
+    console.warn('[cache][redis] REDIS_HOST não configurado. Realtime pode não funcionar.')
+    // Retorna um stub se não houver host para evitar crash
+    return {
+      publish: async () => 0,
+      on: () => {},
+      get: async () => null,
+      set: async () => 'OK',
+      del: async () => 1
+    } as any
+  }
+
+  redisClient = new Redis({
+    host,
+    port,
+    password,
+    retryStrategy: (times) => Math.min(times * 50, 2000),
+    maxRetriesPerRequest: 3
+  })
+
+  redisClient.on('error', (err) => console.error('[cache][redis] Erro:', err.message))
+  redisClient.on('connect', () => console.log('[cache][redis] Conectado para Realtime em:', host))
+
+  return redisClient
 }
 
 export async function getJsonCache<T>(key: string): Promise<T | null> {
-  const start = Date.now()
-
-  // 1. Tenta Cache em Memória primeiro (0ms latency)
   const localEntry = LOCAL_CACHE.get(key)
+  
   if (localEntry && localEntry.expiry > Date.now()) {
     console.log('[cache][memory] CACHE HIT', key)
     return localEntry.value as T
   }
 
-  // 2. Tenta Redis
-  const client = getClient()
-  try {
-    const payload = await client.get(key)
-    const elapsed = Date.now() - start
-    if (payload) {
-      console.log('[cache][redis] CACHE HIT', key, `(${elapsed}ms)`)
-      const parsed = JSON.parse(payload) as T
-      // Alimenta o cache local
-      LOCAL_CACHE.set(key, { value: parsed, expiry: Date.now() + LOCAL_TTL_MS })
-      return parsed
-    }
-    console.log('[cache][redis] CACHE MISS', key, `(${elapsed}ms)`)
-    return null
-  } catch (error) {
-    console.error('[cache][redis] read error', key, error)
-    throw error
+  if (localEntry) {
+    LOCAL_CACHE.delete(key)
   }
+
+  console.log('[cache][memory] CACHE MISS', key)
+  return null
 }
 
-function resolveTtl(): number {
-  const ttl = Number(process.env.CACHE_TTL_SECONDS ?? '60')
-  if (Number.isNaN(ttl) || ttl <= 0) {
-    return 60
-  }
-  return ttl
-}
+export async function setJsonCache(key: string, value: unknown, customTtlSeconds?: number): Promise<void> {
+  const ttlMs = customTtlSeconds ? customTtlSeconds * 1000 : DEFAULT_TTL_MS
+  
+  LOCAL_CACHE.set(key, { 
+    value: value, 
+    expiry: Date.now() + ttlMs 
+  })
 
-export async function setJsonCache(key: string, value: unknown): Promise<void> {
-  const client = getClient()
-  const start = Date.now()
-  try {
-    const ttl = resolveTtl()
-    const payload = JSON.stringify(value)
-
-    // Atualiza Memória e Redis
-    LOCAL_CACHE.set(key, { value: value, expiry: Date.now() + LOCAL_TTL_MS })
-    await client.set(key, payload, 'EX', ttl)
-
-    const elapsed = Date.now() - start
-    console.log(`[cache][redis] CACHE SET ${key} ttl=${ttl}s (${elapsed}ms)`)
-  } catch (error) {
-    console.error('[cache][redis] write error', key, error)
-    throw error
-  }
+  console.log(`[cache][memory] CACHE SET ${key} ttl=${ttlMs/1000}s`)
 }
 
 export async function invalidateCache(key: string): Promise<void> {
   LOCAL_CACHE.delete(key)
-  const client = getClient()
-  try {
-    await client.del(key)
-    console.log(`[cache][redis] CACHE INVALIDATED ${key}`)
-  } catch (error) {
-    console.error('[cache][redis] invalidation error', key, error)
-    throw error
-  }
+  console.log(`[cache][memory] CACHE INVALIDATED ${key}`)
 }

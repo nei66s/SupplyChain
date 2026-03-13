@@ -61,7 +61,7 @@ export default function ProductionPage() {
 
   const loadTasks = React.useCallback(async (opts?: LoadTasksOptions) => {
     const skipLoading = opts?.skipLoading;
-    if (!skipLoading) {
+    if (!skipLoading && serverTasks.length === 0) {
       setLoading(true);
     }
     setError(null);
@@ -95,8 +95,13 @@ export default function ProductionPage() {
 
   React.useEffect(() => {
     loadTasks();
+    const interval = setInterval(() => loadTasks({ skipLoading: true }), 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, [loadTasks]);
 
+  const updateTaskLocal = (taskId: string, field: 'producedQty' | 'producedWeight', value: number | undefined) => {
+    setServerTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: value } : t));
+  };
 
 
   const tasks = React.useMemo(() => {
@@ -234,11 +239,15 @@ export default function ProductionPage() {
         <Input
           type="number"
           className="h-8 text-center"
-          defaultValue={task.producedQty ?? ''}
+          value={task.producedQty ?? ''}
           placeholder="Qtd."
+          onChange={(e) => {
+            const val = e.target.value === '' ? undefined : Number(e.target.value);
+            updateTaskLocal(task.id, 'producedQty', val);
+          }}
           onBlur={(e) => {
             const val = e.target.value === '' ? undefined : Number(e.target.value);
-            if (val !== task.producedQty) saveMeta(task.id, val, task.producedWeight);
+            saveMeta(task.id, val, task.producedWeight);
           }}
         />
       </TableCell>
@@ -247,11 +256,15 @@ export default function ProductionPage() {
           type="number"
           step="0.01"
           className="h-8 text-center"
-          defaultValue={task.producedWeight ?? ''}
+          value={task.producedWeight ?? ''}
           placeholder="Peso"
+          onChange={(e) => {
+            const val = e.target.value === '' ? undefined : Number(e.target.value);
+            updateTaskLocal(task.id, 'producedWeight', val);
+          }}
           onBlur={(e) => {
             const val = e.target.value === '' ? undefined : Number(e.target.value);
-            if (val !== task.producedWeight) saveMeta(task.id, task.producedQty, val);
+            saveMeta(task.id, task.producedQty, val);
           }}
         />
       </TableCell>
@@ -263,14 +276,6 @@ export default function ProductionPage() {
       <TableCell>{formatDate(task.updatedAt)}</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={task.status !== 'PENDING' || busyTaskId === task.id}
-            onClick={() => mutateTask(task.id, 'start')}
-          >
-            Iniciar
-          </Button>
           <Button
             size="sm"
             disabled={task.status === 'DONE' || busyTaskId === task.id}
@@ -291,7 +296,7 @@ export default function ProductionPage() {
             onClick={() => handlePrintProductionLabel(task)}
           >
             <FileText className="mr-1 h-3 w-3" />
-            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta
+            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
           </Button>
         </div>
       </TableCell>
@@ -329,22 +334,30 @@ export default function ProductionPage() {
             <Input
               type="number"
               className="h-9 px-2 text-center text-xs font-bold"
-              defaultValue={task.producedQty ?? ''}
+              value={task.producedQty ?? ''}
               placeholder="Qtd."
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : Number(e.target.value);
+                updateTaskLocal(task.id, 'producedQty', val);
+              }}
               onBlur={(e) => {
                 const val = e.target.value === '' ? undefined : Number(e.target.value);
-                if (val !== task.producedQty) saveMeta(task.id, val, task.producedWeight);
+                saveMeta(task.id, val, task.producedWeight);
               }}
             />
             <Input
               type="number"
               step="0.01"
               className="h-9 px-2 text-center text-xs font-bold"
-              defaultValue={task.producedWeight ?? ''}
+              value={task.producedWeight ?? ''}
               placeholder="Peso"
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : Number(e.target.value);
+                updateTaskLocal(task.id, 'producedWeight', val);
+              }}
               onBlur={(e) => {
                 const val = e.target.value === '' ? undefined : Number(e.target.value);
-                if (val !== task.producedWeight) saveMeta(task.id, task.producedQty, val);
+                saveMeta(task.id, task.producedQty, val);
               }}
             />
           </div>
@@ -353,15 +366,6 @@ export default function ProductionPage() {
 
       <div className="flex flex-col gap-2 mt-2">
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-9 font-bold text-xs"
-            disabled={task.status !== 'PENDING' || busyTaskId === task.id}
-            onClick={() => mutateTask(task.id, 'start')}
-          >
-            Iniciar
-          </Button>
           <Button
             size="sm"
             className="flex-1 h-9 font-bold text-xs"
@@ -385,7 +389,7 @@ export default function ProductionPage() {
           onClick={() => handlePrintProductionLabel(task)}
         >
           <FileText className="mr-2 h-4 w-4" />
-          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta
+          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
         </Button>
       </div>
 

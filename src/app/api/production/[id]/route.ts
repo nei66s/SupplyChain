@@ -4,7 +4,9 @@ import { getPool } from '@/lib/db'
 import { notifyAllocationAvailable, notifyOrderProduced } from '@/lib/notifications'
 import { postReceipt } from '@/lib/receipt-helpers'
 import { logActivity } from '@/lib/log-activity'
+import { requireAuth } from '@/lib/auth'
 import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
+import { refreshMaterialsSnapshot } from '@/lib/repository/materials'
 import { publishRealtimeEvent } from '@/lib/pubsub'
 
 type DbRow = {
@@ -53,6 +55,7 @@ function errorMessage(err: unknown): string {
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireAuth(request as any)
     const { id } = await context.params
     const taskId = parseTaskId(id)
     const payload = await request.json()
@@ -70,14 +73,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const res = await getPool().query(
         `UPDATE production_tasks
          SET produced_qty = $2, produced_weight = $3, updated_at = now()
-         WHERE id = $1
-         RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
+         WHERE id = $1 AND tenant_id = $4
+         RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at, tenant_id,
           (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
           (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`,
-        [taskId, producedQty, producedWeight]
+        [taskId, producedQty, producedWeight, auth.tenantId]
       )
       if (res.rowCount === 0) return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 })
+      
+      // Revalidate
+      await refreshMaterialsSnapshot()
+      revalidateDashboardTag()
+      
       return NextResponse.json(toApiTask(res.rows[0]))
     }
 
@@ -85,12 +93,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const res = await getPool().query(
         `UPDATE production_tasks
          SET label_printed = true, updated_at = now()
-         WHERE id = $1
-         RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
+         WHERE id = $1 AND tenant_id = $2
+         RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at, tenant_id,
           (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
           (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`,
-        [taskId]
+        [taskId, auth.tenantId]
       )
       if (res.rowCount === 0) return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 })
       return NextResponse.json(toApiTask(res.rows[0]))
@@ -104,8 +112,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           status = CASE WHEN status = 'DONE' THEN status ELSE 'IN_PROGRESS' END,
           started_at = CASE WHEN started_at IS NULL AND status != 'DONE' THEN now() ELSE started_at END,
           updated_at = now()
-        WHERE id = $1
-        RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
+        WHERE id = $1 AND tenant_id = $2
+        RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at, tenant_id,
           (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
           (SELECT created_by FROM orders WHERE id = production_tasks.order_id) AS order_created_by,
@@ -116,10 +124,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       // update task to DONE and set qty_to_produce = 0, then create a DRAFT receipt.
       const client = await getPool().connect();
       try {
+        if (auth.tenantId) {
+          await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
+        }
         await client.query('BEGIN');
         const pick = await client.query(
-          'SELECT qty_to_produce, produced_qty, material_id, label_printed FROM production_tasks WHERE id = $1 FOR UPDATE',
-          [taskId]
+          'SELECT qty_to_produce, produced_qty, material_id, label_printed, tenant_id FROM production_tasks WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
+          [taskId, auth.tenantId]
         );
         if (pick.rowCount === 0) {
           await client.query('ROLLBACK');
@@ -144,13 +155,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
              qty_to_produce = 0,
              completed_at = now(),
              updated_at = now()
-           WHERE id = $1
-           RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
+           WHERE id = $1 AND tenant_id = $2
+           RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at, tenant_id,
           (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
           (SELECT created_by FROM orders WHERE id = production_tasks.order_id) AS order_created_by,
           (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`,
-          [taskId]
+          [taskId, auth.tenantId]
         );
 
         if (upd.rowCount === 0) {
@@ -167,25 +178,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         if (qtyProduced <= 0) {
           // If nothing was produced, clear any lingering reservation
           await client.query(
-            `DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2`,
-            [orderId, materialId]
+            `DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2 AND tenant_id = $3`,
+            [orderId, materialId, auth.tenantId]
           );
         } else {
           await client.query(
-            `DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2`,
-            [orderId, materialId]
+            `DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2 AND tenant_id = $3`,
+            [orderId, materialId, auth.tenantId]
           );
           const receiptRes = await client.query(
-            `INSERT INTO inventory_receipts (type, status, source_ref)
-             VALUES ('PRODUCTION', 'DRAFT', $1) RETURNING id`,
-            [orderNumber]
+            `INSERT INTO inventory_receipts (type, status, source_ref, tenant_id)
+             VALUES ('PRODUCTION', 'DRAFT', $1, $2) RETURNING id`,
+            [orderNumber, auth.tenantId]
           );
           const receiptRow = receiptRes.rows[0] as { id: number } | undefined;
           const receiptId = receiptRow?.id ?? 0;
           await client.query(
-            `INSERT INTO inventory_receipt_items (receipt_id, material_id, qty, uom)
-             VALUES ($1, $2, $3, (SELECT unit FROM materials WHERE id = $2))`,
-            [receiptId, materialId, qtyProduced]
+            `INSERT INTO inventory_receipt_items (receipt_id, material_id, qty, uom, tenant_id)
+             VALUES ($1, $2, $3, (SELECT unit FROM materials WHERE id = $2 AND tenant_id = $4), $4)`,
+            [receiptId, materialId, qtyProduced, auth.tenantId]
           );
           await postReceipt(client, receiptId, {
             postedBy: null,
@@ -194,11 +205,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           });
           const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS).toISOString();
           await client.query(
-            `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,now(),now())
+            `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, tenant_id, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,now(),now())
              ON CONFLICT (order_id, material_id)
              DO UPDATE SET qty = EXCLUDED.qty, user_id = EXCLUDED.user_id, expires_at = EXCLUDED.expires_at, updated_at = now()`,
-            [orderId, materialId, null, qtyProduced, expiresAt]
+            [orderId, materialId, null, qtyProduced, expiresAt, auth.tenantId]
           );
           await notifyAllocationAvailable(
             {
@@ -229,13 +240,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         const producedQtyFinal = Number(updRow.produced_qty ?? 0) || qtyProduced;
         const producedWeightFinal = Number(updRow.produced_weight ?? 0) || undefined;
         if (orderCreatedBy) {
-          logActivity(orderCreatedBy, 'PRODUCTION_COMPLETED', 'production_task', taskId, producedQtyFinal, producedWeightFinal ?? null).catch(console.error)
+          logActivity(auth.userId, 'PRODUCTION_COMPLETED', 'production_task', taskId, producedQtyFinal, producedWeightFinal ?? null, null, auth.tenantId).catch(console.error)
         }
 
         // Invalidate dashboard cache
         await invalidateDashboardCache()
-        await refreshDashboardSnapshot(false)
+        await refreshDashboardSnapshot(true)
         revalidateDashboardTag()
+        await refreshMaterialsSnapshot()
 
         await publishRealtimeEvent('PRODUCTION_COMPLETED', { taskId, orderId })
 
@@ -248,7 +260,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       }
     }
     // For 'start' action we execute the prepared SQL, then ensure a production_reservation exists
-    const res = await getPool().query(sql, [taskId]);
+    const res = await getPool().query(sql, [taskId, auth.tenantId]);
     if (res.rowCount === 0) return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
 
     const row = res.rows[0] as DbRow;
@@ -256,13 +268,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     try {
       if (qtyToProduce > 0) {
         await getPool().query(
-          `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
-           VALUES ($1, $2, $3, now(), now())
+          `INSERT INTO production_reservations (order_id, material_id, qty, tenant_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, now(), now())
            ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
-          [row.order_id, row.material_id, qtyToProduce]
+          [row.order_id, row.material_id, qtyToProduce, auth.tenantId]
         );
       } else {
-        await getPool().query(`DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2`, [row.order_id, row.material_id]);
+        await getPool().query(`DELETE FROM production_reservations WHERE order_id = $1 AND material_id = $2 AND tenant_id = $3`, [row.order_id, row.material_id, auth.tenantId]);
       }
     } catch (e) {
       console.error('production reservation upsert error', e);
@@ -270,7 +282,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // Log activity — production started
     if (row.order_created_by) {
-      logActivity(row.order_created_by, 'PRODUCTION_STARTED', 'production_task', taskId, qtyToProduce).catch(console.error)
+      logActivity(auth.userId, 'PRODUCTION_STARTED', 'production_task', taskId, qtyToProduce, null, null, auth.tenantId).catch(console.error)
     }
 
     await publishRealtimeEvent('PRODUCTION_STARTED', { taskId, orderId: row.order_id })

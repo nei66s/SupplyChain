@@ -36,6 +36,7 @@ type ApiOrder = {
   }>
   auditTrail: unknown[]
   labelPrintCount: number
+  picking_label_printed?: boolean
   total: number
   trashedAt: string | null
   hasPendingProduction?: boolean
@@ -56,6 +57,7 @@ type OrderRow = {
   picker_id: string | null
   volume_count: number | null
   label_print_count: number | null
+  picking_label_printed: boolean | null
   item_id: number | null
   material_id: number | null
   quantity: string | number | null
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
          o.picker_id,
          o.volume_count,
          o.label_print_count,
+         o.picking_label_printed,
          oi.id as item_id,
          oi.material_id,
          oi.quantity,
@@ -224,6 +227,7 @@ export async function GET(request: NextRequest) {
           items: [],
           auditTrail: [],
           labelPrintCount: Number(r.label_print_count ?? 0),
+          picking_label_printed: Boolean(r.picking_label_printed ?? false),
           total: Number(r.total ?? 0),
           trashedAt: r.trashed_at ? (r.trashed_at instanceof Date ? r.trashed_at.toISOString() : String(r.trashed_at)) : null,
           hasPendingProduction: Boolean(r.has_pending_production ?? false),
@@ -285,7 +289,8 @@ export async function GET(request: NextRequest) {
     }
     for (const order of orders) {
       order.volumeCount = Math.max(1, order.items.length)
-      order.readiness = computeReadiness(order.items)
+      const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA'
+      order.readiness = isFinalized ? 'READY_FULL' : computeReadiness(order.items)
     }
     const serializationMs = Number(process.hrtime.bigint() - serializationStart) / 1_000_000
     const totalMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000
@@ -351,7 +356,7 @@ export async function POST(request: NextRequest) {
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot(false)
+    await refreshDashboardSnapshot(true)
     revalidateDashboardTag()
 
     await publishRealtimeEvent('ORDER_CREATED', { orderId })

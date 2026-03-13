@@ -149,6 +149,7 @@ export type Order = {
   items: OrderItem[];
   auditTrail: AuditEvent[];
   labelPrintCount: number;
+  picking_label_printed?: boolean;
   total?: number;
 };
 

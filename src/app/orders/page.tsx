@@ -447,6 +447,7 @@ export default function OrdersPage() {
   }, [filteredOrders]);
 
   const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
+  const isFinalized = selectedOrder ? (selectedOrder.status === 'FINALIZADO' || selectedOrder.status === 'SAIDA_CONCLUIDA') : false;
   const selectedOrderIsMrp = selectedOrder ? isMrpOrder(selectedOrder) : false;
 
   React.useEffect(() => {
@@ -604,10 +605,10 @@ export default function OrdersPage() {
                     </span>
                   </CardTitle>
                   <CardDescription>
-                    Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
+                    Status {selectedOrder.status} - {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                   <Button className="w-full sm:w-auto" variant="outline" onClick={async () => {
                     try {
                       await deleteOrder(selectedOrder.id);
@@ -616,10 +617,11 @@ export default function OrdersPage() {
                       console.error(err);
                       alert('Erro ao remover pedido');
                     }
-                  }}>
+                  }}
+                    disabled={isFinalized}
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />Excluir
                   </Button>
-                  {/* Save button removed: unused/empty button caused an empty element in the DOM */}
                 </div>
               </div>
             </CardHeader>
@@ -654,6 +656,7 @@ export default function OrdersPage() {
                       }
                     }}
                     placeholder="Nome do cliente"
+                    disabled={isFinalized}
                   />
                 </div>
                 <div>
@@ -662,6 +665,7 @@ export default function OrdersPage() {
                     type="date"
                     className="w-[140px]"
                     value={selectedOrder.dueDate.slice(0, 10)}
+                    disabled={isFinalized}
                     onChange={(e) => {
                       const val = `${e.target.value}T12:00:00.000Z`;
                       setDb((prev) => ({
@@ -681,6 +685,7 @@ export default function OrdersPage() {
                     min={1}
                     className="w-[80px]"
                     value={selectedOrder.volumeCount}
+                    disabled={isFinalized}
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       setDb((prev) => ({
@@ -697,7 +702,10 @@ export default function OrdersPage() {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Select onValueChange={(value) => addItem(selectedOrder.id, value)}>
+                <Select
+                  onValueChange={(value) => addItem(selectedOrder.id, value)}
+                  disabled={isFinalized}
+                >
                   <SelectTrigger className="w-full sm:max-w-sm">
                     <SelectValue placeholder="Adicionar material" />
                   </SelectTrigger>
@@ -709,7 +717,14 @@ export default function OrdersPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button className="w-full sm:w-auto" variant="outline" onClick={() => heartbeatOrder(selectedOrder.id)}>Estender reserva por +5 min</Button>
+                <Button
+                  className="w-full sm:w-auto"
+                  variant="outline"
+                  onClick={() => heartbeatOrder(selectedOrder.id)}
+                  disabled={isFinalized}
+                >
+                  Estender reserva por +5 min
+                </Button>
               </div>
 
               <div className="max-h-[360px] overflow-auto">
@@ -775,11 +790,13 @@ export default function OrdersPage() {
                                     }
                                   }}
                                   className="ml-auto w-full max-w-[7rem] text-right"
+                                  disabled={isFinalized}
                                 />
                               </TableCell>
                               <TableCell>
                                 <Select
                                   value={item.shortageAction ?? 'PRODUCE'}
+                                  disabled={isFinalized}
                                   onValueChange={(value) => {
                                     const action = value as 'PRODUCE' | 'BUY';
                                     updateOrderItemField(selectedOrder.id, item.id, { shortageAction: action });
@@ -823,10 +840,15 @@ export default function OrdersPage() {
                                     }
                                   }}
                                   className="w-full max-w-[7rem]"
+                                  disabled={isFinalized}
                                 />
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button variant="ghost" onClick={() => removeOrderItem(selectedOrder.id, item.id)}>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => removeOrderItem(selectedOrder.id, item.id)}
+                                  disabled={isFinalized}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </TableCell>
@@ -864,6 +886,7 @@ export default function OrdersPage() {
                                             }}
                                             onBlur={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { key: e.target.value })}
                                             className="h-8"
+                                            disabled={isFinalized}
                                           />
                                           <Input
                                             placeholder="Valor (ex: Vermelho)"
@@ -889,8 +912,13 @@ export default function OrdersPage() {
                                               }));
                                             }}
                                             onBlur={(e) => updateItemConditionField(selectedOrder.id, item.id, idx, { value: e.target.value })}
+                                            disabled={isFinalized}
                                           />
-                                          <Button variant="ghost" onClick={() => removeItemCondition(selectedOrder.id, item.id, idx)}>
+                                          <Button
+                                            variant="ghost"
+                                            onClick={() => removeItemCondition(selectedOrder.id, item.id, idx)}
+                                            disabled={isFinalized}
+                                          >
                                             <Trash2 className="h-4 w-4" />
                                           </Button>
                                         </div>
@@ -898,28 +926,30 @@ export default function OrdersPage() {
                                     ) : (
                                       <p className="text-muted-foreground">Sem condicoes adicionadas.</p>
                                     )}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full sm:w-auto"
-                                        onClick={() =>
-                                          setConditionPickerTarget({ orderId: selectedOrder.id, itemId: item.id })
-                                        }
-                                      >
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Adicionar condição
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full sm:w-auto"
-                                        onClick={() => addItemCondition(selectedOrder.id, item.id)}
-                                      >
-                                        Condição livre
-                                      </Button>
-                                    </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          className="w-full sm:w-auto"
+                                          onClick={() =>
+                                            setConditionPickerTarget({ orderId: selectedOrder.id, itemId: item.id })
+                                          }
+                                          disabled={isFinalized}
+                                        >
+                                          <PlusCircle className="mr-2 h-4 w-4" />
+                                          Adicionar condição
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full sm:w-auto"
+                                          onClick={() => addItemCondition(selectedOrder.id, item.id)}
+                                          disabled={isFinalized}
+                                        >
+                                          Condição livre
+                                        </Button>
+                                      </div>
                                     {isPickerOpen && (
                                       <div className="mt-2 rounded-xl border border-border/70 bg-background p-3 text-sm shadow-inner">
                                         <div className="mb-2 flex items-center justify-between">
@@ -1056,6 +1086,6 @@ export default function OrdersPage() {
           </>
         )}
       </Card>
-    </div >
+    </div>
   );
 }

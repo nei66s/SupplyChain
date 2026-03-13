@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPool } from '@/lib/db'
+import { query } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
 function errorMessage(err: unknown): string {
@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
   try {
     await requireAuth(request)
     // Cleanup expired reservations
-    await getPool().query('DELETE FROM stock_reservations WHERE expires_at <= now()')
+    await query('DELETE FROM stock_reservations WHERE expires_at <= now()')
 
-    const res = await getPool().query(
+    const res = await query(
       `SELECT
          sr.id,
          sr.material_id,

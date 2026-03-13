@@ -1,4 +1,4 @@
-import { unstable_cache } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 import { query } from '../db'
 import { logRepoPerf } from './perf'
 
@@ -69,12 +69,21 @@ export async function addPreconditionValue(categoryId: number, value: string) {
   return existing.rows[0] ?? null
 }
 
-export const getPreconditionCategories = unstable_cache(
-  async () => listPreconditionCategories(),
-  [],
-  { revalidate: 180 }
-)
+import { getTenantFromSession } from '../auth'
+
+export async function getPreconditionCategories() {
+  const tenantId = await getTenantFromSession()
+  return unstable_cache(
+    async () => listPreconditionCategories(),
+    [`preconditions-${tenantId || 'global'}`],
+    { revalidate: 180, tags: ['preconditions', `preconditions-${tenantId || 'global'}`] }
+  )()
+}
 
 export async function refreshPreconditionCategories() {
-  await (getPreconditionCategories as any).revalidate()
+  const tenantId = await getTenantFromSession()
+  if (tenantId) {
+    revalidateTag(`preconditions-${tenantId}`)
+  }
+  revalidateTag('preconditions')
 }

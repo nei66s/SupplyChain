@@ -280,7 +280,8 @@ async function loadOrders(tenantId: string): Promise<LoadResult<{ items: Order[]
   const orders = Array.from(map.values())
   orders.forEach((order) => {
     order.volumeCount = Math.max(1, order.items.length)
-    order.readiness = computeReadiness(order.items)
+    const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA'
+    order.readiness = isFinalized ? 'READY_FULL' : computeReadiness(order.items)
   })
 
   const queryProfile: QueryProfileEntry[] = [
@@ -643,8 +644,8 @@ function scheduleDashboardRefresh(force = false): Promise<void> | null {
   return pendingMaterializedRefresh
 }
 
-export async function refreshDashboardSnapshot(waitForRefresh = true) {
-  const refreshPromise = scheduleDashboardRefresh(waitForRefresh)
+export async function refreshDashboardSnapshot(waitForRefresh = true, force = true) {
+  const refreshPromise = scheduleDashboardRefresh(force)
   if (waitForRefresh && refreshPromise) {
     await refreshPromise
   }

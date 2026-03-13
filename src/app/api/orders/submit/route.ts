@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         // if still null, try lookup by sku or exact id string
         if (!materialIdNum) {
           try {
-            const r = await getPool().query('SELECT id FROM materials WHERE sku=$1 OR name=$1 LIMIT 1', [it.materialId])
+            const r = await getPool().query('SELECT id FROM materials WHERE (sku=$1 OR name=$1) AND tenant_id = $2 LIMIT 1', [it.materialId, auth.tenantId])
             if (r.rowCount > 0) {
               const lookupRow = r.rows[0] as MaterialLookupRow
               materialIdNum = Number(lookupRow.id)
@@ -301,7 +301,7 @@ export async function POST(request: NextRequest) {
 
       // Invalidate dashboard cache
       await invalidateDashboardCache()
-      await refreshDashboardSnapshot(false)
+      await refreshDashboardSnapshot(true)
       revalidateDashboardTag()
 
       await publishRealtimeEvent('ORDER_SUBMITTED', { orderId })

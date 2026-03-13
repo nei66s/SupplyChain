@@ -3,6 +3,8 @@ import { query } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { notifyProductionTaskCreated } from '@/lib/notifications'
 import { publishRealtimeEvent } from '@/lib/pubsub'
+import { revalidateDashboardTag } from '@/lib/repository/dashboard'
+import { refreshMaterialsSnapshot } from '@/lib/repository/materials'
 
 type DbRow = {
   id: number
@@ -190,6 +192,8 @@ export async function POST(request: NextRequest) {
     }
 
     await publishRealtimeEvent('PRODUCTION_TASK_CREATED', { orderId, materialId })
+    await refreshMaterialsSnapshot()
+    revalidateDashboardTag()
 
     return NextResponse.json(toApiTask(createdRow), { status: 201 })
   } catch (err: unknown) {

@@ -37,26 +37,29 @@ export async function POST(request: NextRequest) {
     const pool = getPool();
     const client = await pool.connect();
     try {
+      if (auth.tenantId) {
+        await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
+      }
       await client.query('BEGIN');
 
       // Get current qty
-      const currentRes = await client.query('SELECT on_hand FROM stock_balances WHERE material_id = $1', [mid]);
+      const currentRes = await client.query('SELECT on_hand FROM stock_balances WHERE material_id = $1 AND tenant_id = $2', [mid, auth.tenantId]);
       const qtyBefore = Number(currentRes.rows[0]?.on_hand ?? 0);
       const adjustmentQty = nextQty - qtyBefore;
 
       // Update stock_balances
       await client.query(
-        `INSERT INTO stock_balances (material_id, on_hand, updated_at)
-         VALUES ($1, $2, now())
+        `INSERT INTO stock_balances (material_id, on_hand, updated_at, tenant_id)
+         VALUES ($1, $2, now(), $3)
          ON CONFLICT (material_id) DO UPDATE SET on_hand = EXCLUDED.on_hand, updated_at = now()`,
-        [mid, nextQty]
+        [mid, nextQty, auth.tenantId]
       );
 
       // Record adjustment
       await client.query(
-        `INSERT INTO inventory_adjustments (material_id, qty_before, qty_after, adjustment_qty, reason, actor, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, now())`,
-        [mid, qtyBefore, nextQty, adjustmentQty, reason, auth.userId]
+        `INSERT INTO inventory_adjustments (material_id, qty_before, qty_after, adjustment_qty, reason, actor, created_at, tenant_id)
+         VALUES ($1, $2, $3, $4, $5, $6, now(), $7)`,
+        [mid, qtyBefore, nextQty, adjustmentQty, reason, auth.userId, auth.tenantId]
       );
 
       await client.query('COMMIT');
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
 
       // Invalidate dashboard cache
       await invalidateDashboardCache()
-      await refreshDashboardSnapshot(false)
+      await refreshDashboardSnapshot(true)
       revalidateDashboardTag()
 
       await publishRealtimeEvent('INVENTORY_ADJUSTED', { materialId: mid, nextQty })

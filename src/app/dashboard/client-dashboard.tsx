@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Factory, ShoppingCart, ShieldAlert, Users, Clock, Award, TrendingDown, TrendingUp, Scale, ListChecks, BarChart3 } from 'lucide-react';
+import { Factory, ShoppingCart, ShieldAlert, Users, Clock, Award, TrendingDown, TrendingUp, Scale, ListChecks, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChartContainer } from '@/components/ui/chart';
@@ -170,7 +170,6 @@ function DashboardClientContent({ data, peopleData }: DashboardClientProps) {
   const activeOrders = useMemo(() => orders.filter((o) => !o.trashedAt), [orders]);
   const openOrders = useMemo(() => activeOrders.filter((item) => item.status === 'ABERTO').length, [activeOrders]);
   const tasksPending = useMemo(() => productionTasks.filter((item) => item.status !== 'DONE').length, [productionTasks]);
-  const unread = data.notifications.filter((item) => !item.readAt).length;
 
   const lowStock = stockView.filter((item) => item.material && item.available <= item.material.minStock);
   const recentOrders = useMemo(
@@ -421,13 +420,7 @@ function DashboardClientContent({ data, peopleData }: DashboardClientProps) {
                 unit="un"
                 onClick={() => router.push('/materials?filter=lowstock')}
               />
-              <KpiCard
-                title="Alertas não lidos"
-                value={unread}
-                icon={AlertTriangle}
-                tone="warning"
-                onClick={() => router.push('/notifications')}
-              />
+
             </div>
           </section>
 

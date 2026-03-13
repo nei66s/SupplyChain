@@ -164,15 +164,30 @@ export async function fetchMaterialsWithStock() {
   return { materials, stockBalances, conditionVariants }
 }
 
-export const getMaterialsSnapshot = unstable_cache(async () => {
-  const snapshot = await buildMaterialSnapshot()
-  return {
-    materials: snapshot.materials,
-    stockBalances: snapshot.stockBalances,
-    conditionVariants: snapshot.conditionVariants,
-  }
-}, ['materials-snapshot'], { revalidate: 30, tags: ['materials'] })
+import { getTenantFromSession } from '../auth'
+
+export async function getMaterialsSnapshot() {
+  const tenantId = await getTenantFromSession()
+  if (!tenantId) throw new Error('Unauthorized')
+
+  return unstable_cache(
+    async () => {
+      const snapshot = await buildMaterialSnapshot()
+      return {
+        materials: snapshot.materials,
+        stockBalances: snapshot.stockBalances,
+        conditionVariants: snapshot.conditionVariants,
+      }
+    },
+    [`materials-snapshot-${tenantId}`],
+    { revalidate: 30, tags: ['materials', `materials-${tenantId}`] }
+  )()
+}
 
 export async function refreshMaterialsSnapshot() {
+  const tenantId = await getTenantFromSession()
+  if (tenantId) {
+    revalidateTag(`materials-${tenantId}`)
+  }
   revalidateTag('materials')
 }

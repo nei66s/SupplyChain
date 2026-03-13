@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Info, AlertTriangle, CheckCircle, Inbox, Trash2, CheckCheck } from "lucide-react";
+import { Bell, Info, AlertTriangle, CheckCircle, Inbox, Trash2, CheckCheck, Volume2, VolumeX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,6 +17,7 @@ type Notification = {
 };
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
+import { useRealtimeStore } from "@/store/use-realtime-store";
 
 function timeAgo(iso?: string) {
   if (!iso) return "";
@@ -36,6 +37,7 @@ export function NotificationCenter() {
 
   const [items, setItems] = React.useState<UiNotification[]>([]);
   const unreadCount = items.filter((it) => !it.readAt).length;
+  const { lastNotificationAt, isMuted, setIsMuted } = useRealtimeStore();
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -60,6 +62,12 @@ export function NotificationCenter() {
   React.useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+  
+  React.useEffect(() => {
+    if (lastNotificationAt > 0) {
+      loadNotifications();
+    }
+  }, [lastNotificationAt, loadNotifications]);
 
   const handleMarkRead = (id: string) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, _removing: true } : it)));
@@ -113,7 +121,15 @@ export function NotificationCenter() {
             <h3 className="text-sm font-semibold">Notificacoes</h3>
             <p className="text-xs text-muted-foreground">{mounted ? `${unreadCount} nao lida(s)` : ''}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              title={isMuted ? "Ativar som de notificação" : "Desativar som de notificação"}
+              className={`flex items-center gap-1 text-xs font-medium hover:underline ${isMuted ? 'text-slate-400' : 'text-primary'}`}
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              {isMuted ? 'Mudo' : 'Som'}
+            </button>
             {unreadCount > 0 ? (
               <button
                 title="Marcar todas como lidas"

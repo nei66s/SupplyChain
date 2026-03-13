@@ -4,8 +4,13 @@ import { useRealtimeStore } from "@/store/use-realtime-store";
 
 export function useRealtime() {
     const router = useRouter();
-    const { setIsConnected, setIsConnecting } = useRealtimeStore();
+    const { setIsConnected, setIsConnecting, notifyNotification, isMuted } = useRealtimeStore();
+    const isMutedRef = useRef(isMuted);
     const wsRef = useRef<WebSocket | null>(null);
+
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+    }, [isMuted]);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const needsRefreshRef = useRef(false);
 
@@ -67,11 +72,48 @@ export function useRealtime() {
                     }
                 };
 
+                let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+                const playNotificationSound = () => {
+                    try {
+                        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const playTone = (freq: number, start: number, duration: number) => {
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, start);
+                            g.gain.setValueAtTime(0, start);
+                            g.gain.linearRampToValueAtTime(0.1, start + 0.05);
+                            g.gain.exponentialRampToValueAtTime(0.01, start + duration);
+                            osc.connect(g);
+                            g.connect(audioCtx.destination);
+                            osc.start(start);
+                            osc.stop(start + duration);
+                        };
+                        playTone(660, audioCtx.currentTime, 0.4);
+                        playTone(880, audioCtx.currentTime + 0.1, 0.4);
+                    } catch (e) {
+                        console.warn("[realtime] Fail to play sound:", e);
+                    }
+                };
+
                 ws.onmessage = (event) => {
                     console.log("[realtime] 📩 Message received:", event.data);
+
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.event === 'NOTIFICATION_CREATED') {
+                            if (!isMutedRef.current) playNotificationSound();
+                            notifyNotification();
+                        }
+                    } catch { /* ignore non-json or malformed */ }
+
                     if (document.visibilityState === "visible") {
-                        console.log("[realtime] Performing router.refresh()");
-                        router.refresh();
+                        if (refreshTimeout) clearTimeout(refreshTimeout);
+                        refreshTimeout = setTimeout(() => {
+                            console.log("[realtime] Performing debounced router.refresh()");
+                            router.refresh();
+                        }, 2000); // 2 seconds debounce
                     } else {
                         console.log("[realtime] App invisible, postponing refresh.");
                         needsRefreshRef.current = true;
