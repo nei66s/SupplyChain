@@ -9,8 +9,11 @@ const ROLES: Role[] = ['Admin', 'Manager', 'Seller', 'Input Operator', 'Producti
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin(req);
-    const result = await query('SELECT id, name, email, role, avatar_url, is_blocked FROM users ORDER BY role, name');
+    const auth = await requireAdmin(req);
+    const result = await query(
+      'SELECT id, name, email, role, avatar_url, is_blocked FROM users WHERE tenant_id = $1 ORDER BY role, name',
+      [auth.tenantId]
+    );
     return NextResponse.json({
       users: result.rows.map((user: { id: string; name: string; email: string; role: Role; avatar_url: string | null; is_blocked: boolean }) => ({
         id: user.id,

@@ -3,7 +3,11 @@
 Este guia explica como gerenciar múltiplas empresas clientes (Tenants) dentro do Inventário Ágil.
 
 ## 🛡️ Camada de Isolamento
-O sistema utiliza **Row Level Security (RLS)** no PostgreSQL. Isso significa que, a nível de banco de dados, um cliente nunca consegue ver os dados de outro, mesmo que ocorra um erro de programação.
+O sistema utiliza **Row Level Security (RLS)** no PostgreSQL. Isso significa que, a nível de banco de dados, um cliente nunca consegue ver os dados de outro.
+
+### Melhorias de Performance e Robustez
+1. **Índices Automáticos**: Todas as tabelas multi-tenant possuem índices na coluna `tenant_id` (Migração 045). Isso é vital para que o banco não precise escanear dados de outras empresas.
+2. **Padrão Automático (Fallback)**: Se um desenvolvedor esquecer de passar o `tenant_id` em um comando `INSERT`, o banco de dados tentará recuperá-lo automaticamente da sessão atual (`app.current_tenant_id`). Isso previne erros de constraint nula em ambiente multi-empresa.
 
 ## 🚀 Como Criar um Novo Cliente
 

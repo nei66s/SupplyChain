@@ -17,12 +17,22 @@ export async function logActivity(
     qty?: number | null,
     weight?: number | null,
     durationSeconds?: number | null,
+    tenantId?: string | null,
 ): Promise<void> {
     try {
         await query(
-            `INSERT INTO people_activity_log (user_id, action_type, entity_type, entity_id, qty, weight, duration_seconds)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [userId, actionType, entityType, entityId ?? null, qty ?? null, weight ?? null, durationSeconds ?? null],
+            `INSERT INTO people_activity_log (user_id, action_type, entity_type, entity_id, qty, weight, duration_seconds, tenant_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+                userId,
+                actionType,
+                entityType,
+                entityId ?? null,
+                qty ?? null,
+                weight ?? null,
+                durationSeconds ?? null,
+                tenantId ?? null,
+            ],
         )
     } catch (error) {
         // Never fail the main operation because of logging

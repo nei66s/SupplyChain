@@ -24,6 +24,15 @@ O sistema utiliza Redis para caching de dashboards e para o sistema Pub/Sub de e
 - `REDIS_PORT`: Porta do servidor Redis (padrão is 6379).
 - `REDIS_PASSWORD`: Senha de acesso ao Redis (opcional se local).
 
+## 🎛️ Ajustes de Performance (Opcional)
+
+Estas variáveis permitem tunar o desempenho do sistema dependendo do hardware:
+
+- `PG_POOL_MIN`: (Padrão: 2) Conexões mínimas mantidas no pool.
+- `PG_POOL_MAX`: (Padrão: 10) Limite de conexões simultâneas com o banco. Aumente se o Dashboard estiver lento.
+- `PG_CONNECTION_TIMEOUT_MS`: (Padrão: 10000) Tempo máximo de espera por uma conexão livre.
+- `CACHE_TTL_SECONDS`: (Padrão: 60) Tempo de vida das informações no cache Redis. Dados de branding (logo) usam um cache interno fixo de 5 segundos em memória além deste.
+
 ## 📡 Comunicação em Tempo Real
 
 ### `NEXT_PUBLIC_WS_URL`

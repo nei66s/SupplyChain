@@ -117,16 +117,16 @@ function computeReadiness(items: ApiOrder['items']) {
   return 'READY_PARTIAL'
 }
 
-async function generateManualOrderNumber(createdIso: string) {
+async function generateManualOrderNumber(createdIso: string, tenantId: string) {
   const dateStr = formatBrazilianDate(createdIso)
   const dayKey = dateStr.replace(/-/g, '')
   const counter = await query<{ last_seq: number }>(
-    `INSERT INTO order_number_counters (day, last_seq)
-     VALUES ($1::date, 1)
-     ON CONFLICT (day) DO UPDATE
+    `INSERT INTO order_number_counters (day, last_seq, tenant_id)
+     VALUES ($1::date, 1, $2::uuid)
+     ON CONFLICT (tenant_id, day) DO UPDATE
        SET last_seq = order_number_counters.last_seq + 1
      RETURNING last_seq`,
-    [dateStr]
+    [dateStr, tenantId]
   )
   const seq = Number(counter.rows[0]?.last_seq ?? 0)
   return `${dayKey}${String(seq).padStart(2, '0')}`
@@ -316,8 +316,8 @@ export async function POST(request: NextRequest) {
     const source = sourceRaw === 'mrp' ? 'mrp' : 'manual'
 
     const client = await query(
-      'INSERT INTO orders (status, total, created_by, client_name, due_date, source) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at',
-      [status, 0, auth.userId, clientName || null, dueDate, source]
+      'INSERT INTO orders (status, total, created_by, client_name, due_date, source, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at',
+      [status, 0, auth.userId, clientName || null, dueDate, source, auth.tenantId]
     )
     const orderId = Number(client.rows[0].id)
     const createdAt = client.rows[0].created_at ?? new Date().toISOString()
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
     if (source === 'mrp') {
       orderNumber = `MRP-${orderId}`
     } else {
-      orderNumber = await generateManualOrderNumber(createdIso)
+      orderNumber = await generateManualOrderNumber(createdIso, auth.tenantId)
     }
     await query('UPDATE orders SET order_number = $1 WHERE id = $2', [orderNumber, orderId])
 
@@ -351,13 +351,13 @@ export async function POST(request: NextRequest) {
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot()
+    await refreshDashboardSnapshot(false)
     revalidateDashboardTag()
 
     await publishRealtimeEvent('ORDER_CREATED', { orderId })
 
     // Log activity
-    logActivity(auth.userId, 'ORDER_CREATED', 'order', orderId).catch(console.error)
+    logActivity(auth.userId, 'ORDER_CREATED', 'order', orderId, null, null, null, auth.tenantId).catch(console.error)
 
     return response
   } catch (err: unknown) {

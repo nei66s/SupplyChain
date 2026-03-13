@@ -1,18 +1,23 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
+import { RealtimeListener } from "@/components/RealtimeListener";
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function MaterialsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('sc-session')?.value;
+  const user = await getCurrentUser();
 
-  if (!token) {
+  if (!user) {
     redirect('/login');
   }
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <>
+      <RealtimeListener />
+      <AppShell user={user}>{children}</AppShell>
+    </>
+  );
 }

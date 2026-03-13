@@ -2,21 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type AuthUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatarUrl?: string;
-  subscriptionStatus?: string;
-};
+import { AuthUser } from '@/lib/auth';
 
-export function useAuthUser() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAuthUser(initialUser: AuthUser | null = null) {
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
+  const [loading, setLoading] = useState(!initialUser);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    // Se for o primeiro render e já temos initialUser, podemos pular o fetch no mount
+    // mas ainda deixamos o refresh disponível para chamadas manuais.
     setLoading(true);
     try {
       const response = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
@@ -38,8 +33,10 @@ export function useAuthUser() {
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!initialUser) {
+      refresh();
+    }
+  }, [refresh, initialUser]);
 
   return { user, loading, error, refresh };
 }

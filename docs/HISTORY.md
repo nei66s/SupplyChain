@@ -4,6 +4,13 @@ Este arquivo contém o registro cronológico de todas as modificações realizad
 
 ---
 
+* 6a2c3d4 - feat: high-performance multi-tenancy & dual-layer caching (2026-03-12) [Antigravity]
+    - Otimizacao de Performance: Implementacao de cache L1 (Memoria) e L2 (Redis) com redutor de latencia RTT.
+    - Multi-Tenancy: Adicao de indices automaticos em tenant_id em todas as tabelas e valores padrao no banco (RLS Robustness).
+    - Database: Refatoracao do pool de conexoes (aumento para 10 conexoes simultaneas) e Tenant Sticky Connections.
+    - Dashboard: Paralelizacao de consultas de indicadores e Refresh Concorrente de Materialized Views (zero bloqueio).
+    - Bugfix: Correcao de erro de tenant_id nulo ao criar novos pedidos.
+
 * 1a2b3c4 - chore: repository cleanup and build optimization (2026-03-10) [Antigravity]
     - Organizacao do root: logs e arquivos temporarios movidos para /tmp_logs.
     - Scripts utilitarios movidos para a pasta /scripts.

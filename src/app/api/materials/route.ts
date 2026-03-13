@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { query } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth(request)
     const res = await query(
       `SELECT id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options, metadata
-       FROM materials ORDER BY id`
+       FROM materials WHERE tenant_id = $1 ORDER BY id`,
+      [auth.tenantId]
     )
     const rows = res.rows || []
     const materials = rows.map((r: any) => ({
@@ -28,8 +31,9 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth(request)
     const payload = await request.json()
     // Basic validation
     const errors: Record<string, string> = {}
@@ -59,25 +63,24 @@ export async function POST(request: Request) {
 
     // If sku provided, ensure uniqueness
     if (sku) {
-      const exists = await query('SELECT id FROM materials WHERE sku=$1', [sku])
+      const exists = await query('SELECT id FROM materials WHERE sku=$1 AND tenant_id = $2', [sku, auth.tenantId])
       if (exists.rowCount > 0) return NextResponse.json({ errors: { sku: 'SKU já em uso' } }, { status: 400 })
     }
 
     let res
     if (sku) {
       res = await query(
-        `INSERT INTO materials (sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options`,
-        [sku, name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || [])]
+        `INSERT INTO materials (sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options, tenant_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options`,
+        [sku, name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || []), auth.tenantId]
       )
     } else {
-      // generate a SKU using the next id from the materials sequence so we can satisfy NOT NULL/UNIQUE
       res = await query(
         `WITH next_id AS (SELECT nextval(pg_get_serial_sequence('materials','id')) AS nid)
-         INSERT INTO materials (id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options)
-         SELECT nid, ('MAT-' || lpad(nid::text, 3, '0'))::text, $1, $2, $3, $4, $5, $6, $7, $8 FROM next_id
+         INSERT INTO materials (id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options, tenant_id)
+         SELECT nid, ('MAT-' || lpad(nid::text, 3, '0'))::text, $1, $2, $3, $4, $5, $6, $7, $8, $9 FROM next_id
          RETURNING id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options`,
-        [name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || [])]
+        [name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || []), auth.tenantId]
       )
     }
     const row = res.rows[0]

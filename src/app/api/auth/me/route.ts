@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/db';
+import { query } from '@/lib/db';
 import { getAuthPayload } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Nao autorizado' }, { status: 401 });
     }
 
-    const result = await getPool().query(
+    const result = await query(
       `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status
        FROM users u
        JOIN tenants t ON t.id = u.tenant_id

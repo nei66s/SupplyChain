@@ -11,22 +11,23 @@
     o.picker_id,
     o.volume_count,
     o.label_print_count,
-    o.tenant_id,
-    oi.id AS item_id,
-    oi.material_id,
-    oi.quantity,
-    oi.conditions,
-    oi.unit_price,
-    oi.color,
-    oi.shortage_action,
-    oi.qty_reserved_from_stock,
-    oi.qty_to_produce,
-    oi.qty_separated,
-    oi.separated_weight,
-    oi.item_condition,
-    oi.condition_template_name,
-    m.name AS material_name,
-    m.unit AS material_unit
-   FROM orders o
-     LEFT JOIN order_items oi ON oi.order_id = o.id
-     LEFT JOIN materials m ON m.id = oi.material_id;
+  o.tenant_id,
+  oi.id AS item_id,
+  oi.material_id,
+  oi.quantity,
+  oi.conditions,
+  oi.unit_price,
+  oi.color,
+  oi.shortage_action,
+  oi.qty_reserved_from_stock,
+  oi.qty_to_produce,
+  oi.qty_separated,
+  oi.separated_weight,
+  oi.item_condition,
+  oi.condition_template_name,
+  m.name AS material_name,
+  m.unit AS material_unit,
+  COALESCE(oi.id, -(o.id + 1000000)) AS unique_row_id
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN materials m ON m.id = oi.material_id;

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
       // Invalidate dashboard cache
       await invalidateDashboardCache()
-      await refreshDashboardSnapshot()
+      await refreshDashboardSnapshot(false)
       revalidateDashboardTag()
 
       await publishRealtimeEvent('INVENTORY_ADJUSTED', { materialId: mid, nextQty })

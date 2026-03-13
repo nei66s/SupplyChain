@@ -196,10 +196,19 @@ export async function query<T extends QueryResultRow = any>(text: string | Query
         tenantId = await getTenantFromSession()
       }
 
-      if (tenantId) {
-        await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(tenantId)}`)
-      } else {
-        await client.query('RESET app.current_tenant_id')
+      // VERCEL/SERVERLESS OPTIMIZATION: 
+      // Evita o roundtrip 'SET app.current_tenant_id' se o client do pool já estiver com o mesmo tenant.
+      // Isso economiza 1 RTT por consulta (crítico quando a latência física é alta).
+      const clientExt = client as any
+      if (clientExt.__last_tenant_id !== tenantId) {
+        if (tenantId) {
+          if (getPerfEnabled()) console.debug(`[db] setting current_tenant_id to ${tenantId}`);
+          await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(tenantId)}`)
+        } else {
+          if (getPerfEnabled()) console.debug('[db] resetting current_tenant_id');
+          await client.query('RESET app.current_tenant_id')
+        }
+        clientExt.__last_tenant_id = tenantId
       }
 
       const result = await client.query<T>(config)

@@ -1,18 +1,17 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function ReportLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('sc-session')?.value;
+  const user = await getCurrentUser();
 
-  if (!token) {
+  if (!user) {
     redirect('/login');
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell user={user}>{children}</AppShell>;
 }

@@ -68,6 +68,7 @@ import WsHealth from './ws-health';
 import { Input } from './ui/input';
 import { roleLabel } from '@/lib/domain/i18n';
 import { useAuthUser } from '@/hooks/use-auth';
+import { AuthUser } from '@/lib/auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -445,11 +446,11 @@ function AppSidebar() {
   );
 }
 
-function AppShellContent({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children, initialUser }: { children: React.ReactNode, initialUser?: AuthUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme, mounted } = useTheme();
-  const { user: authUser, loading: authLoading } = useAuthUser();
+  const { user: authUser, loading: authLoading } = useAuthUser(initialUser);
 
   const displayUser = authUser ?? null;
   const displayRoleLabel = displayUser ? roleLabel(displayUser.role) : '---';
@@ -602,10 +603,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AppShell(props: { children: React.ReactNode }) {
+export function AppShell(props: { children: React.ReactNode, user?: AuthUser | null }) {
   return (
     <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center p-8 text-muted-foreground">Carregando interface...</div>}>
-      <AppShellContent {...props} />
+      <AppShellContent initialUser={props.user}>
+        {props.children}
+      </AppShellContent>
     </React.Suspense>
   );
 }

@@ -41,7 +41,8 @@ async function upsertReservation(
   orderId: number,
   materialId: number,
   userId: string | null,
-  qty: number
+  qty: number,
+  tenantId: string
 ) {
   const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS).toISOString()
   if (qty <= 0) {
@@ -49,11 +50,11 @@ async function upsertReservation(
     return
   }
   await client.query(
-    `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,now(),now())
+    `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, tenant_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,now(),now())
      ON CONFLICT (order_id, material_id)
      DO UPDATE SET qty = EXCLUDED.qty, user_id = EXCLUDED.user_id, expires_at = EXCLUDED.expires_at, updated_at = now()`,
-    [orderId, materialId, userId, qty, expiresAt]
+    [orderId, materialId, userId, qty, expiresAt, tenantId]
   )
 }
 
@@ -61,7 +62,8 @@ async function updateProductionTask(
   client: import('pg').Pool | import('pg').PoolClient,
   orderId: number,
   materialId: number,
-  qtyToProduce: number
+  qtyToProduce: number,
+  tenantId: string
 ) {
   if (qtyToProduce <= 0) {
     await client.query('DELETE FROM production_tasks WHERE order_id = $1 AND material_id = $2', [orderId, materialId])
@@ -69,19 +71,19 @@ async function updateProductionTask(
     return
   }
   await client.query(
-    `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
-     VALUES ($1,$2,$3,'PENDING')
+    `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status, tenant_id)
+     VALUES ($1,$2,$3,'PENDING', $4)
      ON CONFLICT (order_id, material_id)
      DO UPDATE SET qty_to_produce = EXCLUDED.qty_to_produce,
        status = CASE WHEN production_tasks.status = 'DONE' THEN production_tasks.status ELSE 'PENDING' END,
        updated_at = now()`,
-    [orderId, materialId, qtyToProduce]
+    [orderId, materialId, qtyToProduce, tenantId]
   )
   await client.query(
-    `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
-     VALUES ($1,$2,$3,now(),now())
+    `INSERT INTO production_reservations (order_id, material_id, qty, tenant_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,now(),now())
      ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
-    [orderId, materialId, qtyToProduce]
+    [orderId, materialId, qtyToProduce, tenantId]
   )
 }
 
@@ -89,7 +91,8 @@ async function recalcReservationForItem(
   client: import('pg').Pool | import('pg').PoolClient,
   orderId: number,
   itemId: number,
-  userId: string | null
+  userId: string | null,
+  tenantId: string
 ) {
   const itemRes = await client.query(
     `SELECT material_id, quantity, shortage_action
@@ -125,8 +128,8 @@ async function recalcReservationForItem(
      WHERE id = $1 AND order_id = $2`,
     [itemId, orderId, qtyReserved, qtyToProduce]
   )
-  await upsertReservation(client, orderId, materialId, userId, qtyReserved)
-  await updateProductionTask(client, orderId, materialId, qtyToProduce)
+  await upsertReservation(client, orderId, materialId, userId, qtyReserved, tenantId)
+  await updateProductionTask(client, orderId, materialId, qtyToProduce, tenantId)
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
@@ -141,6 +144,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const client = await getPool().connect()
     try {
+      // Importante: Como estamos usando uma conexão manual e RLS está ativo,
+      // precisamos definir o tenant_id na sessão para que as queries (mesmo INSERTs) funcionem.
+      // O pool.query faz isso automaticamente, mas client.connect() não.
+      await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
       await client.query('BEGIN')
 
       if (action === 'update_meta') {
@@ -185,9 +192,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         )
         const materialDescription = descRes.rows[0]?.description ?? null
         await client.query(
-          `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [orderId, materialId, 0, 0, '', 'PRODUCE', materialDescription]
+          `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description, tenant_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [orderId, materialId, 0, 0, '', 'PRODUCE', materialDescription, auth.tenantId]
         )
       } else if (action === 'remove_item') {
         const itemId = parseItemId(body.itemId ?? '')
@@ -243,7 +250,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           values.push(itemId, orderId)
           await client.query(`UPDATE order_items SET ${updates.join(', ')} WHERE id = $${values.length - 1} AND order_id = $${values.length}`, values)
         }
-        await recalcReservationForItem(client, orderId, itemId, auth.userId)
+        await recalcReservationForItem(client, orderId, itemId, auth.userId, auth.tenantId)
       } else if (action === 'add_item_condition' || action === 'update_item_condition' || action === 'remove_item_condition') {
         const itemId = parseItemId(body.itemId ?? '')
         if (!itemId) {
@@ -288,7 +295,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             [itemId, orderId, Math.max(0, Number(body.qtyRequested))]
           )
         }
-        await recalcReservationForItem(client, orderId, itemId, auth.userId)
+        await recalcReservationForItem(client, orderId, itemId, auth.userId, auth.tenantId)
       } else if (action === 'heartbeat') {
         const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS).toISOString()
         await client.query(
@@ -362,9 +369,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           auth.userId,
         ])
         await client.query(
-          `INSERT INTO audit_events (order_id, action, actor, timestamp, details)
-           VALUES ($1, $2, $3, now(), $4)`,
-          [orderId, 'PICKING_COMPLETED', auth.userId, `Pedido concluido com status ${nextStatus}.`]
+          `INSERT INTO audit_events (order_id, action, actor, timestamp, details, tenant_id)
+           VALUES ($1, $2, $3, now(), $4, $5)`,
+          [orderId, 'PICKING_COMPLETED', auth.userId, `Pedido concluido com status ${nextStatus}.`, auth.tenantId]
         )
         const orderMeta = await client.query(
           'SELECT created_by, order_number FROM orders WHERE id = $1',
@@ -380,16 +387,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           client
         )
         // Log activity — pick completed
-        logActivity(auth.userId, 'PICK_COMPLETED', 'pick', orderId).catch(console.error)
+        logActivity(auth.userId, 'PICK_COMPLETED', 'pick', orderId, null, null, null, auth.tenantId).catch(console.error)
         await publishRealtimeEvent('PICKING_COMPLETED', { orderId })
       } else if (action === 'register_label_print') {
         await client.query('UPDATE orders SET label_print_count = COALESCE(label_print_count,0) + 1 WHERE id = $1', [
           orderId,
         ])
         await client.query(
-          `INSERT INTO audit_events (order_id, action, actor, timestamp, details)
-           VALUES ($1, $2, $3, now(), $4)`,
-          [orderId, 'LABEL_PRINTED', auth.userId, `Etiqueta impressa (${body.format ?? 'EXIT_10x15'}).`]
+          `INSERT INTO audit_events (order_id, action, actor, timestamp, details, tenant_id)
+           VALUES ($1, $2, $3, now(), $4, $5)`,
+          [orderId, 'LABEL_PRINTED', auth.userId, `Etiqueta impressa (${body.format ?? 'EXIT_10x15'}).`, auth.tenantId]
         )
       } else if (action === 'save_order') {
         await client.query(
@@ -420,7 +427,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot()
+    await refreshDashboardSnapshot(false)
     revalidateDashboardTag()
 
     await publishRealtimeEvent('ORDER_UPDATED', { orderId, action })
@@ -447,7 +454,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot()
+    await refreshDashboardSnapshot(false)
     revalidateDashboardTag()
 
     await publishRealtimeEvent('ORDER_DELETED', { orderId })

@@ -30,8 +30,14 @@ O **Inventário Ágil** é um piloto de sistema de WMS (Warehouse Management Sys
 
 ### 🏢 Arquitetura Multi-Tenant
 - **Isolamento de Dados**: Sistema multi-empresa com RLS (Row Level Security) nativo no banco.
+- **Performance Otimizada**: Índices inteligentes por Tenant e cache de duas camadas (L1 Memória / L2 Redis).
 - **Painel Super Admin**: Gestão centralizada de tenants, planos e status de ativação.
 - **Auto-onboarding**: Fluxo de registro simplificado com criação automática de dados iniciais.
+
+### ⚡ Performance & Escalabilidade
+- **Dual-Layer Caching**: Redução drástica de latência de rede com cache local de 5s para dados frequentes.
+- **Paralelismo de Dados**: Carregamento ultra-rápido de dashboards via consultas paralelas (`Promise.all`).
+- **Zero-Lock Refresh**: Atualização de relatórios em segundo plano (Concurrent Views) sem travar a interface.
 
 ### 💳 Assinatura & Faturamento
 - **Checkout Integrado**: Integração com Asaas para gestão de subscrições (Cartão/Pix).

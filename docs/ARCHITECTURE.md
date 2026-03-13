@@ -62,8 +62,25 @@ O sistema evoluiu para uma estrutura SaaS (Software as a Service) com suporte a 
 - **Landing Page**: Implementada no `src/app/page.tsx` com componentes modulares para marketing (Hero, Features, Pricing).
 - **Roadmap & Security**: Páginas dedicadas para transparência técnica e retenção de leads B2B.
 
----
+## ⚡ Otimização de Performance & Escalabilidade
 
+O sistema utiliza diversas técnicas avançadas para garantir latência mínima, mesmo em conexões remotas:
+
+### 1. Sistema de Cache em Duas Camadas (Dual-Layer)
+Para minimizar o impacto da latência de rede (RTT) entre a aplicação e o Redis/DB:
+- **L1 (In-Memory Cache)**: Localizado na memória do servidor (Map). Possui TTL curto (5s) para dados de altíssima frequência como Site Branding e Logos. Latência: **0ms**.
+- **L2 (Redis)**: Persistência temporária centralizada para dashboards e snapshots. Latência: **~200ms**.
+
+### 2. Otimização de Multi-Tenancy (Database Level)
+- **Tenant Indices**: Todas as tabelas possuem índices automáticos em `tenant_id` para acelerar o filtro RLS.
+- **Tenant Sticky Connections**: O driver de banco de dados (`db.ts`) rastreia o último `tenant_id` definido em cada conexão do pool, evitando comandos `SET app.current_tenant_id` repetitivos e desnecessários.
+- **Default Constraints**: O banco de dados preenche automaticamente o `tenant_id` a partir da sessão se ele for omitido no `INSERT`.
+
+### 3. Concorrência e Paralelismo
+- **Parallel Fetching**: Páginas críticas como o Dashboard carregam indicadores em paralelo usando `Promise.all`, reduzindo o tempo total de carregamento ao tempo da consulta mais lenta.
+- **Concurrent Materialized Views**: Tabelas de resumo são atualizadas via `REFRESH MATERIALIZED VIEW CONCURRENTLY`, permitindo leitura ininterrupta dos dados enquanto a atualização ocorre em background.
+
+---
 ## 🔐 Segurança e Autenticação
 
 O sistema utiliza uma estratégia de **Zero-Flash Auth Redirection** para garantir uma experiência de usuário premium e proteger rotas privadas.

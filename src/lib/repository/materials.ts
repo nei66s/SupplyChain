@@ -39,17 +39,22 @@ const materialSnapshotQuery = `SELECT
   m.production_time_per_unit_minutes,
   m.color_options,
   m.metadata,
-  COALESCE((
-    SELECT SUM(sr.qty)::NUMERIC(12,4)
-    FROM stock_reservations sr
-    WHERE sr.material_id = m.id
-      AND sr.expires_at > now()
-  ), 0) AS reserved_total,
-  COALESCE((SELECT SUM(qty)::NUMERIC(12,4) FROM production_reservations pr WHERE pr.material_id = m.id), 0) AS production_reserved,
+  COALESCE(sr_agg.total, 0) AS reserved_total,
+  COALESCE(pr_agg.total, 0) AS production_reserved,
   COALESCE(sb.on_hand, 0) AS on_hand
 FROM materials m
 LEFT JOIN stock_balances sb ON sb.material_id = m.id
-GROUP BY m.id, sb.on_hand`
+LEFT JOIN (
+  SELECT material_id, SUM(qty)::NUMERIC(12,4) as total
+  FROM stock_reservations
+  WHERE expires_at > now()
+  GROUP BY material_id
+) sr_agg ON sr_agg.material_id = m.id
+LEFT JOIN (
+  SELECT material_id, SUM(qty)::NUMERIC(12,4) as total
+  FROM production_reservations
+  GROUP BY material_id
+) pr_agg ON pr_agg.material_id = m.id`
 
 function parseJson<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) return fallback
@@ -69,7 +74,25 @@ async function buildMaterialSnapshot(): Promise<{
   conditionVariants: ConditionVariant[];
   queryMs: number;
 }> {
-  const res = await query<MaterialStockRow>(materialSnapshotQuery)
+  // Paralelizamos as duas consultas principais de materiais
+  const [res, variantsRes] = await Promise.all([
+    query<MaterialStockRow>(materialSnapshotQuery),
+    query<ConditionVariantRow>(`
+      SELECT
+        oi.material_id,
+        oi.conditions,
+        COALESCE(SUM(oi.quantity)::NUMERIC(12,4), 0) AS quantity_requested,
+        COALESCE(SUM(oi.qty_reserved_from_stock)::NUMERIC(12,4), 0) AS reserved_from_stock,
+        COALESCE(SUM(oi.qty_to_produce)::NUMERIC(12,4), 0) AS qty_to_produce
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      WHERE COALESCE(oi.conditions, '[]'::jsonb) <> '[]'::jsonb
+        AND NOT (lower(o.status) IN ('finalizado', 'saida_concluida', 'cancelado'))
+      GROUP BY oi.material_id, oi.conditions
+      ORDER BY oi.material_id
+    `)
+  ])
+
   const colorMap = res.rows.map((row) => {
     const colorOptionsRaw = parseJson<unknown>(row.color_options, [])
     const metadataRaw = parseJson<Record<string, unknown>>(row.metadata, {})
@@ -114,21 +137,6 @@ async function buildMaterialSnapshot(): Promise<{
     reservedTotal: Number(row.reserved_total ?? 0),
     productionReserved: Number((row as any).production_reserved ?? 0),
   }))
-
-  const variantsRes = await query<ConditionVariantRow>(`
-    SELECT
-      oi.material_id,
-      oi.conditions,
-      COALESCE(SUM(oi.quantity)::NUMERIC(12,4), 0) AS quantity_requested,
-      COALESCE(SUM(oi.qty_reserved_from_stock)::NUMERIC(12,4), 0) AS reserved_from_stock,
-      COALESCE(SUM(oi.qty_to_produce)::NUMERIC(12,4), 0) AS qty_to_produce
-    FROM order_items oi
-    JOIN orders o ON o.id = oi.order_id
-    WHERE COALESCE(oi.conditions, '[]'::jsonb) <> '[]'::jsonb
-      AND NOT (lower(o.status) IN ('finalizado', 'saida_concluida', 'cancelado'))
-    GROUP BY oi.material_id, oi.conditions
-    ORDER BY oi.material_id
-  `)
 
   const conditionVariants: ConditionVariant[] = variantsRes.rows.map((row) => ({
     materialId: `M-${row.material_id}`,

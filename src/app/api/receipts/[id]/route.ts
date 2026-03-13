@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Invalidate dashboard cache
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot()
+    await refreshDashboardSnapshot(false)
     revalidateDashboardTag()
 
     return NextResponse.json({ ok: true })

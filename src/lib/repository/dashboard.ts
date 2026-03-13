@@ -366,12 +366,13 @@ async function loadMaterialsWithStock(tenantId: string): Promise<
   return { materials, stockBalances, queryMs: res.queryTimeMs, queryProfile }
 }
 
-async function loadUsers(): Promise<LoadResult<{ items: User[] }>> {
+async function loadUsers(tenantId: string): Promise<LoadResult<{ items: User[] }>> {
   const res = await query<UserRow>(`
     SELECT id, name, email, role, tenant_id, avatar_url
     FROM users
+    WHERE tenant_id = $1::uuid
     ORDER BY name ASC
-  `)
+  `, [tenantId])
 
   const users = res.rows.map((row) => ({
     id: row.id,
@@ -496,7 +497,7 @@ async function createDashboardSnapshotInternal(tenantId: string): Promise<Dashbo
     loadOrders(tenantId),
     loadProductionTasks(tenantId),
     loadMaterialsWithStock(tenantId),
-    loadUsers(),
+    loadUsers(tenantId),
     loadStockReservations(tenantId),
     loadInventoryReceipts(tenantId),
     loadNotifications(tenantId),
@@ -607,10 +608,8 @@ type RevalidableDashboardSnapshot = typeof getDashboardSnapshot & {
 async function refreshMaterializedViews(): Promise<void> {
   await Promise.all(
     MATERIALIZED_VIEWS.map((view) => {
-      const refreshSql =
-        view === 'mv_inventory_receipts_snapshot'
-          ? `REFRESH MATERIALIZED VIEW CONCURRENTLY ${view}`
-          : `REFRESH MATERIALIZED VIEW ${view}`
+      // Agora todas as views possuem índices únicos e suportam REFRESH CONCURRENTLY
+      const refreshSql = `REFRESH MATERIALIZED VIEW CONCURRENTLY ${view}`
       return query(refreshSql)
     })
   )

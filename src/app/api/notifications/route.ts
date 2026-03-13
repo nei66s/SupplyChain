@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPool } from '@/lib/db'
+import { query } from '@/lib/db'
 import { isUnauthorizedError, requireAuth } from '@/lib/auth'
 
 function errorMessage(err: unknown): string {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const params: unknown[] = [auth.role, auth.userId]
     if (onlyUnread) clauses.push('read_at IS NULL')
 
-    const res = await getPool().query(
+    const res = await query(
       `SELECT id, type, title, message, created_at, read_at, role_target, user_target, order_id, material_id, dedupe_key
        FROM notifications
        WHERE ${clauses.join(' AND ')}
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
     const id = Number(String(body.id ?? '').replace(/\D+/g, ''))
     if (!id) return NextResponse.json({ error: 'id invalido' }, { status: 400 })
     const read = Boolean(body.read)
-    await getPool().query('UPDATE notifications SET read_at = $2 WHERE id = $1', [id, read ? new Date() : null])
+    await query('UPDATE notifications SET read_at = $2 WHERE id = $1', [id, read ? new Date() : null])
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {
     if (isUnauthorizedError(err)) {
@@ -71,7 +71,7 @@ export async function DELETE(request: NextRequest) {
     const clearAll = url.searchParams.get('all') === '1'
 
     if (clearAll) {
-      await getPool().query(
+      await query(
         'DELETE FROM notifications WHERE (role_target IS NULL OR role_target = $1 OR user_target = $2)',
         [auth.role, auth.userId]
       )
@@ -79,7 +79,7 @@ export async function DELETE(request: NextRequest) {
       const idStr = url.searchParams.get('id')
       if (idStr) {
         const id = Number(idStr.replace(/\\D+/g, ''))
-        await getPool().query(
+        await query(
           'DELETE FROM notifications WHERE id = $1 AND (role_target IS NULL OR role_target = $2 OR user_target = $3)',
           [id, auth.role, auth.userId]
         )

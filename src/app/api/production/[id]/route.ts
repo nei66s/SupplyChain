@@ -234,7 +234,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
         // Invalidate dashboard cache
         await invalidateDashboardCache()
-        await refreshDashboardSnapshot()
+        await refreshDashboardSnapshot(false)
         revalidateDashboardTag()
 
         await publishRealtimeEvent('PRODUCTION_COMPLETED', { taskId, orderId })

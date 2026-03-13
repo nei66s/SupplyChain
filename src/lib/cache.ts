@@ -2,6 +2,10 @@ import Redis from 'ioredis'
 
 let cachedClient: Redis | null = null
 
+// Memória local para evitar viagens de rede até o Redis em dados muito frequentes
+const LOCAL_CACHE = new Map<string, { value: any; expiry: number }>()
+const LOCAL_TTL_MS = 5000 // 5 segundos de cache local é seguro para a maioria dos casos
+
 function ensureConfig(): { host: string; port: number; password?: string } {
   const host = process.env.REDIS_HOST
   if (!host) {
@@ -36,14 +40,26 @@ export function getClient(): Redis {
 }
 
 export async function getJsonCache<T>(key: string): Promise<T | null> {
-  const client = getClient()
   const start = Date.now()
+
+  // 1. Tenta Cache em Memória primeiro (0ms latency)
+  const localEntry = LOCAL_CACHE.get(key)
+  if (localEntry && localEntry.expiry > Date.now()) {
+    console.log('[cache][memory] CACHE HIT', key)
+    return localEntry.value as T
+  }
+
+  // 2. Tenta Redis
+  const client = getClient()
   try {
     const payload = await client.get(key)
     const elapsed = Date.now() - start
     if (payload) {
       console.log('[cache][redis] CACHE HIT', key, `(${elapsed}ms)`)
-      return JSON.parse(payload) as T
+      const parsed = JSON.parse(payload) as T
+      // Alimenta o cache local
+      LOCAL_CACHE.set(key, { value: parsed, expiry: Date.now() + LOCAL_TTL_MS })
+      return parsed
     }
     console.log('[cache][redis] CACHE MISS', key, `(${elapsed}ms)`)
     return null
@@ -66,7 +82,12 @@ export async function setJsonCache(key: string, value: unknown): Promise<void> {
   const start = Date.now()
   try {
     const ttl = resolveTtl()
-    await client.set(key, JSON.stringify(value), 'EX', ttl)
+    const payload = JSON.stringify(value)
+
+    // Atualiza Memória e Redis
+    LOCAL_CACHE.set(key, { value: value, expiry: Date.now() + LOCAL_TTL_MS })
+    await client.set(key, payload, 'EX', ttl)
+
     const elapsed = Date.now() - start
     console.log(`[cache][redis] CACHE SET ${key} ttl=${ttl}s (${elapsed}ms)`)
   } catch (error) {
@@ -76,6 +97,7 @@ export async function setJsonCache(key: string, value: unknown): Promise<void> {
 }
 
 export async function invalidateCache(key: string): Promise<void> {
+  LOCAL_CACHE.delete(key)
   const client = getClient()
   try {
     await client.del(key)

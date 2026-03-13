@@ -11,15 +11,27 @@ export type InventorySnapshot = {
 }
 
 export async function getInventorySnapshot(): Promise<InventorySnapshot> {
-  const { materials, stockBalances, conditionVariants } = await getMaterialsSnapshot()
+  // Disparamos todas as buscas em paralelo para economizar RTT (ida e volta ao banco)
+  // Como estamos rodando localmente vs banco remoto, o paralelismo é crítico.
+  const [materialsResult, reservationsRes, adjustmentsRes] = await Promise.all([
+    getMaterialsSnapshot(),
+    query(`
+      SELECT sr.id, sr.material_id, sr.order_id, sr.user_id, sr.qty, sr.expires_at, sr.updated_at, sr.created_at, u.name AS user_name
+      FROM stock_reservations sr
+      LEFT JOIN users u ON u.id = sr.user_id
+      WHERE sr.expires_at > now()
+      ORDER BY sr.expires_at ASC
+    `),
+    query(`
+      SELECT ia.id, ia.material_id, m.name AS material_name, ia.qty_before, ia.qty_after, ia.adjustment_qty, ia.reason, ia.actor, ia.created_at
+      FROM inventory_adjustments ia
+      JOIN materials m ON m.id = ia.material_id
+      ORDER BY ia.created_at DESC
+      LIMIT 100
+    `)
+  ])
 
-  const reservationsRes = await query(`
-    SELECT sr.id, sr.material_id, sr.order_id, sr.user_id, sr.qty, sr.expires_at, sr.updated_at, sr.created_at, u.name AS user_name
-    FROM stock_reservations sr
-    LEFT JOIN users u ON u.id = sr.user_id
-    WHERE sr.expires_at > now()
-    ORDER BY sr.expires_at ASC
-  `)
+  const { materials, stockBalances, conditionVariants } = materialsResult
 
   const stockReservations = reservationsRes.rows.map((row: any) => ({
     id: `SR-${row.id}`,
@@ -32,14 +44,6 @@ export async function getInventorySnapshot(): Promise<InventorySnapshot> {
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
   }))
-
-  const adjustmentsRes = await query(`
-    SELECT ia.id, ia.material_id, m.name AS material_name, ia.qty_before, ia.qty_after, ia.adjustment_qty, ia.reason, ia.actor, ia.created_at
-    FROM inventory_adjustments ia
-    JOIN materials m ON m.id = ia.material_id
-    ORDER BY ia.created_at DESC
-    LIMIT 100
-  `)
 
   const adjustments = adjustmentsRes.rows.map((row: any) => ({
     id: `ADJ-${row.id}`,

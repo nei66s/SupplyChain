@@ -97,15 +97,19 @@ export async function POST(request: NextRequest) {
     for (const it of items) total += Number(it.quantity) * Number(it.unitPrice ?? 0)
 
     const client = await getPool().connect()
-    const orderCreatorId = auth.userId
-    const pendingProductionNotifications: { materialId: number; qty: number }[] = []
-    const pendingAllocationNotifications: { materialId: number; qty: number }[] = []
-    const notificationMaterialIds = new Set<number>()
     try {
+      // Importante: Definir o tenant_id na sessão para o client manual
+      await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
+
+      const orderCreatorId = auth.userId
+      const pendingProductionNotifications: { materialId: number; qty: number }[] = []
+      const pendingAllocationNotifications: { materialId: number; qty: number }[] = []
+      const notificationMaterialIds = new Set<number>()
+
       await client.query('BEGIN')
       const orderRes = await client.query(
-        'INSERT INTO orders (status, total, created_by, client_name, due_date) VALUES ($1,$2,$3,$4,$5) RETURNING id, status, total, created_at',
-        [payload.status ?? 'draft', total, auth.userId, payload.clientName ?? null, payload.dueDate ? new Date(payload.dueDate) : null]
+        'INSERT INTO orders (status, total, created_by, client_name, due_date, tenant_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, status, total, created_at',
+        [payload.status ?? 'draft', total, auth.userId, payload.clientName ?? null, payload.dueDate ? new Date(payload.dueDate) : null, auth.tenantId]
       )
       const orderId = orderRes.rows[0].id
 
@@ -122,8 +126,8 @@ export async function POST(request: NextRequest) {
       for (const it of items) {
         const description = it.description ?? (await resolveMaterialDescription(it.materialId))
         await client.query(
-          'INSERT INTO order_items (order_id, material_id, quantity, unit_price, conditions, shortage_action, item_description) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [orderId, it.materialId, Number(it.quantity), Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description]
+          'INSERT INTO order_items (order_id, material_id, quantity, unit_price, conditions, shortage_action, item_description, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [orderId, it.materialId, Number(it.quantity), Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description, auth.tenantId]
         )
       }
 
@@ -177,18 +181,18 @@ export async function POST(request: NextRequest) {
         if (qtyToProduce <= 0) continue
 
         await client.query(
-          `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status)
-           VALUES ($1, $2, $3, 'PENDING')
+          `INSERT INTO production_tasks (order_id, material_id, qty_to_produce, status, tenant_id)
+           VALUES ($1, $2, $3, 'PENDING', $4)
            ON CONFLICT (order_id, material_id)
            DO UPDATE SET qty_to_produce = EXCLUDED.qty_to_produce, status = 'PENDING', updated_at = now()`,
-          [orderId, materialId, qtyToProduce]
+          [orderId, materialId, qtyToProduce, auth.tenantId]
         )
         // Create a production reservation tied to this order so the produced qty is earmarked
         await client.query(
-          `INSERT INTO production_reservations (order_id, material_id, qty, created_at, updated_at)
-           VALUES ($1, $2, $3, now(), now())
+          `INSERT INTO production_reservations (order_id, material_id, qty, tenant_id)
+           VALUES ($1, $2, $3, $4)
            ON CONFLICT (order_id, material_id) DO UPDATE SET qty = EXCLUDED.qty, updated_at = now()`,
-          [orderId, materialId, qtyToProduce]
+          [orderId, materialId, qtyToProduce, auth.tenantId]
         )
         pendingProductionNotifications.push({ materialId, qty: qtyToProduce })
         notificationMaterialIds.add(materialId)
@@ -198,7 +202,7 @@ export async function POST(request: NextRequest) {
       const createdAtInserted = orderRes.rows[0].created_at ?? new Date().toISOString()
       const dateStr = new Date(createdAtInserted).toISOString().slice(0, 10) // YYYY-MM-DD
       const dateKey = dateStr.replace(/-/g, '') // YYYYMMDD
-      const sameDayRes = await client.query('SELECT id FROM orders WHERE created_at::date = $1::date ORDER BY created_at ASC', [dateStr])
+      const sameDayRes = await client.query('SELECT id FROM orders WHERE created_at::date = $1::date AND tenant_id = $2::uuid ORDER BY created_at ASC', [dateStr, auth.tenantId])
       const sameDayRows = sameDayRes.rows as OrderIdRow[]
       const ids = sameDayRows.map((r) => Number(r.id))
       const pos = ids.indexOf(orderId)
@@ -234,11 +238,11 @@ export async function POST(request: NextRequest) {
         if (qtyReserved > 0) {
           const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
           await client.query(
-            `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,now(),now())
+            `INSERT INTO stock_reservations (order_id, material_id, user_id, qty, expires_at, tenant_id, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,now(),now())
              ON CONFLICT (order_id, material_id)
              DO UPDATE SET qty = EXCLUDED.qty, user_id = EXCLUDED.user_id, expires_at = EXCLUDED.expires_at, updated_at = now()`,
-            [orderId, row.material_id, auth.userId, qtyReserved, expiresAt]
+            [orderId, row.material_id, auth.userId, qtyReserved, expiresAt, auth.tenantId]
           )
           pendingAllocationNotifications.push({ materialId: row.material_id, qty: qtyReserved })
           notificationMaterialIds.add(row.material_id)
@@ -297,16 +301,16 @@ export async function POST(request: NextRequest) {
 
       // Invalidate dashboard cache
       await invalidateDashboardCache()
-      await refreshDashboardSnapshot()
+      await refreshDashboardSnapshot(false)
       revalidateDashboardTag()
 
       await publishRealtimeEvent('ORDER_SUBMITTED', { orderId })
 
       // Log activity — order created with items
-      logActivity(auth.userId, 'ORDER_CREATED', 'order', orderId, items.length).catch(console.error)
+      logActivity(auth.userId, 'ORDER_CREATED', 'order', orderId, items.length, null, null, auth.tenantId).catch(console.error)
 
       // Fetch created order and items
-      const createdRes = await getPool().query(
+      const createdRes = await client.query(
         `SELECT o.id, o.order_number, o.status, o.total, o.created_at, oi.id AS item_id, oi.material_id, oi.conditions, m.sku, m.name AS material_name, oi.quantity, oi.unit_price
          FROM orders o
          LEFT JOIN order_items oi ON oi.order_id = o.id
@@ -344,6 +348,7 @@ export async function POST(request: NextRequest) {
       client.release()
     }
   } catch (err: unknown) {
+    console.error('order submit error', err)
     return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

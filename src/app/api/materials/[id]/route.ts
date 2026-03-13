@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { query } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
 
 export async function PUT(request: NextRequest, { params }: any) {
   try {
+    const auth = await requireAuth(request)
     const rawId = params?.id
     const id = rawId.startsWith('M-') ? Number(rawId.replace(/^M-/, '')) : Number(rawId)
     if (Number.isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
@@ -36,14 +38,14 @@ export async function PUT(request: NextRequest, { params }: any) {
 
     // If sku provided, ensure uniqueness (allow same as current record)
     if (sku) {
-      const exists = await query('SELECT id FROM materials WHERE sku=$1 AND id<>$2', [sku, id])
+      const exists = await query('SELECT id FROM materials WHERE sku=$1 AND id<>$2 AND tenant_id = $3', [sku, id, auth.tenantId])
       if (exists.rowCount > 0) return NextResponse.json({ errors: { sku: 'SKU já em uso' } }, { status: 400 })
     }
 
     const res = await query(
       `UPDATE materials SET sku=$1, name=$2, description=$3, unit=$4, min_stock=$5, reorder_point=$6, setup_time_minutes=$7, production_time_per_unit_minutes=$8, color_options=$9
-       WHERE id=$10 RETURNING id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options`,
-      [sku || null, name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || []), id]
+       WHERE id=$10 AND tenant_id=$11 RETURNING id, sku, name, description, unit, min_stock, reorder_point, setup_time_minutes, production_time_per_unit_minutes, color_options`,
+      [sku || null, name, payload.description || null, standardUom, minStock, reorderPoint, setupTimeMinutes, productionTimePerUnitMinutes, JSON.stringify(colorOptions || []), id, auth.tenantId]
     )
 
     if (res.rowCount === 0) return NextResponse.json({ error: 'not found' }, { status: 404 })
@@ -70,11 +72,12 @@ export async function PUT(request: NextRequest, { params }: any) {
 
 export async function DELETE(request: NextRequest, { params }: any) {
   try {
+    const auth = await requireAuth(request)
     const rawId = params?.id
     const id = rawId.startsWith('M-') ? Number(rawId.replace(/^M-/, '')) : Number(rawId)
     if (Number.isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
 
-    const res = await query('DELETE FROM materials WHERE id=$1', [id])
+    const res = await query('DELETE FROM materials WHERE id=$1 AND tenant_id=$2', [id, auth.tenantId])
     if (res.rowCount === 0) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
     return NextResponse.json({ success: true })
