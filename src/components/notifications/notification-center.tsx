@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Info, AlertTriangle, CheckCircle, Inbox, Trash2, CheckCheck } from "lucide-react";
+import { Bell, Info, AlertTriangle, CheckCircle, Inbox, Trash2, CheckCheck, Volume2, VolumeX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,6 +17,7 @@ type Notification = {
 };
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
+import { useRealtimeStore } from "@/store/use-realtime-store";
 
 function timeAgo(iso?: string) {
   if (!iso) return "";
@@ -31,35 +32,50 @@ function timeAgo(iso?: string) {
   return `${d}d`;
 }
 
+let globalItems: any[] = [];
+let lastItemsFetch = 0;
+
 export function NotificationCenter() {
   type UiNotification = Notification & { _removing?: boolean };
 
-  const [items, setItems] = React.useState<UiNotification[]>([]);
+  const [items, setItems] = React.useState<UiNotification[]>(globalItems);
   const unreadCount = items.filter((it) => !it.readAt).length;
+  const { lastNotificationAt, isMuted, setIsMuted } = useRealtimeStore();
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const loadNotifications = React.useCallback(async () => {
+  const loadNotifications = React.useCallback(async (force = false) => {
+    const now = Date.now();
+    // Use cache if within 30s AND no new realtime push event has occurred since last fetch
+    if (!force && lastItemsFetch > 0 && now - lastItemsFetch < 30000 && lastNotificationAt <= lastItemsFetch) {
+        if (JSON.stringify(globalItems) !== JSON.stringify(items)) setItems(globalItems);
+        return;
+    }
     try {
       const res = await fetch('/api/notifications', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       if (Array.isArray(data)) {
-        setItems(
-          data
-            .map((item: Notification) => ({ ...item }))
-            .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-        );
+        const sorted = data.map((item: Notification) => ({ ...item })).sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+        globalItems = sorted;
+        lastItemsFetch = Date.now();
+        setItems(sorted);
       }
     } catch (err) {
       console.error('notifications fetch failed', err);
     }
-  }, []);
+  }, [items, lastNotificationAt]);
 
   React.useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+  
+  React.useEffect(() => {
+    if (lastNotificationAt > 0) {
+      loadNotifications();
+    }
+  }, [lastNotificationAt, loadNotifications]);
 
   const handleMarkRead = (id: string) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, _removing: true } : it)));
@@ -113,7 +129,15 @@ export function NotificationCenter() {
             <h3 className="text-sm font-semibold">Notificacoes</h3>
             <p className="text-xs text-muted-foreground">{mounted ? `${unreadCount} nao lida(s)` : ''}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              title={isMuted ? "Ativar som de notificação" : "Desativar som de notificação"}
+              className={`flex items-center gap-1 text-xs font-medium hover:underline ${isMuted ? 'text-slate-400' : 'text-primary'}`}
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              {isMuted ? 'Mudo' : 'Som'}
+            </button>
             {unreadCount > 0 ? (
               <button
                 title="Marcar todas como lidas"

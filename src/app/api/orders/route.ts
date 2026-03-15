@@ -36,6 +36,7 @@ type ApiOrder = {
   }>
   auditTrail: unknown[]
   labelPrintCount: number
+  picking_label_printed?: boolean
   total: number
   trashedAt: string | null
   hasPendingProduction?: boolean
@@ -56,6 +57,7 @@ type OrderRow = {
   picker_id: string | null
   volume_count: number | null
   label_print_count: number | null
+  picking_label_printed: boolean | null
   item_id: number | null
   material_id: number | null
   quantity: string | number | null
@@ -141,7 +143,7 @@ function errorMessage(err: unknown): string {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth(request)
+    const auth = await requireAuth(request)
     const totalStart = process.hrtime.bigint()
     const res = await query<OrderRow>(
       `SELECT
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
          o.picker_id,
          o.volume_count,
          o.label_print_count,
+         o.picking_label_printed,
          oi.id as item_id,
          oi.material_id,
          oi.quantity,
@@ -182,7 +185,9 @@ export async function GET(request: NextRequest) {
        LEFT JOIN LATERAL (
          SELECT EXISTS(SELECT 1 FROM production_tasks pt WHERE pt.order_id = o.id AND pt.status <> 'DONE') AS has_pending_production
        ) pp ON true
-       ORDER BY o.created_at ASC`
+       WHERE o.tenant_id = $1::uuid
+       ORDER BY o.created_at ASC`,
+      [auth.tenantId]
     )
     const rows = res.rows || []
     const queryMs = res.queryTimeMs
@@ -224,6 +229,7 @@ export async function GET(request: NextRequest) {
           items: [],
           auditTrail: [],
           labelPrintCount: Number(r.label_print_count ?? 0),
+          picking_label_printed: Boolean(r.picking_label_printed ?? false),
           total: Number(r.total ?? 0),
           trashedAt: r.trashed_at ? (r.trashed_at instanceof Date ? r.trashed_at.toISOString() : String(r.trashed_at)) : null,
           hasPendingProduction: Boolean(r.has_pending_production ?? false),
@@ -262,9 +268,9 @@ export async function GET(request: NextRequest) {
       const auditRes = await query(
         `SELECT id, order_id, action, actor, timestamp, details
          FROM audit_events
-         WHERE order_id = ANY($1::int[])
+         WHERE order_id = ANY($1::int[]) AND tenant_id = $2::uuid
          ORDER BY timestamp DESC`,
-        [ids]
+        [ids, auth.tenantId]
       )
       const auditMap = new Map<number, any[]>()
       for (const row of auditRes.rows as any[]) {
@@ -285,7 +291,8 @@ export async function GET(request: NextRequest) {
     }
     for (const order of orders) {
       order.volumeCount = Math.max(1, order.items.length)
-      order.readiness = computeReadiness(order.items)
+      const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA'
+      order.readiness = isFinalized ? 'READY_FULL' : computeReadiness(order.items)
     }
     const serializationMs = Number(process.hrtime.bigint() - serializationStart) / 1_000_000
     const totalMs = Number(process.hrtime.bigint() - totalStart) / 1_000_000
@@ -351,7 +358,7 @@ export async function POST(request: NextRequest) {
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot(false)
+    await refreshDashboardSnapshot(true)
     revalidateDashboardTag()
 
     await publishRealtimeEvent('ORDER_CREATED', { orderId })

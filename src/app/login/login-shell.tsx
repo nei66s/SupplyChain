@@ -67,7 +67,11 @@ export function LoginShell({ branding }: LoginShellProps) {
       if (!meResponse.ok) {
         throw new Error('Sessao nao persistida');
       }
-      router.replace('/dashboard');
+      
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectPath = searchParams.get('redirect');
+      
+      router.replace(redirectPath || '/dashboard');
       router.refresh();
     } catch (error) {
       console.error('login error', error);

@@ -1,4 +1,5 @@
 import { query } from './db'
+import { getTenantFromSession } from './auth'
 
 export type ActivityAction =
     | 'ORDER_CREATED'
@@ -20,6 +21,10 @@ export async function logActivity(
     tenantId?: string | null,
 ): Promise<void> {
     try {
+        // Se o tenantId não foi passado, tenta pegar da sessão.
+        // Importante para evitar erros de NOT NULL em tabelas multi-tenant.
+        const effectiveTenantId = tenantId || (await getTenantFromSession())
+
         await query(
             `INSERT INTO people_activity_log (user_id, action_type, entity_type, entity_id, qty, weight, duration_seconds, tenant_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -31,7 +36,7 @@ export async function logActivity(
                 qty ?? null,
                 weight ?? null,
                 durationSeconds ?? null,
-                tenantId ?? null,
+                effectiveTenantId ?? null,
             ],
         )
     } catch (error) {

@@ -3,7 +3,7 @@ import { ReadinessFlag } from './types';
 export function readinessLabel(flag: ReadinessFlag | string): string {
   switch (flag) {
     case 'READY_FULL':
-      return 'Completo';
+      return 'Pronto';
     case 'READY_PARTIAL':
       return 'Parcial';
     case 'NOT_READY':
@@ -14,7 +14,7 @@ export function readinessLabel(flag: ReadinessFlag | string): string {
 }
 
 export const readinessTabLabel: Record<string, string> = {
-  READY_FULL: 'Completo',
+  READY_FULL: 'Pronto',
   READY_PARTIAL: 'Parcial',
   NOT_READY: 'Não pronto',
 };

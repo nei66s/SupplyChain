@@ -178,7 +178,7 @@ export default function PickingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: qty }),
     });
-    await loadData();
+    await loadData({ skipLoading: true });
   };
 
   const commitSeparatedWeight = async (orderId: string, itemId: string, weight: number) => {
@@ -187,7 +187,7 @@ export default function PickingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_separated_weight', itemId, separatedWeight: weight }),
     });
-    await loadData();
+    await loadData({ skipLoading: true });
   };
 
   const concludePicking = async (orderId: string) => {
@@ -205,10 +205,6 @@ export default function PickingPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="font-headline">Fila de picking</CardTitle>
-            <Button size="sm" variant="outline" onClick={() => loadData({ skipLoading: true })} disabled={loading}>
-              <RefreshCw className={`mr-1 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
           </div>
           <CardDescription>Filtre por prontidao e conclua separacao com baixa de saida simulada.</CardDescription>
           <div className="space-y-2">
@@ -267,9 +263,9 @@ export default function PickingPage() {
                   {
                     (() => {
                       const hasProductionBlocking = selected.items.some((it) => it.qtyToProduce > 0);
-                      const isLabelPrinted = (selected.labelPrintCount ?? 0) > 0;
+                      const isPickingLabelPrinted = !!selected.picking_label_printed;
                       const isFullyTyped = selected.items.every(item => item.qtySeparated >= item.qtyReservedFromStock);
-                      const canConclude = isLabelPrinted && isFullyTyped && !hasProductionBlocking;
+                      const canConclude = isPickingLabelPrinted && isFullyTyped && !hasProductionBlocking;
 
                       return (
                         <>
@@ -280,7 +276,7 @@ export default function PickingPage() {
                             disabled={hasProductionBlocking}
                           >
                             <FileText className="mr-2 h-4 w-4" />
-                            {isLabelPrinted ? 'Reimprimir etiquetas' : 'Imprimir etiquetas'}
+                            {isPickingLabelPrinted ? 'Reimprimir etiquetas de separação' : 'Imprimir etiquetas de separação'}
                           </Button>
                           <Button
                             className="w-full sm:w-auto"

@@ -50,14 +50,15 @@ async function ensureAuthorized(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await ensureAuthorized(request);
+    const auth = await ensureAuthorized(request);
     const result = await query<SuggestionRow>(`
       SELECT id, material_id, suggested_reorder_point, suggested_min_stock, suggested_qty,
         rationale, status, updated_by, created_at, updated_at, applied_at
       FROM mrp_suggestions
+      WHERE tenant_id = $1
       ORDER BY updated_at DESC
       LIMIT 200
-    `);
+    `, [auth.tenantId]);
 
     return NextResponse.json(result.rows.map(mapRow));
   } catch (error) {
@@ -79,8 +80,7 @@ export async function POST(request: NextRequest) {
     const suggestedQty = toNumber(body.suggestedQty);
     const rationale = String(body.rationale ?? '').trim();
 
-    const result = await query<SuggestionRow>(
-      `
+    const result = await query<SuggestionRow>(`
         INSERT INTO mrp_suggestions (
           material_id,
           suggested_reorder_point,
@@ -91,9 +91,10 @@ export async function POST(request: NextRequest) {
           updated_by,
           applied_at,
           created_at,
-          updated_at
-        ) VALUES ($1,$2,$3,$4,$5,'CONFIRMED',$6,now(),now(),now())
-        ON CONFLICT (material_id)
+          updated_at,
+          tenant_id
+        ) VALUES ($1,$2,$3,$4,$5,'CONFIRMED',$6,now(),now(),now(), $7)
+        ON CONFLICT (material_id, tenant_id)
         DO UPDATE SET
           suggested_reorder_point = EXCLUDED.suggested_reorder_point,
           suggested_min_stock = EXCLUDED.suggested_min_stock,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
         RETURNING id, material_id, suggested_reorder_point, suggested_min_stock, suggested_qty,
           rationale, status, updated_by, created_at, updated_at, applied_at;
       `,
-      [materialId, suggestedReorderPoint, suggestedMinStock, suggestedQty, rationale, auth.userId]
+      [materialId, suggestedReorderPoint, suggestedMinStock, suggestedQty, rationale, auth.userId, auth.tenantId]
     );
 
     return NextResponse.json(mapRow(result.rows[0]));

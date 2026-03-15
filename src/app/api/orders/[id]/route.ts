@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db'
 import { isUnauthorizedError, requireAuth } from '@/lib/auth'
 import { notifyOrderCompleted } from '@/lib/notifications'
 import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
+import { refreshMaterialsSnapshot } from '@/lib/repository/materials'
 import { logActivity } from '@/lib/log-activity'
 import { publishRealtimeEvent } from '@/lib/pubsub'
 
@@ -23,16 +24,26 @@ function errorMessage(err: unknown): string {
   return String(err)
 }
 
-async function resolveMaterialId(client: import('pg').Pool | import('pg').PoolClient, value: string | number): Promise<number | null> {
+async function resolveMaterialId(
+  client: import('pg').Pool | import('pg').PoolClient,
+  value: string | number,
+  tenantId?: string
+): Promise<number | null> {
   if (typeof value === 'number') return Number(value)
   const raw = String(value).trim()
   if (!raw) return null
   const m = raw.match(/\d+/)
   if (m) return Number(m[0])
-  const lookup = await client.query(
-    'SELECT id FROM materials WHERE sku = $1 OR name = $1 LIMIT 1',
-    [raw]
-  )
+
+  let sql = 'SELECT id FROM materials WHERE (sku = $1 OR name = $1)'
+  const params = [raw]
+  if (tenantId) {
+    sql += ' AND tenant_id = $2'
+    params.push(tenantId)
+  }
+  sql += ' LIMIT 1'
+
+  const lookup = await client.query(sql, params)
   return lookup.rowCount > 0 ? Number(lookup.rows[0].id) : null
 }
 
@@ -150,6 +161,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
       await client.query('BEGIN')
 
+      const statusRes = await client.query('SELECT status FROM orders WHERE id = $1', [orderId])
+      const currentStatus = statusRes.rows[0]?.status
+      const isFinalized = currentStatus === 'FINALIZADO' || currentStatus === 'SAIDA_CONCLUIDA'
+
+      if (isFinalized && !['restore', 'register_label_print', 'heartbeat', 'update_client', 'update_meta'].includes(action)) {
+        await client.query('ROLLBACK')
+        return NextResponse.json({ error: 'Pedido finalizado não pode ser modificado' }, { status: 400 })
+      }
+
       if (action === 'update_meta') {
         const updates: string[] = []
         const values: unknown[] = []
@@ -181,7 +201,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         const nextName = typeof body.clientName === 'string' ? body.clientName.trim() : ''
         await client.query('UPDATE orders SET client_name = $2 WHERE id = $1', [orderId, nextName])
       } else if (action === 'add_item') {
-        const materialId = await resolveMaterialId(client, body.materialId)
+        const materialId = await resolveMaterialId(client, body.materialId, auth.tenantId)
         if (!materialId) {
           await client.query('ROLLBACK')
           return NextResponse.json({ error: 'materialId invalido' }, { status: 400 })
@@ -368,6 +388,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           nextStatus,
           auth.userId,
         ])
+        
+        // Ensure no dangling production tasks or reservations remain
+        await client.query('DELETE FROM production_tasks WHERE order_id = $1', [orderId])
+        await client.query('DELETE FROM production_reservations WHERE order_id = $1', [orderId])
+        
         await client.query(
           `INSERT INTO audit_events (order_id, action, actor, timestamp, details, tenant_id)
            VALUES ($1, $2, $3, now(), $4, $5)`,
@@ -390,20 +415,43 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         logActivity(auth.userId, 'PICK_COMPLETED', 'pick', orderId, null, null, null, auth.tenantId).catch(console.error)
         await publishRealtimeEvent('PICKING_COMPLETED', { orderId })
       } else if (action === 'register_label_print') {
-        await client.query('UPDATE orders SET label_print_count = COALESCE(label_print_count,0) + 1 WHERE id = $1', [
-          orderId,
-        ])
+        const isPicking = body.format === 'EXIT_10x15'
+        if (isPicking) {
+          await client.query('UPDATE orders SET label_print_count = COALESCE(label_print_count,0) + 1, picking_label_printed = true WHERE id = $1', [
+            orderId,
+          ])
+        } else {
+          await client.query('UPDATE orders SET label_print_count = COALESCE(label_print_count,0) + 1 WHERE id = $1', [
+            orderId,
+          ])
+        }
         await client.query(
           `INSERT INTO audit_events (order_id, action, actor, timestamp, details, tenant_id)
            VALUES ($1, $2, $3, now(), $4, $5)`,
           [orderId, 'LABEL_PRINTED', auth.userId, `Etiqueta impressa (${body.format ?? 'EXIT_10x15'}).`, auth.tenantId]
         )
       } else if (action === 'save_order') {
+        const updates = [`status = CASE WHEN status IN ('draft','rascunho','RASCUNHO') THEN 'ABERTO' ELSE status END`];
+        const values: unknown[] = [orderId];
+
+        if (typeof body.clientName === 'string') {
+          updates.push(`client_name = $${values.length + 1}`);
+          values.push(body.clientName.trim() || null);
+        }
+        if (body.dueDate) {
+          updates.push(`due_date = $${values.length + 1}`);
+          values.push(new Date(body.dueDate));
+        }
+        if (body.volumeCount !== undefined) {
+          updates.push(`volume_count = $${values.length + 1}`);
+          values.push(Math.max(1, Number(body.volumeCount)));
+        }
+
         await client.query(
           `UPDATE orders
-           SET status = CASE WHEN status IN ('draft','rascunho','RASCUNHO') THEN 'ABERTO' ELSE status END
+           SET ${updates.join(', ')}
            WHERE id = $1`,
-          [orderId]
+          values
         )
       } else if (action === 'restore') {
         await client.query('UPDATE orders SET trashed_at = NULL WHERE id = $1', [orderId])
@@ -412,6 +460,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (trashed) {
           await client.query('UPDATE orders SET trashed_at = NOW(), status = $2 WHERE id = $1', [orderId, 'CANCELADO'])
           await client.query('DELETE FROM production_tasks WHERE order_id = $1', [orderId])
+          await client.query('DELETE FROM production_reservations WHERE order_id = $1', [orderId])
         } else if (body.trashed === false) {
           await client.query('UPDATE orders SET trashed_at = NULL WHERE id = $1', [orderId])
         }
@@ -427,8 +476,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Background refresh
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot(false)
+    await refreshDashboardSnapshot(true)
     revalidateDashboardTag()
+    await refreshMaterialsSnapshot()
 
     await publishRealtimeEvent('ORDER_UPDATED', { orderId, action })
 
@@ -449,6 +499,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const orderId = parseOrderId(resolvedParams.id)
     if (Number.isNaN(orderId)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
 
+    const statusRes = await getPool().query('SELECT status FROM orders WHERE id = $1', [orderId])
+    const currentStatus = statusRes.rows[0]?.status
+    if (currentStatus === 'FINALIZADO' || currentStatus === 'SAIDA_CONCLUIDA') {
+      return NextResponse.json({ error: 'Pedido finalizado não pode ser excluído' }, { status: 400 })
+    }
+
     await getPool().query('DELETE FROM order_items WHERE order_id = $1', [orderId])
     await getPool().query('DELETE FROM orders WHERE id = $1', [orderId])
 
@@ -456,6 +512,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await invalidateDashboardCache()
     await refreshDashboardSnapshot(false)
     revalidateDashboardTag()
+    await refreshMaterialsSnapshot()
 
     await publishRealtimeEvent('ORDER_DELETED', { orderId })
 

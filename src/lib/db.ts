@@ -190,15 +190,21 @@ export async function query<T extends QueryResultRow = any>(text: string | Query
   while (true) {
     const client = await getPool().connect()
     try {
-      // Tenta pegar o tenant do AsyncLocalStorage ou diretamente da Session (Cookies)
+      // 1ª prioridade: TenantContext já populado explicitamente (ex: por runWithTenant)
       let tenantId = getTenantContext()?.tenantId || null
+
+      // 2ª prioridade: Resolução via Session (cacheada por requisição com getOrCacheTenantResolution)
+      // Isso garante que `await headers()` + JWT.verify() só rodam UMA VEZ por request,
+      // mesmo que query() seja chamado 10x na mesma requisição em paralelo.
       if (!tenantId) {
         tenantId = await getTenantFromSession()
       }
 
-      // VERCEL/SERVERLESS OPTIMIZATION: 
+      // VERCEL/SERVERLESS OPTIMIZATION:
       // Evita o roundtrip 'SET app.current_tenant_id' se o client do pool já estiver com o mesmo tenant.
       // Isso economiza 1 RTT por consulta (crítico quando a latência física é alta).
+      // Em serverless, os clients são freq. novos, mas o cache por request evita o problema de
+      // multiplos SETs para queries paralelas que compartilham o mesmo tenantId.
       const clientExt = client as any
       if (clientExt.__last_tenant_id !== tenantId) {
         if (tenantId) {
@@ -209,6 +215,8 @@ export async function query<T extends QueryResultRow = any>(text: string | Query
           await client.query('RESET app.current_tenant_id')
         }
         clientExt.__last_tenant_id = tenantId
+      } else {
+        if (getPerfEnabled()) console.debug(`[db] tenant SET skipped (cached on client)`);
       }
 
       const result = await client.query<T>(config)

@@ -8,14 +8,52 @@ export default function WsHealth() {
   const { isConnected, isConnecting } = useRealtimeStore();
   const [mounted, setMounted] = React.useState(false);
 
+  const [latency, setLatency] = React.useState<number | null>(null);
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
+  React.useEffect(() => {
+    let interval: number;
+    let mountedLocal = true;
+
+    const measurePing = async () => {
+      // Only measure if connected, otherwise we might just be showing disconnected
+      if (!isConnected) {
+        if (mountedLocal) setLatency(null);
+        return;
+      }
+      
+      const start = Date.now();
+      try {
+        const res = await fetch('/api/ping', { cache: 'no-store' });
+        const end = Date.now();
+        if (res.ok && mountedLocal) {
+          setLatency(Math.max(1, Math.round(end - start)));
+        }
+      } catch {
+        if (mountedLocal) setLatency(null);
+      }
+    };
+
+    if (isConnected) {
+      measurePing();
+      interval = window.setInterval(measurePing, 120000);
+    } else {
+      setLatency(null);
+    }
+
+    return () => {
+      mountedLocal = false;
+      if (interval) window.clearInterval(interval);
+    };
+  }, [isConnected]);
+
   if (!mounted) {
     return (
-      <span className="inline-flex w-fit items-center gap-1 rounded-2xl border border-yellow-200/80 bg-yellow-50/80 px-2 py-1 text-slate-700 shadow-sm transition">
-        <Loader2 className="text-yellow-500 animate-spin h-5 w-5" />
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-help">
+        <Loader2 className="text-amber-500 dark:text-amber-400 animate-spin h-4 w-4" strokeWidth={2.5} />
       </span>
     );
   }
@@ -25,24 +63,15 @@ export default function WsHealth() {
   const config = {
     connected: {
       label: 'Tempo Real: Conectado',
-      border: 'border-emerald-200/80',
-      bg: 'bg-emerald-50/70',
-      iconColor: 'text-emerald-500',
-      // icon: Zap,
+      iconColor: 'text-emerald-500 dark:text-emerald-400',
     },
     loading: {
       label: 'Tempo Real: Conectando...',
-      border: 'border-yellow-200/80',
-      bg: 'bg-yellow-50/80',
-      iconColor: 'text-yellow-500',
-      // icon: Loader2,
+      iconColor: 'text-amber-500 dark:text-amber-400',
     },
     disconnected: {
       label: 'Tempo Real: Desconectado',
-      border: 'border-rose-200/80',
-      bg: 'bg-rose-50/80',
-      iconColor: 'text-rose-500',
-      // icon: ZapOff,
+      iconColor: 'text-rose-500 dark:text-rose-400',
     }
   };
 
@@ -53,10 +82,15 @@ export default function WsHealth() {
     <span
       role="status"
       aria-label={cfg.label}
-      title={cfg.label}
-      className={`inline-flex w-fit items-center gap-1 rounded-2xl border ${cfg.border} ${cfg.bg} px-2 py-1 text-slate-700 shadow-sm transition hover:scale-110 cursor-help`}
+      title={latency ? `${cfg.label} (${latency}ms)` : cfg.label}
+      className="inline-flex h-8 min-w-[32px] px-1.5 gap-1 items-center justify-center rounded-full transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-help"
     >
-      <Icon className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-5 w-5`} />
+      <Icon className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-4 w-4 shrink-0`} strokeWidth={2.5} />
+      {latency !== null && status === 'connected' && (
+        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-0.5">
+          {latency}ms
+        </span>
+      )}
       <span className="sr-only">{cfg.label}</span>
     </span>
   );

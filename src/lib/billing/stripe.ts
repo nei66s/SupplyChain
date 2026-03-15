@@ -11,7 +11,7 @@ export const stripeClient = {
         });
     },
 
-    async createCheckoutSession(customerId: string, tenantId: string) {
+    async createCheckoutSession(customerId: string, tenantId: string, interval: 'month' | 'year' = 'month', quantity: number = 1) {
         return await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ['card'], // Add 'pix', 'boleto' if needed and available in Brazil
@@ -21,14 +21,14 @@ export const stripeClient = {
                         currency: 'brl',
                         product_data: {
                             name: 'Assinatura Inventário Ágil',
-                            description: 'Ativação de instância e acesso mensal.',
+                            description: interval === 'year' ? 'Acesso anual.' : 'Acesso mensal.',
                         },
-                        unit_amount: 500, // R$ 5,00
+                        unit_amount: interval === 'year' ? 300000 : 30000, // R$ 3000 / R$ 300
                         recurring: {
-                            interval: 'month',
+                            interval: interval,
                         },
                     },
-                    quantity: 1,
+                    quantity: quantity,
                 },
             ],
             mode: 'subscription',
@@ -36,6 +36,8 @@ export const stripeClient = {
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/register?canceled=true`,
             metadata: {
                 tenantId,
+                interval,
+                quantity: String(quantity),
             },
         });
     },

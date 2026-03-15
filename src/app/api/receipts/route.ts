@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPool } from '@/lib/db'
+import { query } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
 function errorMessage(err: unknown): string {
@@ -9,11 +9,13 @@ function errorMessage(err: unknown): string {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth(request)
-    const res = await getPool().query(
+    const auth = await requireAuth(request)
+    const res = await query(
       `SELECT id, type, status, source_ref, created_at, posted_at, posted_by, auto_allocated
        FROM inventory_receipts
-       ORDER BY created_at DESC`
+       WHERE tenant_id = $1::uuid
+       ORDER BY created_at DESC`,
+      [auth.tenantId]
     )
     const receipts = res.rows.map((row: any) => ({
       id: `IR-${row.id}`,
@@ -30,12 +32,12 @@ export async function GET(request: NextRequest) {
       const ids = receipts
         .map((r: { id: string }) => Number(String(r.id).replace(/^IR-/, '')))
         .filter((n: number) => !Number.isNaN(n))
-      const itemsRes = await getPool().query(
+      const itemsRes = await query(
         `SELECT iri.receipt_id, iri.material_id, iri.qty, iri.uom, m.name AS material_name
          FROM inventory_receipt_items iri
          LEFT JOIN materials m ON m.id = iri.material_id
-         WHERE iri.receipt_id = ANY($1::int[])`,
-        [ids]
+         WHERE iri.receipt_id = ANY($1::int[]) AND iri.tenant_id = $2::uuid`,
+        [ids, auth.tenantId]
       )
       const map = new Map<number, any[]>()
       for (const row of itemsRes.rows) {

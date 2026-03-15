@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status
+      `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status, t.subscription_expires_at
        FROM users u
        JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1`,
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         tenantId: user.tenant_id,
         avatarUrl: user.avatar_url ?? undefined,
         subscriptionStatus: user.subscription_status,
+        subscriptionExpiresAt: user.subscription_expires_at,
       },
     });
 

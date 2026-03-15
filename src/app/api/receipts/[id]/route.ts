@@ -25,10 +25,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const client = await getPool().connect()
     try {
+      if (auth.tenantId) {
+        await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
+      }
       await client.query('BEGIN')
       await postReceipt(client, receiptId, {
         postedBy: auth.userId,
         autoAllocate,
+        tenantId: auth.tenantId,
       })
       await client.query('COMMIT')
     } catch (err) {
@@ -47,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Invalidate dashboard cache
     await invalidateDashboardCache()
-    await refreshDashboardSnapshot(false)
+    await refreshDashboardSnapshot(true)
     revalidateDashboardTag()
 
     return NextResponse.json({ ok: true })

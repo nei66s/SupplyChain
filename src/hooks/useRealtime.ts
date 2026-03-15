@@ -4,9 +4,15 @@ import { useRealtimeStore } from "@/store/use-realtime-store";
 
 export function useRealtime() {
     const router = useRouter();
-    const { setIsConnected, setIsConnecting } = useRealtimeStore();
+    const { setIsConnected, setIsConnecting, notifyNotification, isMuted } = useRealtimeStore();
+    const isMutedRef = useRef(isMuted);
     const wsRef = useRef<WebSocket | null>(null);
+
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+    }, [isMuted]);
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const reconnectAttemptsRef = useRef(0);
     const needsRefreshRef = useRef(false);
 
     useEffect(() => {
@@ -60,6 +66,7 @@ export function useRealtime() {
                         return;
                     }
                     console.log("[realtime] ✅ Connected successfully to", wsUrl);
+                    reconnectAttemptsRef.current = 0;
                     setIsConnected(true);
                     if (reconnectTimeoutRef.current) {
                         clearTimeout(reconnectTimeoutRef.current);
@@ -67,11 +74,48 @@ export function useRealtime() {
                     }
                 };
 
+                let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+                const playNotificationSound = () => {
+                    try {
+                        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const playTone = (freq: number, start: number, duration: number) => {
+                            const osc = audioCtx.createOscillator();
+                            const g = audioCtx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, start);
+                            g.gain.setValueAtTime(0, start);
+                            g.gain.linearRampToValueAtTime(0.1, start + 0.05);
+                            g.gain.exponentialRampToValueAtTime(0.01, start + duration);
+                            osc.connect(g);
+                            g.connect(audioCtx.destination);
+                            osc.start(start);
+                            osc.stop(start + duration);
+                        };
+                        playTone(660, audioCtx.currentTime, 0.4);
+                        playTone(880, audioCtx.currentTime + 0.1, 0.4);
+                    } catch (e) {
+                        console.warn("[realtime] Fail to play sound:", e);
+                    }
+                };
+
                 ws.onmessage = (event) => {
                     console.log("[realtime] 📩 Message received:", event.data);
+
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.event === 'NOTIFICATION_CREATED') {
+                            if (!isMutedRef.current) playNotificationSound();
+                            notifyNotification();
+                        }
+                    } catch { /* ignore non-json or malformed */ }
+
                     if (document.visibilityState === "visible") {
-                        console.log("[realtime] Performing router.refresh()");
-                        router.refresh();
+                        if (refreshTimeout) clearTimeout(refreshTimeout);
+                        refreshTimeout = setTimeout(() => {
+                            console.log("[realtime] Performing debounced router.refresh()");
+                            router.refresh();
+                        }, 2000); // 2 seconds debounce
                     } else {
                         console.log("[realtime] App invisible, postponing refresh.");
                         needsRefreshRef.current = true;
@@ -79,27 +123,33 @@ export function useRealtime() {
                 };
 
                 ws.onclose = (event) => {
-                    console.warn("[realtime] ❌ WebSocket closed", event.code, event.reason);
+                    if (event.code !== 1000) {
+                        // don't warn prominently on every reconnect loop in dev
+                        console.debug("[realtime] WebSocket closed", event.code, event.reason);
+                    }
                     wsRef.current = null;
                     setIsConnected(false);
                     setIsConnecting(false);
 
                     if (isMounted) {
-                        console.log("[realtime] Scheduled reconnection in 3s...");
-                        reconnectTimeoutRef.current = setTimeout(connect, 3000);
+                        const backoff = Math.min(30000, 1000 * Math.pow(1.5, reconnectAttemptsRef.current || 0));
+                        reconnectAttemptsRef.current = (reconnectAttemptsRef.current || 0) + 1;
+                        console.debug(`[realtime] Scheduled reconnection in ${Math.round(backoff/1000)}s...`);
+                        reconnectTimeoutRef.current = setTimeout(connect, backoff);
                     }
                 };
 
                 ws.onerror = (err) => {
-                    // Browser WebSocket error events are opaque and commonly occur during reconnect.
-                    // Keep this as warning so local dev is not blocked by noisy console overlays.
-                    console.warn("[realtime] WebSocket error:", err);
+                    // Keep this as debug so local dev is not blocked by noisy console overlays.
+                    console.debug("[realtime] WebSocket error:", err);
                     ws.close();
                 };
             } catch (err) {
-                console.error("[realtime] 🚨 Error creating WebSocket:", err);
+                console.debug("[realtime] Error creating WebSocket:", err);
                 if (isMounted) {
-                    reconnectTimeoutRef.current = setTimeout(connect, 3000);
+                    const backoff = Math.min(30000, 1000 * Math.pow(1.5, reconnectAttemptsRef.current || 0));
+                    reconnectAttemptsRef.current = (reconnectAttemptsRef.current || 0) + 1;
+                    reconnectTimeoutRef.current = setTimeout(connect, backoff);
                 }
             }
         }

@@ -588,39 +588,6 @@ function InventoryPageContent() {
         </Card>
       </TabsContent>
 
-      <TabsContent value="inbox">
-        <Card id="inbox">
-          <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2"><Bell className="h-5 w-5" /> Notificacoes</CardTitle>
-            <CardDescription>Inbox interna para alertas e disponibilidade para separacao.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {notifications.length === 0 ? (
-              <EmptyState icon={Inbox} title="Inbox vazia" description="Novas notificacoes operacionais aparecerao aqui." className="min-h-[130px]" />
-            ) : (
-              notifications.map((notification) => (
-                <div key={notification.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="font-medium">{notification.title}</p>
-                      <p className="text-sm text-muted-foreground">{notification.message}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{formatDate(notification.createdAt)} - {notificationTypeLabel(notification.type)}</p>
-                    </div>
-                    <Button
-                      className="w-full sm:w-auto"
-                      size="sm"
-                      variant={notification.readAt ? 'outline' : 'default'}
-                      onClick={() => markNotification(notification.id, !notification.readAt)}
-                    >
-                      {notification.readAt ? 'Marcar como nao lida' : 'Marcar como lida'}
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
 
       <TabsContent value="mrp">
         {/* Lazy-loaded MRP panel */}

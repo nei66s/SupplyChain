@@ -29,6 +29,7 @@ import {
   RefreshCcw,
   Clock,
   Inbox,
+  CreditCard,
 } from 'lucide-react';
 
 import {
@@ -86,14 +87,15 @@ const navItems = [
   { href: '/admin', icon: Shield, label: 'Administracao' },
 ];
 
-function MobileBottomNav() {
+function MobileBottomNav({ badges }: { badges?: { orders: number; production: number; picking: number } }) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
 
   const items = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Painel' },
-    { href: '/orders', icon: ShoppingCart, label: 'Pedidos' },
-    { href: '/inventory', icon: Warehouse, label: 'Estoque' },
+    { href: '/orders', icon: ShoppingCart, label: 'Pedidos', badgeType: 'orders' as const },
+    { href: '/production', icon: Factory, label: 'Produção', badgeType: 'production' as const },
+    { href: '/picking', icon: PackageCheck, label: 'Picking', badgeType: 'picking' as const },
   ];
 
   return (
@@ -101,6 +103,7 @@ function MobileBottomNav() {
       <div className="flex items-center justify-around gap-1 max-w-md mx-auto">
         {items.map(item => {
           const isActive = pathname.startsWith(item.href);
+          const badgeCount = item.badgeType ? (badges?.[item.badgeType] ?? 0) : 0;
           return (
             <Link
               key={item.href}
@@ -111,10 +114,15 @@ function MobileBottomNav() {
               )}
             >
               <div className={cn(
-                "p-1.5 rounded-lg transition-colors",
+                "p-1.5 rounded-lg transition-colors relative",
                 isActive && "bg-indigo-50 dark:bg-indigo-900/30"
               )}>
                 <item.icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[1.5px]")} />
+                {badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-2 flex h-4 w-auto min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-950">
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
               </div>
               <span className="text-[10px] tracking-tight">{item.label}</span>
             </Link>
@@ -124,7 +132,7 @@ function MobileBottomNav() {
           onClick={() => setOpenMobile(true)}
           className="flex flex-col items-center gap-1 min-w-[64px] py-1 rounded-xl text-slate-500 dark:text-slate-400 transition-all active:scale-90"
         >
-          <div className="p-1.5 rounded-lg">
+          <div className="p-1.5 rounded-lg relative">
             <Menu className="h-5 w-5 stroke-[1.5px]" />
           </div>
           <span className="text-[10px] tracking-tight">Menu</span>
@@ -134,7 +142,7 @@ function MobileBottomNav() {
   );
 }
 
-function AppSidebar() {
+function AppSidebar({ badges }: { badges?: { orders: number; production: number; picking: number } }) {
   const { setOpenMobile, openMobile } = useSidebar();
   const isMobile = useIsMobile();
   const router = useRouter();
@@ -163,12 +171,12 @@ function AppSidebar() {
   if (isMobile) {
     const mobileItems = [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Painel', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-      { href: '/orders', icon: ShoppingCart, label: 'Pedidos', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
+      { href: '/orders', icon: ShoppingCart, label: 'Pedidos', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20', badge: badges?.orders },
       { href: '/inventory', icon: Warehouse, label: 'Estoque', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
       { href: '/inventory?tab=mrp', icon: AreaChart, label: 'MRP', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
       { href: '/report', icon: FileText, label: 'Relatórios', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
-      { href: '/production', icon: Factory, label: 'Produção', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-50 dark:bg-pink-900/20' },
-      { href: '/picking', icon: PackageCheck, label: 'Separação', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+      { href: '/production', icon: Factory, label: 'Produção', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-50 dark:bg-pink-900/20', badge: badges?.production },
+      { href: '/picking', icon: PackageCheck, label: 'Separação', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', badge: badges?.picking },
       { href: '/materials', icon: Bot, label: 'Materiais', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-900/20' },
       { href: '/orders/trash', icon: Trash2, label: 'Lixeira', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
       { href: '/profile', icon: UserCircle2, label: 'Perfil', color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-200/50 dark:bg-slate-900/20' },
@@ -205,8 +213,13 @@ function AppSidebar() {
                       isActive ? "bg-indigo-50/50 dark:bg-indigo-900/20 ring-1 ring-indigo-200/50 dark:ring-indigo-800/50" : "bg-slate-50/50 dark:bg-slate-900/30"
                     )}
                   >
-                    <div className={cn("p-3 rounded-xl shadow-sm transition-transform", item.bg, item.color, isActive && "scale-110")}>
+                    <div className={cn("p-3 rounded-xl shadow-sm transition-transform relative", item.bg, item.color, isActive && "scale-110")}>
                       <item.icon className="h-6 w-6 stroke-[2px]" />
+                      {!!(item.badge && item.badge > 0) && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-5 w-auto min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-950">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </div>
                     <span className={cn(
                       "text-[10px] font-bold text-center leading-tight uppercase tracking-tight",
@@ -228,7 +241,6 @@ function AppSidebar() {
                     { label: 'Saldo de Estoque', tab: 'stock', icon: Warehouse },
                     { label: 'Ajustes de Inventário', tab: 'adjustments', icon: RefreshCcw },
                     { label: 'Reservas e Validade', tab: 'reservations', icon: Clock },
-                    { label: 'Inbox (Reservas Diretas)', tab: 'inbox', icon: Inbox },
                     { label: 'Planejamento MRP', tab: 'mrp', icon: AreaChart },
                   ].map((sub) => (
                     <Link
@@ -297,10 +309,10 @@ function AppSidebar() {
             <SidebarGroupLabel>Indicadores</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/dashboard" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <AreaChart className="h-4 w-4" />
                   <span>Indicadores</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isDashboardActive && currentDashTab === 'business'}>
@@ -323,24 +335,37 @@ function AppSidebar() {
             </SidebarMenu>
           </SidebarGroup>
           <SidebarGroup className="p-1">
-            <SidebarGroupLabel>Pedidos</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem key="/orders">
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/orders')} tooltip="Pedidos">
-                  <Link href="/orders">
-                    <ShoppingCart />
-                    <span>Pedidos</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem key="/orders/trash">
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/orders/trash')} tooltip="Lixeira">
-                  <Link href="/orders/trash">
-                    <Trash2 />
-                    <span>Lixeira</span>
-                  </Link>
-                </SidebarMenuButton>
+              <SidebarMenuItem>
+                <Link href="/orders" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Pedidos</span>
+                </Link>
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/orders') && !pathname.startsWith('/orders/trash')}>
+                      <Link href="/orders" className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          <span>Pedidos</span>
+                        </div>
+                        {!!badges?.orders && (
+                          <span className="flex h-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/50 px-2 text-[10px] font-bold text-indigo-700 dark:text-indigo-400">
+                            {badges.orders > 99 ? '99+' : badges.orders}
+                          </span>
+                        )}
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/orders/trash')}>
+                      <Link href="/orders/trash" className="flex items-center gap-2">
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Lixeira</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
@@ -348,10 +373,10 @@ function AppSidebar() {
           <SidebarGroup className="p-1 pt-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/inventory" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <Warehouse className="h-4 w-4" />
                   <span>Gestão de estoque</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isInventoryActive && currentTab === 'stock'}>
@@ -377,14 +402,7 @@ function AppSidebar() {
                       </Link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <SidebarMenuSubButton asChild isActive={isInventoryActive && currentTab === 'inbox'}>
-                      <Link href="/inventory?tab=inbox" className="flex items-center gap-2">
-                        <Bell className="h-3.5 w-3.5" />
-                        <span>Inbox</span>
-                      </Link>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
+
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isInventoryActive && currentTab === 'mrp'}>
                       <Link href="/inventory?tab=mrp" className="flex items-center gap-2">
@@ -399,45 +417,74 @@ function AppSidebar() {
           </SidebarGroup>
 
           <SidebarGroup className="p-1">
-            <SidebarGroupLabel>Operacoes</SidebarGroupLabel>
             <SidebarMenu>
-              {navItems
-                .filter(
-                  (i) =>
-                    i.href !== '/materials' &&
-                    i.href !== '/admin' &&
-                    i.href !== '/orders' &&
-                    i.href !== '/orders/trash' &&
-                    i.href !== '/dashboard'
-                )
-                .map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+              <SidebarMenuItem>
+                <Link href="/production" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
+                  <Factory className="h-4 w-4" />
+                  <span>Operações</span>
+                </Link>
+                <SidebarMenuSub>
+                  {navItems
+                    .filter(
+                      (i) =>
+                        i.href !== '/materials' &&
+                        i.href !== '/admin' &&
+                        i.href !== '/orders' &&
+                        i.href !== '/orders/trash' &&
+                        i.href !== '/dashboard'
+                    )
+                    .map((item) => {
+                      const badgeKey = item.href === '/production' ? 'production' : item.href === '/picking' ? 'picking' : undefined;
+                      const badgeCount = badgeKey ? badges?.[badgeKey] : 0;
+                      return (
+                        <SidebarMenuSubItem key={item.href}>
+                          <SidebarMenuSubButton asChild isActive={pathname.startsWith(item.href)}>
+                            <Link href={item.href} className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <item.icon className="h-3.5 w-3.5" />
+                                <span>{item.label}</span>
+                              </div>
+                              {!!(badgeCount && badgeCount > 0) && (
+                                <span className={cn(
+                                  "flex h-5 items-center justify-center rounded-full px-2 text-[10px] font-bold",
+                                  badgeKey === 'production' ? "bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-400" :
+                                  badgeKey === 'picking' ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400" : ""
+                                )}>
+                                  {badgeCount > 99 ? '99+' : badgeCount}
+                                </span>
+                              )}
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                </SidebarMenuSub>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
 
           <SidebarGroup className="p-1">
-            <SidebarGroupLabel>Administracao</SidebarGroupLabel>
             <SidebarMenu>
-              {navItems
-                .filter((i) => i.href === '/materials' || i.href === '/admin')
-                .map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+              <SidebarMenuItem>
+                <Link href="/admin" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
+                  <Shield className="h-4 w-4" />
+                  <span>Administração</span>
+                </Link>
+                <SidebarMenuSub>
+                  {navItems
+                    .filter((i) => i.href === '/materials' || i.href === '/admin')
+                    .map((item) => (
+                      <SidebarMenuSubItem key={item.href}>
+                        <SidebarMenuSubButton asChild isActive={pathname.startsWith(item.href)}>
+                          <Link href={item.href} className="flex items-center gap-2">
+                            <item.icon className="h-3.5 w-3.5" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                </SidebarMenuSub>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </div>
@@ -446,11 +493,40 @@ function AppSidebar() {
   );
 }
 
+let globalBadgesCache = { orders: 0, production: 0, picking: 0 };
+let lastBadgesFetch = 0;
+
 function AppShellContent({ children, initialUser }: { children: React.ReactNode, initialUser?: AuthUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme, mounted } = useTheme();
   const { user: authUser, loading: authLoading } = useAuthUser(initialUser);
+  const [badges, setBadges] = React.useState(globalBadgesCache);
+
+  React.useEffect(() => {
+    if (!authUser) return;
+    const fetchBadges = async (force = false) => {
+      const now = Date.now();
+      if (!force && lastBadgesFetch > 0 && now - lastBadgesFetch < 30000) {
+        if (JSON.stringify(globalBadgesCache) !== JSON.stringify(badges)) {
+            setBadges(globalBadgesCache);
+        }
+        return;
+      }
+      try {
+        const res = await fetch('/api/badges');
+        if (res.ok) {
+          const data = await res.json();
+          globalBadgesCache = data;
+          lastBadgesFetch = Date.now();
+          setBadges(data);
+        }
+      } catch (err) { }
+    };
+    fetchBadges();
+    const interval = setInterval(() => fetchBadges(true), 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, [authUser]);
 
   const displayUser = authUser ?? null;
   const displayRoleLabel = displayUser ? roleLabel(displayUser.role) : '---';
@@ -521,7 +597,7 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
       </div>
 
       <SidebarProvider defaultOpen={true}>
-        <AppSidebar />
+        <AppSidebar badges={badges} />
 
         <SidebarInset className="bg-transparent relative overflow-x-hidden">
 
@@ -533,14 +609,14 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
             </h1>
 
             <div className="hidden flex-1 md:flex md:justify-center">
-              <div className="relative w-full max-w-md">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Buscar pedidos, materiais ou tarefas" className="pl-9 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/60 dark:border-slate-800/60" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="global-search" name="global-search" placeholder="Buscar pedidos, materiais ou tarefas" className="pl-9 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/60 dark:border-slate-800/60" />
               </div>
             </div>
 
             <NotificationCenter />
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center sm:flex h-11 px-2 rounded-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm border border-slate-200/60 dark:border-slate-800/60 gap-1">
               <PingHealth />
               <DbHealth />
               <WsHealth />
@@ -555,6 +631,8 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
             ) : null}
+
+            <WhatsAppButton />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -576,6 +654,12 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
                     Meu perfil
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-xl mx-1 cursor-pointer">
+                  <Link href="/dashboard/billing">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Assinatura
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-200/60 dark:bg-slate-800/60" />
                 <DropdownMenuItem className="rounded-xl mx-1 text-red-600 focus:text-red-600 cursor-pointer" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -585,7 +669,7 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
             </DropdownMenu>
           </header>
 
-          <MobileBottomNav />
+          <MobileBottomNav badges={badges} />
 
           <main className="page-enter flex-1 relative z-10 px-4 pt-4 pb-28 md:px-8 md:py-10">
             <div className="mx-auto w-full max-w-full lg:max-w-[1600px]">
@@ -598,7 +682,6 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
           </main>
         </SidebarInset>
       </SidebarProvider>
-      <WhatsAppButton />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin(req);
+    const auth = await requireAdmin(req);
     const body = await req.json();
     const name = String(body.name ?? '').trim();
     const email = String(body.email ?? '').trim().toLowerCase();
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Perfil invalido' }, { status: 400 });
     }
 
-    const emailCheck = await query('SELECT 1 FROM users WHERE LOWER(email) = $1', [email]);
+    const emailCheck = await query('SELECT 1 FROM users WHERE LOWER(email) = $1 AND tenant_id = $2', [email, auth.tenantId]);
     if (emailCheck.rowCount > 0) {
       return NextResponse.json({ message: 'E-mail ja cadastrado' }, { status: 400 });
     }
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     await query(
-      'INSERT INTO users (id, name, email, password_hash, role, avatar_url, is_blocked) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [id, name, email, passwordHash, role, avatarUrl, false]
+      'INSERT INTO users (id, name, email, password_hash, role, avatar_url, is_blocked, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [id, name, email, passwordHash, role, avatarUrl, false, auth.tenantId]
     );
 
     return NextResponse.json({

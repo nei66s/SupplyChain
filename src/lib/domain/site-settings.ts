@@ -87,8 +87,8 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     settings = formatRow(result.rows[0]);
   }
 
-  // Salva no cache por 60 segundos
-  await setJsonCache(cacheKey, settings);
+  // Salva no cache por 1 hora (3600 segundos)
+  await setJsonCache(cacheKey, settings, 3600);
   return settings;
 }
 

@@ -178,7 +178,8 @@ function buildOrdersFromRows(rows: OrderRow[]): Order[] {
   const orders = Array.from(map.values())
   orders.forEach((order) => {
     order.volumeCount = Math.max(1, order.items.length)
-    order.readiness = computeReadiness(order.items)
+    const isFinalized = order.status === 'FINALIZADO' || order.status === 'SAIDA_CONCLUIDA'
+    order.readiness = isFinalized ? 'READY_FULL' : computeReadiness(order.items)
   })
 
   return orders

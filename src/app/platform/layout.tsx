@@ -7,7 +7,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     const token = cookieStore.get('sc-session')?.value;
 
     if (!token) {
-        redirect('/login?redirect=/platform/tenants');
+        redirect('/platform-login?redirect=/platform/tenants');
     }
 
     return <>{children}</>;

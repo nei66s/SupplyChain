@@ -46,6 +46,46 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
+function EditableInput({
+  value,
+  onSave,
+  ...props
+}: React.ComponentProps<typeof Input> & {
+  value: string;
+  onSave: (val: string) => void;
+}) {
+  const [localValue, setLocalValue] = React.useState(value);
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isFocused) {
+      setLocalValue(value);
+    }
+  }, [value, isFocused]);
+
+  return (
+    <Input
+      {...props}
+      value={localValue}
+      onFocus={(e) => {
+        setIsFocused(true);
+        props.onFocus?.(e);
+      }}
+      onChange={(e) => {
+        setLocalValue(e.target.value);
+        props.onChange?.(e);
+      }}
+      onBlur={(e) => {
+        setIsFocused(false);
+        if (localValue !== value) {
+          onSave(e.target.value);
+        }
+        props.onBlur?.(e);
+      }}
+    />
+  );
+}
+
 type LoadTasksOptions = {
   skipLoading?: boolean;
 };
@@ -61,7 +101,7 @@ export default function ProductionPage() {
 
   const loadTasks = React.useCallback(async (opts?: LoadTasksOptions) => {
     const skipLoading = opts?.skipLoading;
-    if (!skipLoading) {
+    if (!skipLoading && serverTasks.length === 0) {
       setLoading(true);
     }
     setError(null);
@@ -95,8 +135,13 @@ export default function ProductionPage() {
 
   React.useEffect(() => {
     loadTasks();
+    const interval = setInterval(() => loadTasks({ skipLoading: true }), 30000); // 30s auto-refresh
+    return () => clearInterval(interval);
   }, [loadTasks]);
 
+  const updateTaskLocal = (taskId: string, field: 'producedQty' | 'producedWeight', value: number | undefined) => {
+    setServerTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: value } : t));
+  };
 
 
   const tasks = React.useMemo(() => {
@@ -231,27 +276,29 @@ export default function ProductionPage() {
       <TableCell className="text-sm text-muted-foreground">{task.color ?? ''}</TableCell>
       <TableCell className="text-right">{task.qtyToProduce}</TableCell>
       <TableCell className="p-1">
-        <Input
+        <EditableInput
           type="number"
           className="h-8 text-center"
-          defaultValue={task.producedQty ?? ''}
+          value={String(task.producedQty ?? '')}
           placeholder="Qtd."
-          onBlur={(e) => {
-            const val = e.target.value === '' ? undefined : Number(e.target.value);
-            if (val !== task.producedQty) saveMeta(task.id, val, task.producedWeight);
+          onSave={(val) => {
+            const qty = val === '' ? undefined : Number(val);
+            updateTaskLocal(task.id, 'producedQty', qty);
+            saveMeta(task.id, qty, task.producedWeight);
           }}
         />
       </TableCell>
       <TableCell className="p-1">
-        <Input
+        <EditableInput
           type="number"
           step="0.01"
           className="h-8 text-center"
-          defaultValue={task.producedWeight ?? ''}
+          value={String(task.producedWeight ?? '')}
           placeholder="Peso"
-          onBlur={(e) => {
-            const val = e.target.value === '' ? undefined : Number(e.target.value);
-            if (val !== task.producedWeight) saveMeta(task.id, task.producedQty, val);
+          onSave={(val) => {
+            const w = val === '' ? undefined : Number(val);
+            updateTaskLocal(task.id, 'producedWeight', w);
+            saveMeta(task.id, task.producedQty, w);
           }}
         />
       </TableCell>
@@ -263,14 +310,6 @@ export default function ProductionPage() {
       <TableCell>{formatDate(task.updatedAt)}</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={task.status !== 'PENDING' || busyTaskId === task.id}
-            onClick={() => mutateTask(task.id, 'start')}
-          >
-            Iniciar
-          </Button>
           <Button
             size="sm"
             disabled={task.status === 'DONE' || busyTaskId === task.id}
@@ -291,7 +330,7 @@ export default function ProductionPage() {
             onClick={() => handlePrintProductionLabel(task)}
           >
             <FileText className="mr-1 h-3 w-3" />
-            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta
+            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
           </Button>
         </div>
       </TableCell>
@@ -326,25 +365,27 @@ export default function ProductionPage() {
         </div>
         <div className="flex flex-col gap-1 col-span-2">
           <div className="grid grid-cols-2 gap-2">
-            <Input
+            <EditableInput
               type="number"
               className="h-9 px-2 text-center text-xs font-bold"
-              defaultValue={task.producedQty ?? ''}
+              value={String(task.producedQty ?? '')}
               placeholder="Qtd."
-              onBlur={(e) => {
-                const val = e.target.value === '' ? undefined : Number(e.target.value);
-                if (val !== task.producedQty) saveMeta(task.id, val, task.producedWeight);
+              onSave={(val) => {
+                const qty = val === '' ? undefined : Number(val);
+                updateTaskLocal(task.id, 'producedQty', qty);
+                saveMeta(task.id, qty, task.producedWeight);
               }}
             />
-            <Input
+            <EditableInput
               type="number"
               step="0.01"
               className="h-9 px-2 text-center text-xs font-bold"
-              defaultValue={task.producedWeight ?? ''}
+              value={String(task.producedWeight ?? '')}
               placeholder="Peso"
-              onBlur={(e) => {
-                const val = e.target.value === '' ? undefined : Number(e.target.value);
-                if (val !== task.producedWeight) saveMeta(task.id, task.producedQty, val);
+              onSave={(val) => {
+                const w = val === '' ? undefined : Number(val);
+                updateTaskLocal(task.id, 'producedWeight', w);
+                saveMeta(task.id, task.producedQty, w);
               }}
             />
           </div>
@@ -353,15 +394,6 @@ export default function ProductionPage() {
 
       <div className="flex flex-col gap-2 mt-2">
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-9 font-bold text-xs"
-            disabled={task.status !== 'PENDING' || busyTaskId === task.id}
-            onClick={() => mutateTask(task.id, 'start')}
-          >
-            Iniciar
-          </Button>
           <Button
             size="sm"
             className="flex-1 h-9 font-bold text-xs"
@@ -385,7 +417,7 @@ export default function ProductionPage() {
           onClick={() => handlePrintProductionLabel(task)}
         >
           <FileText className="mr-2 h-4 w-4" />
-          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta
+          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
         </Button>
       </div>
 
@@ -405,12 +437,6 @@ export default function ProductionPage() {
             <CardDescription className="text-xs sm:text-sm">
               Tarefas de producao persistidas no banco. Concluir libera para o picking.
             </CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-             <Button size="sm" variant="outline" onClick={() => loadTasks({ skipLoading: true })} disabled={loading}>
-              <RefreshCw className={`mr-1 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
           </div>
         </div>
       </CardHeader>

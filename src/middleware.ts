@@ -5,9 +5,13 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get('sc-session')?.value;
     const { pathname } = request.nextUrl;
 
-    // 1. If at /login and already have a token, go to dashboard
-    if (pathname === '/login' && token) {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+    // 1. If at /login and already have a token, go to dashboard or the redirect param
+    if ((pathname === '/login' || pathname === '/platform-login') && token) {
+        let defaultRedirect = '/dashboard';
+        if (pathname === '/platform-login') defaultRedirect = '/platform/tenants';
+        
+        const redirectUrl = request.nextUrl.searchParams.get('redirect') || defaultRedirect;
+        return NextResponse.redirect(new URL(redirectUrl, request.url));
     }
 
     // 2. Protected paths check
@@ -24,10 +28,11 @@ export function middleware(request: NextRequest) {
         '/platform',
     ];
 
-    const isProtected = protectedPaths.some(path => pathname.startsWith(path));
+    const isProtected = protectedPaths.some(path => pathname.startsWith(path)) && !pathname.startsWith('/platform-login');
 
     if (isProtected && !token) {
-        const url = new URL('/login', request.url);
+        const loginRoute = pathname.startsWith('/platform') ? '/platform-login' : '/login';
+        const url = new URL(loginRoute, request.url);
         url.searchParams.set('redirect', pathname);
         return NextResponse.redirect(url);
     }

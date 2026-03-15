@@ -129,7 +129,7 @@ export default function OrdersTrashPage() {
                     {selectedOrder.orderNumber} — <span className="text-base text-muted-foreground">{users.find((u) => u.id === selectedOrder.createdBy)?.name ?? selectedOrder.createdBy}</span>
                   </CardTitle>
                   <CardDescription>
-                    Status {selectedOrder.status} - Pronto {readinessLabel(selectedOrder.readiness)}
+                    Status {selectedOrder.status} - {readinessLabel(selectedOrder.readiness)}
                   </CardDescription>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">

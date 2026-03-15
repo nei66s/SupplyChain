@@ -369,7 +369,7 @@ export default function PlatformTenantsPage() {
     // Redirect if not logged in
     useEffect(() => {
         if (notLoggedIn) {
-            router.replace('/login?redirect=/platform/tenants');
+            router.replace('/platform-login?redirect=/platform/tenants');
         }
     }, [notLoggedIn, router]);
 

@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const pool = new Pool({ connectionString: 'postgresql://appuser:9UxJ48kk4MS62N5g48dCqBxsr@144.91.89.174:6432/inventario_agil?sslmode=disable' });
+const pool = new Pool({ connectionString: 'postgresql://appuser:9UxJ48kk4MS62N5g48dCqBxsr@147.93.176.5:6432/inventario_agil?sslmode=disable' });
 
 const sql = `
 DROP MATERIALIZED VIEW IF EXISTS dashboard_materials_stock_view CASCADE;

@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const pool = new Pool({ connectionString: 'postgresql://appuser:9UxJ48kk4MS62N5g48dCqBxsr@144.91.89.174:6432/inventario_agil?sslmode=disable' });
+const pool = new Pool({ connectionString: 'postgresql://appuser:9UxJ48kk4MS62N5g48dCqBxsr@147.93.176.5:6432/inventario_agil?sslmode=disable' });
 
 const migrationPath = path.join(__dirname, '../migrations/046_add_tenant_id_defaults.sql');
 const sql = fs.readFileSync(migrationPath, 'utf8');

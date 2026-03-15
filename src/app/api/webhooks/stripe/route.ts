@@ -25,12 +25,19 @@ export async function POST(req: NextRequest) {
                 const tenantRes = await pool.query("SELECT name FROM tenants WHERE id = $1", [tenantId]);
                 const tenantName = tenantRes.rows[0]?.name || 'Empresa Desconhecida';
 
+                // Determine interval and quantity from metadata
+                const interval = session.metadata?.interval || 'month';
+                const quantityStr = session.metadata?.quantity || '1';
+                const quantity = parseInt(quantityStr, 10) || 1;
+                const baseDays = interval === 'year' ? 365 : 30;
+                const daysToAdd = baseDays * quantity;
+
                 // Update tenant status
                 await pool.query(
                     `UPDATE tenants 
                      SET subscription_status = 'ACTIVE', 
                          status = 'ACTIVE',
-                         subscription_expires_at = NOW() + INTERVAL '32 days',
+                         subscription_expires_at = NOW() + INTERVAL '${daysToAdd} days',
                          stripe_customer_id = $1,
                          stripe_subscription_id = $2
                      WHERE id = $3`,
