@@ -32,32 +32,40 @@ function timeAgo(iso?: string) {
   return `${d}d`;
 }
 
+let globalItems: any[] = [];
+let lastItemsFetch = 0;
+
 export function NotificationCenter() {
   type UiNotification = Notification & { _removing?: boolean };
 
-  const [items, setItems] = React.useState<UiNotification[]>([]);
+  const [items, setItems] = React.useState<UiNotification[]>(globalItems);
   const unreadCount = items.filter((it) => !it.readAt).length;
   const { lastNotificationAt, isMuted, setIsMuted } = useRealtimeStore();
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  const loadNotifications = React.useCallback(async () => {
+  const loadNotifications = React.useCallback(async (force = false) => {
+    const now = Date.now();
+    // Use cache if within 30s AND no new realtime push event has occurred since last fetch
+    if (!force && lastItemsFetch > 0 && now - lastItemsFetch < 30000 && lastNotificationAt <= lastItemsFetch) {
+        if (JSON.stringify(globalItems) !== JSON.stringify(items)) setItems(globalItems);
+        return;
+    }
     try {
       const res = await fetch('/api/notifications', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       if (Array.isArray(data)) {
-        setItems(
-          data
-            .map((item: Notification) => ({ ...item }))
-            .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-        );
+        const sorted = data.map((item: Notification) => ({ ...item })).sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+        globalItems = sorted;
+        lastItemsFetch = Date.now();
+        setItems(sorted);
       }
     } catch (err) {
       console.error('notifications fetch failed', err);
     }
-  }, []);
+  }, [items, lastNotificationAt]);
 
   React.useEffect(() => {
     loadNotifications();

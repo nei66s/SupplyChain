@@ -5,51 +5,71 @@ import { Loader2, Wifi, WifiOff } from 'lucide-react';
 
 type Status = 'loading' | 'connected' | 'disconnected';
 
-const statusConfig: Record<Status, { label: string; border: string; bg: string; iconColor: string }> = {
+const statusConfig: Record<Status, { label: string; iconColor: string }> = {
   connected: {
     label: 'Ping OK',
-    border: 'border-emerald-200/80',
-    bg: 'bg-emerald-50/70',
-    iconColor: 'text-emerald-500',
+    iconColor: 'text-emerald-500 dark:text-emerald-400',
   },
   loading: {
     label: 'Ping...',
-    border: 'border-yellow-200/80',
-    bg: 'bg-yellow-50/80',
-    iconColor: 'text-yellow-500',
+    iconColor: 'text-amber-500 dark:text-amber-400',
   },
   disconnected: {
     label: 'Ping falhou',
-    border: 'border-rose-200/80',
-    bg: 'bg-rose-50/80',
-    iconColor: 'text-rose-500',
+    iconColor: 'text-rose-500 dark:text-rose-400',
   },
 };
 
+let globalPingStatus: Status = 'loading';
+let globalLatency: number | null = null;
+let lastPingCheck = 0;
+
 export default function PingHealth() {
-  const [status, setStatus] = React.useState<Status>('loading');
+  const [status, setStatus] = React.useState<Status>(globalPingStatus);
+  const [latency, setLatency] = React.useState<number | null>(globalLatency);
 
   React.useEffect(() => {
     let mounted = true;
 
-    const measurePing = async () => {
+    const measurePing = async (force = false) => {
+      const start = Date.now();
+      if (!force && lastPingCheck > 0 && start - lastPingCheck < 120000) {
+        if (mounted) {
+          if (status !== globalPingStatus) setStatus(globalPingStatus);
+          if (latency !== globalLatency) setLatency(globalLatency);
+        }
+        return;
+      }
       try {
         const res = await fetch('/api/ping', { cache: 'no-store' });
-        if (!mounted) return;
-        setStatus(res.ok ? 'connected' : 'disconnected');
+        const end = Date.now();
+        const measure = Math.max(1, Math.round(end - start));
+        const newStatus = res.ok ? 'connected' : 'disconnected';
+        globalPingStatus = newStatus;
+        globalLatency = res.ok ? measure : null;
+        lastPingCheck = Date.now();
+        if (mounted) {
+          setStatus(newStatus);
+          setLatency(res.ok ? measure : null);
+        }
       } catch {
-        if (!mounted) return;
-        setStatus('disconnected');
+        globalPingStatus = 'disconnected';
+        globalLatency = null;
+        lastPingCheck = Date.now();
+        if (mounted) {
+          setStatus('disconnected');
+          setLatency(null);
+        }
       }
     };
 
     measurePing();
-    const id = window.setInterval(measurePing, 120000);
+    const id = window.setInterval(() => measurePing(true), 120000);
     return () => {
       mounted = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [status, latency]);
 
   const cfg = statusConfig[status];
   const Icon = status === 'disconnected' ? WifiOff : status === 'loading' ? Loader2 : Wifi;
@@ -58,10 +78,15 @@ export default function PingHealth() {
     <span
       role="status"
       aria-label={cfg.label}
-      title={cfg.label}
-      className={`inline-flex w-fit items-center gap-1 rounded-2xl border ${cfg.border} ${cfg.bg} px-2 py-1 text-slate-700 shadow-sm transition hover:scale-110 cursor-help`}
+      title={latency ? `${cfg.label} (${latency}ms)` : cfg.label}
+      className="inline-flex h-8 min-w-[32px] px-1.5 gap-1 items-center justify-center rounded-full transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-help"
     >
-      <Icon className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-5 w-5`} />
+      <Icon className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-4 w-4 shrink-0`} strokeWidth={2.5} />
+      {latency !== null && status === 'connected' && (
+        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-0.5">
+          {latency}ms
+        </span>
+      )}
       <span className="sr-only">{cfg.label}</span>
     </span>
   );

@@ -8,6 +8,21 @@ export async function POST(req: NextRequest) {
         const auth = getAuthPayload(req);
         if (!auth) return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
 
+        // Parse body optionally
+        let interval: 'month' | 'year' = 'month';
+        let quantity: number = 1;
+        try {
+            const body = await req.json();
+            if (body && body.interval === 'year') {
+                interval = 'year';
+            }
+            if (body && typeof body.quantity === 'number' && body.quantity > 0) {
+                quantity = body.quantity;
+            }
+        } catch (e) {
+            // Ignore if no body
+        }
+
         const pool = getPool();
 
         // 1. Get Tenant Data
@@ -32,7 +47,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Create Checkout Session
-        const session = await stripeClient.createCheckoutSession(customerId, auth.tenantId);
+        const session = await stripeClient.createCheckoutSession(customerId, auth.tenantId, interval, quantity);
 
         return NextResponse.json({
             checkoutUrl: session.url

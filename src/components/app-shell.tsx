@@ -29,6 +29,7 @@ import {
   RefreshCcw,
   Clock,
   Inbox,
+  CreditCard,
 } from 'lucide-react';
 
 import {
@@ -308,10 +309,10 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
             <SidebarGroupLabel>Indicadores</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/dashboard" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <AreaChart className="h-4 w-4" />
                   <span>Indicadores</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isDashboardActive && currentDashTab === 'business'}>
@@ -336,10 +337,10 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
           <SidebarGroup className="p-1">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/orders" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Pedidos</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={pathname.startsWith('/orders') && !pathname.startsWith('/orders/trash')}>
@@ -372,10 +373,10 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
           <SidebarGroup className="p-1 pt-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/inventory" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <Warehouse className="h-4 w-4" />
                   <span>Gestão de estoque</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild isActive={isInventoryActive && currentTab === 'stock'}>
@@ -418,10 +419,10 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
           <SidebarGroup className="p-1">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/production" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <Factory className="h-4 w-4" />
                   <span>Operações</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   {navItems
                     .filter(
@@ -465,10 +466,10 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
           <SidebarGroup className="p-1">
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 select-none">
+                <Link href="/admin" className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors select-none cursor-pointer">
                   <Shield className="h-4 w-4" />
                   <span>Administração</span>
-                </div>
+                </Link>
                 <SidebarMenuSub>
                   {navItems
                     .filter((i) => i.href === '/materials' || i.href === '/admin')
@@ -492,26 +493,38 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
   );
 }
 
+let globalBadgesCache = { orders: 0, production: 0, picking: 0 };
+let lastBadgesFetch = 0;
+
 function AppShellContent({ children, initialUser }: { children: React.ReactNode, initialUser?: AuthUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme, mounted } = useTheme();
   const { user: authUser, loading: authLoading } = useAuthUser(initialUser);
-  const [badges, setBadges] = React.useState({ orders: 0, production: 0, picking: 0 });
+  const [badges, setBadges] = React.useState(globalBadgesCache);
 
   React.useEffect(() => {
     if (!authUser) return;
-    const fetchBadges = async () => {
+    const fetchBadges = async (force = false) => {
+      const now = Date.now();
+      if (!force && lastBadgesFetch > 0 && now - lastBadgesFetch < 30000) {
+        if (JSON.stringify(globalBadgesCache) !== JSON.stringify(badges)) {
+            setBadges(globalBadgesCache);
+        }
+        return;
+      }
       try {
         const res = await fetch('/api/badges');
         if (res.ok) {
           const data = await res.json();
+          globalBadgesCache = data;
+          lastBadgesFetch = Date.now();
           setBadges(data);
         }
       } catch (err) { }
     };
     fetchBadges();
-    const interval = setInterval(fetchBadges, 30000); // refresh every 30s
+    const interval = setInterval(() => fetchBadges(true), 30000); // refresh every 30s
     return () => clearInterval(interval);
   }, [authUser]);
 
@@ -603,7 +616,7 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
             </div>
 
             <NotificationCenter />
-            <div className="hidden items-center gap-2 sm:flex">
+            <div className="hidden items-center sm:flex h-11 px-2 rounded-full bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shadow-sm border border-slate-200/60 dark:border-slate-800/60 gap-1">
               <PingHealth />
               <DbHealth />
               <WsHealth />
@@ -639,6 +652,12 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
                   <Link href="/profile">
                     <UserCircle2 className="mr-2 h-4 w-4" />
                     Meu perfil
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-xl mx-1 cursor-pointer">
+                  <Link href="/dashboard/billing">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Assinatura
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-200/60 dark:bg-slate-800/60" />

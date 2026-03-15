@@ -9,12 +9,18 @@ export default function BillingPage() {
     const { user, refresh } = useAuthUser();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [interval, setIntervalState] = useState<'month' | 'year'>('month');
+    const [quantity, setQuantity] = useState<number>(1);
 
     const handleSetupSubscription = async () => {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('/api/billing/setup-subscription', { method: 'POST' });
+            const res = await fetch('/api/billing/setup-subscription', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interval, quantity })
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Falha ao iniciar assinatura');
 
@@ -40,19 +46,46 @@ export default function BillingPage() {
                 <p className="text-slate-500 dark:text-slate-400">Gerencie seu plano e visualize o status do seu pagamento.</p>
             </div>
 
-            {isSubscribed ? (
-                <div className="p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex items-center gap-6">
-                    <div className="h-16 w-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+            {isSubscribed && (
+                <div className="p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
+                    <div className="h-16 w-16 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
                         <ShieldCheck className="w-8 h-8" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                         <h3 className="text-xl font-bold text-emerald-900 dark:text-emerald-400">Plano Ativo</h3>
-                        <p className="text-emerald-700/70 dark:text-emerald-500/70">Sua assinatura está em dia. Você tem acesso total a todos os módulos.</p>
+                        <p className="text-emerald-700/70 dark:text-emerald-500/70 mb-3">Sua assinatura está em dia. Você tem acesso total a todos os módulos.</p>
+                        
+                        {user?.subscriptionExpiresAt && (
+                            <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-800/40 px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-700/50">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                                    Válido até {new Date(user.subscriptionExpiresAt).toLocaleDateString('pt-BR')}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
-            ) : (
-                <div className="grid md:grid-cols-5 gap-8">
+            )}
+
+            <div className="grid md:grid-cols-5 gap-8">
                     <div className="md:col-span-3 space-y-6">
+                        <div className="flex justify-center mb-6">
+                            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex items-center space-x-1 border border-slate-200 dark:border-slate-700">
+                                <button
+                                    onClick={() => setIntervalState('month')}
+                                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${interval === 'month' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                                >
+                                    Mensal
+                                </button>
+                                <button
+                                    onClick={() => setIntervalState('year')}
+                                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${interval === 'year' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                                >
+                                    Anual <span className={`${interval === 'year' ? 'bg-indigo-500' : 'bg-emerald-500'} text-white text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider`}>Economize</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="p-8 rounded-[40px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-500">
                                 <Zap className="w-24 h-24 text-indigo-500" />
@@ -64,9 +97,30 @@ export default function BillingPage() {
                                     <h2 className="text-3xl font-black text-slate-900 dark:text-white">Operação Total</h2>
                                 </div>
 
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-4xl font-black text-slate-900 dark:text-white">R$ 300</span>
-                                    <span className="text-slate-500 font-medium">/ mês</span>
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black text-slate-900 dark:text-white">
+                                            R$ {((interval === 'month' ? 300 : 3000) * quantity).toLocaleString('pt-BR')}
+                                        </span>
+                                        <span className="text-slate-500 font-medium whitespace-nowrap">
+                                            / {quantity} {interval === 'month' ? (quantity > 1 ? 'meses' : 'mês') : (quantity > 1 ? 'anos' : 'ano')}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Duração:</span>
+                                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+                                            <button 
+                                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                                className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm transition-colors"
+                                            >-</button>
+                                            <span className="w-10 text-center text-sm font-bold">{quantity}</span>
+                                            <button 
+                                                onClick={() => setQuantity(q => q + 1)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm transition-colors"
+                                            >+</button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <ul className="space-y-3">
@@ -89,7 +143,7 @@ export default function BillingPage() {
                                     disabled={loading}
                                 >
                                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                                        <>Assinar Agora <ArrowRight className="ml-2 w-5 h-5" /></>
+                                        <>{isSubscribed ? 'Renovar Plano' : 'Assinar Agora'} <ArrowRight className="ml-2 w-5 h-5" /></>
                                     )}
                                 </Button>
 
@@ -121,7 +175,6 @@ export default function BillingPage() {
                         </div>
                     </div>
                 </div>
-            )}
         </div>
     );
 }

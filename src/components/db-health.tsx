@@ -5,51 +5,71 @@ import { Database } from 'lucide-react';
 
 type Status = 'loading' | 'connected' | 'disconnected';
 
-const statusConfig: Record<Status, { label: string; border: string; bg: string; iconColor: string }> = {
+const statusConfig: Record<Status, { label: string; iconColor: string }> = {
   connected: {
     label: 'Conectado',
-    border: 'border-emerald-200/80',
-    bg: 'bg-emerald-50/70',
-    iconColor: 'text-emerald-500',
+    iconColor: 'text-emerald-500 dark:text-emerald-400',
   },
   loading: {
     label: 'Verificando...',
-    border: 'border-yellow-200/80',
-    bg: 'bg-yellow-50/80',
-    iconColor: 'text-yellow-500',
+    iconColor: 'text-amber-500 dark:text-amber-400',
   },
   disconnected: {
     label: 'Desconectado',
-    border: 'border-rose-200/80',
-    bg: 'bg-rose-50/80',
-    iconColor: 'text-rose-500',
+    iconColor: 'text-rose-500 dark:text-rose-400',
   },
 };
 
+let globalDbStatus: Status = 'loading';
+let globalDbLatency: number | null = null;
+let lastDbCheck = 0;
+
 export default function DbHealth() {
-  const [status, setStatus] = React.useState<Status>('loading');
+  const [status, setStatus] = React.useState<Status>(globalDbStatus);
+  const [latency, setLatency] = React.useState<number | null>(globalDbLatency);
 
   React.useEffect(() => {
     let mounted = true;
 
-    const check = async () => {
+    const check = async (force = false) => {
+      const start = Date.now();
+      if (!force && lastDbCheck > 0 && start - lastDbCheck < 120000) {
+        if (mounted) {
+          if (status !== globalDbStatus) setStatus(globalDbStatus);
+          if (latency !== globalDbLatency) setLatency(globalDbLatency);
+        }
+        return;
+      }
       try {
         const res = await fetch('/api/ping', { cache: 'no-store' });
-        if (!mounted) return;
-        setStatus(res.ok ? 'connected' : 'disconnected');
+        const end = Date.now();
+        const measure = Math.max(1, Math.round(end - start));
+        const newStatus = res.ok ? 'connected' : 'disconnected';
+        globalDbStatus = newStatus;
+        globalDbLatency = res.ok ? measure : null;
+        lastDbCheck = Date.now();
+        if (mounted) {
+          setStatus(newStatus);
+          setLatency(res.ok ? measure : null);
+        }
       } catch {
-        if (!mounted) return;
-        setStatus('disconnected');
+        globalDbStatus = 'disconnected';
+        globalDbLatency = null;
+        lastDbCheck = Date.now();
+        if (mounted) {
+          setStatus('disconnected');
+          setLatency(null);
+        }
       }
     };
 
     check();
-    const id = window.setInterval(check, 120000);
+    const id = window.setInterval(() => check(true), 120000);
     return () => {
       mounted = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [status, latency]);
 
   const cfg = statusConfig[status];
 
@@ -57,10 +77,15 @@ export default function DbHealth() {
     <span
       role="status"
       aria-label={`Banco de dados: ${cfg.label}`}
-      title={`Banco de dados: ${cfg.label}`}
-      className={`inline-flex w-fit items-center gap-1 rounded-2xl border ${cfg.border} ${cfg.bg} px-2 py-1 text-slate-700 shadow-sm transition hover:scale-110 cursor-help`}
+      title={latency ? `Banco de dados: ${cfg.label} (${latency}ms)` : `Banco de dados: ${cfg.label}`}
+      className="inline-flex h-8 min-w-[32px] px-1.5 gap-1 items-center justify-center rounded-full transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-help"
     >
-      <Database className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-5 w-5`} />
+      <Database className={`${cfg.iconColor} ${status === 'loading' ? 'animate-spin' : ''} h-4 w-4 shrink-0`} strokeWidth={2.5} />
+      {latency !== null && status === 'connected' && (
+        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mr-0.5">
+          {latency}ms
+        </span>
+      )}
       <span className="sr-only">{cfg.label}</span>
     </span>
   );
