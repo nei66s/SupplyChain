@@ -239,7 +239,7 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
                 <div className="grid grid-cols-1 gap-2">
                   {[
                     { label: 'Saldo de Estoque', tab: 'stock', icon: Warehouse },
-                    { label: 'Ajustes de Inventário', tab: 'adjustments', icon: RefreshCcw },
+                    { label: 'Ajustes de Inventário', tab: 'adjust', icon: RefreshCcw },
                     { label: 'Reservas e Validade', tab: 'reservations', icon: Clock },
                     { label: 'Planejamento MRP', tab: 'mrp', icon: AreaChart },
                   ].map((sub) => (
@@ -533,7 +533,7 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
   const headerIsHydrated = mounted;
   const userName = headerIsHydrated ? displayUser?.name ?? 'Usuario' : 'Usuario';
   const roleLabelText = headerIsHydrated ? displayRoleLabel : 'Carregando...';
-  const avatarSrc = headerIsHydrated ? displayUser?.avatarUrl ?? '/black-tower-x-transp.png' : '/black-tower-x-transp.png';
+  const avatarSrc = headerIsHydrated ? displayUser?.avatarUrl ?? undefined : undefined;
   const avatarAlt = headerIsHydrated ? displayUser?.name ?? 'Usuario' : 'Usuario';
   const avatarInitial = headerIsHydrated ? displayUser?.name?.charAt(0)?.toUpperCase() ?? 'U' : 'U';
 
@@ -638,7 +638,7 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-11 w-11 rounded-full p-0 shadow-sm transition-transform hover:scale-105">
                   <Avatar className="h-9 w-9 border-2 border-white/80 shadow-sm">
-                    <AvatarImage src={avatarSrc} alt={avatarAlt} className="object-cover" />
+                    {avatarSrc && <AvatarImage src={avatarSrc} alt={avatarAlt} className="object-cover" />}
                     <AvatarFallback className="bg-indigo-600 text-white font-bold">{avatarInitial}</AvatarFallback>
                   </Avatar>
                 </Button>

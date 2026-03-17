@@ -35,8 +35,8 @@ export default function DbHealth() {
       const start = Date.now();
       if (!force && lastDbCheck > 0 && start - lastDbCheck < 120000) {
         if (mounted) {
-          if (status !== globalDbStatus) setStatus(globalDbStatus);
-          if (latency !== globalDbLatency) setLatency(globalDbLatency);
+          setStatus(globalDbStatus);
+          setLatency(globalDbLatency);
         }
         return;
       }
@@ -69,7 +69,7 @@ export default function DbHealth() {
       mounted = false;
       window.clearInterval(id);
     };
-  }, [status, latency]);
+  }, []);
 
   const cfg = statusConfig[status];
 
