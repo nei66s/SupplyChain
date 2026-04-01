@@ -134,7 +134,6 @@ export async function updateSiteSettings(update: SiteSettingsUpdate): Promise<Si
     assignments.push(`logo_content_type = $${params.length + 1}`);
     params.push(update.logoContentType);
   }
-
   assignments.push(`updated_at = now()`);
 
   const result = await query(

@@ -1,5 +1,5 @@
 import { Pool, PoolClient } from 'pg'
-import { getPool, query as dbQuery } from '@/lib/db'
+import { getPool } from '@/lib/db'
 import { NotificationType, Role } from '@/lib/domain/types'
 import { getTenantFromSession } from './auth'
 import { publishRealtimeEvent } from './pubsub'

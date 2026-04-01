@@ -1,44 +1,87 @@
-# Guia de Variáveis de Ambiente
+# Guia de Variaveis de Ambiente
 
-Este documento descreve detalhadamente cada variável necessária no arquivo `.env` para o correto funcionamento do **Inventário Ágil**.
+Este projeto depende de um conjunto pequeno de variaveis obrigatorias e varias opcionais para operacao, billing e observabilidade.
 
-## 🔑 Autenticação & IA
-
-### `GEMINI_API_KEY`
-- **Descrição**: Chave de API do Google Gemini para processamento de linguagem natural no módulo MRP.
-- **Como Obter**: Através do [Google AI Studio](https://aistudio.google.com/app/apikey).
-- **Impacto**: Sem esta chave, o painel de sugestões do MRP não funcionará.
-
-## 🗄 Persistência (PostgreSQL)
+## Obrigatorias
 
 ### `DATABASE_URL`
-- **Descrição**: String de conexão padrão do PostgreSQL. Inclui usuário, senha, host, porta e nome do banco.
-- **Formato**: `postgresql://[user]:[password]@[host]:[port]/[db_name]`
-- **Dica**: Use `?sslmode=disable` se estiver rodando em ambiente de desenvolvimento local sem certificados SSL.
 
-## 🚀 Cache & Mensageria (Redis)
+String de conexao com PostgreSQL.
 
-O sistema utiliza Redis para caching de dashboards e para o sistema Pub/Sub de eventos em tempo real.
+Exemplo:
 
-- `REDIS_HOST`: IP ou hostname do servidor Redis.
-- `REDIS_PORT`: Porta do servidor Redis (padrão is 6379).
-- `REDIS_PASSWORD`: Senha de acesso ao Redis (opcional se local).
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/inventario_agil?sslmode=disable
+```
 
-## 🎛️ Ajustes de Performance (Opcional)
+### `AUTH_SECRET`
 
-Estas variáveis permitem tunar o desempenho do sistema dependendo do hardware:
+Segredo usado na autenticacao e cookies de sessao.
 
-- `PG_POOL_MIN`: (Padrão: 2) Conexões mínimas mantidas no pool.
-- `PG_POOL_MAX`: (Padrão: 10) Limite de conexões simultâneas com o banco. Aumente se o Dashboard estiver lento.
-- `PG_CONNECTION_TIMEOUT_MS`: (Padrão: 10000) Tempo máximo de espera por uma conexão livre.
-- `CACHE_TTL_SECONDS`: (Padrão: 60) Tempo de vida das informações no cache Redis. Dados de branding (logo) usam um cache interno fixo de 5 segundos em memória além deste.
+### `NEXT_PUBLIC_APP_URL`
 
-## 📡 Comunicação em Tempo Real
+URL publica base da aplicacao. E usada nos redirects do billing.
 
-### `NEXT_PUBLIC_WS_URL`
-- **Descrição**: URL do servidor WebSockets (WS/WSS) para notificações e atualizações de UI em tempo real (ex: reserva de estoque simultânea).
-- **Importância**: O prefixo `NEXT_PUBLIC_` permite que esta variável seja acessada pelo código do lado do cliente (browsers).
+### `STRIPE_SECRET_KEY`
 
----
-> [!WARNING]
-> Nunca comite seu arquivo `.env` real no controle de versão (Git). Use sempre o `.env.example` como base para novos ambientes.
+Chave secreta da conta Stripe.
+
+### `STRIPE_WEBHOOK_SECRET`
+
+Segredo do webhook Stripe para validar eventos recebidos.
+
+## Opcionais
+
+### IA
+
+- `GEMINI_API_KEY`: habilita recursos de IA do modulo MRP.
+
+### Redis
+
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+
+Se nao configurado, partes do sistema continuam funcionando, mas voce perde ganhos de cache e integracoes de tempo real associadas.
+
+### Banco e performance
+
+- `PGSSLMODE`
+- `PG_POOL_MIN`
+- `PG_POOL_MAX`
+- `PG_IDLE_TIMEOUT_MS`
+- `PG_CONNECTION_TIMEOUT_MS`
+- `DEBUG_PERF`
+
+### Realtime
+
+- `NEXT_PUBLIC_WS_URL`: endpoint WebSocket usado pelo cliente.
+
+### Notificacoes
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
+### Jobs e deploy
+
+- `CRON_SECRET`
+- `DEPLOY_ON_BUILD`
+- `AUTO_DEPLOY`
+- `DEPLOY_COMMAND`
+- `VERCEL_TOKEN`
+
+### Relatorios
+
+- `SPEED_INSIGHTS_PORT`
+- `SPEED_INSIGHTS_PATH`
+- `SPEED_INSIGHTS_TIMEOUT`
+
+## Exemplo rapido
+
+Use [.env.example](../.env.example) como base para novos ambientes.
+
+## Boas praticas
+
+- Nunca versione o `.env` real.
+- Use segredos diferentes entre desenvolvimento, preview e producao.
+- Revise variaveis de billing e autenticacao antes de cada deploy.

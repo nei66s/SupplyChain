@@ -61,3 +61,8 @@ next-env.d.ts
 /testbuild
 /test-results/
 /playwright-report/
+
+# root temp artifacts
+/tmp_*.js
+/view_def.sql
+/0

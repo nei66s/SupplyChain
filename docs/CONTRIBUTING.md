@@ -1,59 +1,51 @@
-# Guia de Contribuição
+# Guia de Contribuicao
 
-Obrigado por seu interesse em contribuir com o **Inventário Ágil**! Este documento descreve as diretrizes para garantir que o seu trabalho seja integrado da melhor forma possível.
+Obrigado por contribuir com o Inventario Agil.
 
-## 🚀 Como Começar
+## Como comecar
 
-1. **Fork o repositório**: Crie uma cópia do projeto em sua conta do GitHub.
-2. **Clone localmente**: `git clone https://github.com/seu-usuario/Inventario-Agil.git`
-3. **Crie uma branch**: Use um nome descritivo para sua feature ou correção (ex: `feature/nova-venda` ou `fix/erro-reserva`).
-4. **Instale as dependências**: `npm install`.
+1. Faça um fork do repositorio.
+2. Clone o projeto localmente.
+3. Crie uma branch descritiva, como `feature/nova-tela` ou `fix/reserva-duplicada`.
+4. Instale as dependencias com `npm install`.
 
-## 🛠 Padrões de Desenvolvimento
+## Padroes de desenvolvimento
 
-### Codificação
+- Escreva codigo em TypeScript e evite `any`.
+- Reaproveite os componentes de `src/components/ui` quando fizer sentido.
+- Mantenha o estilo alinhado ao Tailwind e aos componentes ja existentes.
+- Em alteracoes de banco, adicione migration e rode `npm run db:migrate`.
 
-- **TypeScript**: Todo o código deve ser tipado. Evite usar `any`.
-- **Componentes**: Utilize os componentes de UI baseados em Radix (em `src/components/ui`) sempre que possível para manter a consistência.
-- **Estilização**: Use Tailwind CSS seguindo os tokens definidos em `tailwind.config.ts`.
+## Commits
 
-### Mensagens de Commit
+Use Conventional Commits sempre que possivel:
 
-Seguimos o padrão de [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat:` para novas funcionalidades.
-- `fix:` para correções de bugs.
-- `docs:` para alterações na documentação.
-- `style:` para alterações de formatação de código que não afetam a lógica.
-- `refactor:` para alterações de código que não corrigem bugs nem adicionam funcionalidades.
+- `feat:` para nova funcionalidade
+- `fix:` para correcao de bug
+- `docs:` para documentacao
+- `refactor:` para refatoracao sem mudanca funcional
+- `test:` para testes
+- `chore:` para manutencao
 
-## ✅ Garantia de Qualidade
+## Checklist antes do PR
 
-Antes de enviar seu Pull Request, certifique-se de que os seguintes comandos passem sem erros:
+Rode estes comandos antes de abrir um pull request:
 
 ```bash
-# Verificação de tipos
-npm run typecheck
-
-# Linting
 npm run lint
-
-# Build de teste
+npm run typecheck
 npm run build
 ```
 
-## 🏗 Fluxo de Backend
+Se voce alterou fluxo de interface ou operacao critica, rode tambem:
 
-O projeto utiliza uma arquitetura pensada para facilitar a troca de backend. Atualmente, partes funcionam via `localStorage` (para o piloto inicial) e outras via API com PostgreSQL/Redis.
+```bash
+npm run test:e2e
+```
 
-- Ao adicionar novos serviços, siga o padrão de contratos em `src/lib/pilot/contracts.ts`.
-- Certifique-se de rodar `npm run db:migrate` se houver mudanças no esquema do banco de dados.
+## Enviando mudancas
 
-## 📬 Enviando Mudanças
-
-1. Faça o `push` da sua branch para o seu fork.
-2. Abra um Pull Request para a branch `main`.
-3. Descreva detalhadamente o que foi alterado e por que.
-4. Aguarde a revisão por um dos mantenedores.
-
----
-Feito com ❤️ pela equipe do **Inventário Ágil**.
+1. Faça push da sua branch.
+2. Abra o pull request para `main`.
+3. Explique o contexto, o risco e como validar.
+4. Inclua screenshots quando houver mudanca visual relevante.

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Factory, Star, FileText, RefreshCw } from 'lucide-react';
+import { Factory, Star, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,7 +101,7 @@ export default function ProductionPage() {
 
   const loadTasks = React.useCallback(async (opts?: LoadTasksOptions) => {
     const skipLoading = opts?.skipLoading;
-    if (!skipLoading && serverTasks.length === 0) {
+    if (!skipLoading) {
       setLoading(true);
     }
     setError(null);
@@ -135,14 +135,13 @@ export default function ProductionPage() {
 
   React.useEffect(() => {
     loadTasks();
-    const interval = setInterval(() => loadTasks({ skipLoading: true }), 30000); // 30s auto-refresh
+    const interval = setInterval(() => loadTasks({ skipLoading: true }), 30000);
     return () => clearInterval(interval);
   }, [loadTasks]);
 
   const updateTaskLocal = (taskId: string, field: 'producedQty' | 'producedWeight', value: number | undefined) => {
-    setServerTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: value } : t));
+    setServerTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, [field]: value } : task)));
   };
-
 
   const tasks = React.useMemo(() => {
     return [...serverTasks].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -160,7 +159,7 @@ export default function ProductionPage() {
         body: JSON.stringify({ action }),
       });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error || `Erro HTTP ${res.status}`);
       }
       await loadTasks({ skipLoading: true });
@@ -182,7 +181,7 @@ export default function ProductionPage() {
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
       await loadTasks({ skipLoading: true });
     } catch (err: unknown) {
-      setError(errorMessage(err) || 'Falha ao salvar dados de produção');
+      setError(errorMessage(err) || 'Falha ao salvar dados de producao');
     } finally {
       setBusyTaskId(null);
     }
@@ -242,7 +241,6 @@ export default function ProductionPage() {
       });
       if (!res.ok) throw new Error(`Falha ao registrar etiqueta (${res.status})`);
 
-      // Also register label print on the specific production task
       const taskRes = await fetch(`/api/production/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -281,10 +279,10 @@ export default function ProductionPage() {
           className="h-8 text-center"
           value={String(task.producedQty ?? '')}
           placeholder="Qtd."
-          onSave={(val) => {
-            const qty = val === '' ? undefined : Number(val);
-            updateTaskLocal(task.id, 'producedQty', qty);
-            saveMeta(task.id, qty, task.producedWeight);
+          onSave={(value) => {
+            const nextQty = value === '' ? undefined : Number(value);
+            updateTaskLocal(task.id, 'producedQty', nextQty);
+            saveMeta(task.id, nextQty, task.producedWeight);
           }}
         />
       </TableCell>
@@ -295,10 +293,10 @@ export default function ProductionPage() {
           className="h-8 text-center"
           value={String(task.producedWeight ?? '')}
           placeholder="Peso"
-          onSave={(val) => {
-            const w = val === '' ? undefined : Number(val);
-            updateTaskLocal(task.id, 'producedWeight', w);
-            saveMeta(task.id, task.producedQty, w);
+          onSave={(value) => {
+            const nextWeight = value === '' ? undefined : Number(value);
+            updateTaskLocal(task.id, 'producedWeight', nextWeight);
+            saveMeta(task.id, task.producedQty, nextWeight);
           }}
         />
       </TableCell>
@@ -315,7 +313,7 @@ export default function ProductionPage() {
             disabled={task.status === 'DONE' || busyTaskId === task.id}
             onClick={() => {
               if (!task.labelPrinted) {
-                setError('Você deve imprimir a etiqueta antes de concluir.');
+                setError('Voce deve imprimir a etiqueta antes de concluir.');
                 return;
               }
               mutateTask(task.id, 'complete');
@@ -325,12 +323,12 @@ export default function ProductionPage() {
           </Button>
           <Button
             size="sm"
-            variant={task.labelPrinted ? "outline" : "default"}
+            variant={task.labelPrinted ? 'outline' : 'default'}
             disabled={busyLabelTaskId === task.id || busyTaskId === task.id}
             onClick={() => handlePrintProductionLabel(task)}
           >
             <FileText className="mr-1 h-3 w-3" />
-            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
+            {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Producao
           </Button>
         </div>
       </TableCell>
@@ -343,12 +341,12 @@ export default function ProductionPage() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="font-bold text-slate-900 dark:text-slate-100">{task.orderNumber}</p>
-            {task.isMrp && (
+            {task.isMrp ? (
               <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
                 <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                 mrp
               </Badge>
-            )}
+            ) : null}
           </div>
           <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">{task.materialName}</p>
           <p className="text-[10px] text-slate-500 italic">{task.description || task.materialName} {task.color ? `• ${task.color}` : ''}</p>
@@ -370,10 +368,10 @@ export default function ProductionPage() {
               className="h-9 px-2 text-center text-xs font-bold"
               value={String(task.producedQty ?? '')}
               placeholder="Qtd."
-              onSave={(val) => {
-                const qty = val === '' ? undefined : Number(val);
-                updateTaskLocal(task.id, 'producedQty', qty);
-                saveMeta(task.id, qty, task.producedWeight);
+              onSave={(value) => {
+                const nextQty = value === '' ? undefined : Number(value);
+                updateTaskLocal(task.id, 'producedQty', nextQty);
+                saveMeta(task.id, nextQty, task.producedWeight);
               }}
             />
             <EditableInput
@@ -382,10 +380,10 @@ export default function ProductionPage() {
               className="h-9 px-2 text-center text-xs font-bold"
               value={String(task.producedWeight ?? '')}
               placeholder="Peso"
-              onSave={(val) => {
-                const w = val === '' ? undefined : Number(val);
-                updateTaskLocal(task.id, 'producedWeight', w);
-                saveMeta(task.id, task.producedQty, w);
+              onSave={(value) => {
+                const nextWeight = value === '' ? undefined : Number(value);
+                updateTaskLocal(task.id, 'producedWeight', nextWeight);
+                saveMeta(task.id, task.producedQty, nextWeight);
               }}
             />
           </div>
@@ -400,7 +398,7 @@ export default function ProductionPage() {
             disabled={task.status === 'DONE' || busyTaskId === task.id}
             onClick={() => {
               if (!task.labelPrinted) {
-                setError('Você deve imprimir a etiqueta antes de concluir.');
+                setError('Voce deve imprimir a etiqueta antes de concluir.');
                 return;
               }
               mutateTask(task.id, 'complete');
@@ -411,13 +409,13 @@ export default function ProductionPage() {
         </div>
         <Button
           size="sm"
-          variant={task.labelPrinted ? "outline" : "default"}
+          variant={task.labelPrinted ? 'outline' : 'default'}
           className="w-full h-9 font-bold text-xs"
           disabled={busyLabelTaskId === task.id || busyTaskId === task.id}
           onClick={() => handlePrintProductionLabel(task)}
         >
           <FileText className="mr-2 h-4 w-4" />
-          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Produção
+          {task.labelPrinted ? 'Reimprimir' : 'Imprimir'} Etiqueta de Producao
         </Button>
       </div>
 
@@ -446,7 +444,6 @@ export default function ProductionPage() {
         </CardHeader>
       ) : null}
       <CardContent>
-        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -476,7 +473,7 @@ export default function ProductionPage() {
                     <EmptyState
                       icon={Factory}
                       title="Sem tarefas pendentes"
-                      description="As tarefas iniciadas ou concluidas ficam guardadas no histórico."
+                      description="As tarefas iniciadas ou concluidas ficam guardadas no historico."
                       className="min-h-[120px]"
                     />
                   </TableCell>
@@ -488,63 +485,60 @@ export default function ProductionPage() {
           </Table>
         </div>
 
-        {/* Mobile Task Cards */}
         <div className="grid grid-cols-1 gap-4 md:hidden">
           {loading ? (
-             <EmptyState title="Carregando..." description="Buscando tarefas de produção." className="min-h-[120px]" />
+            <EmptyState title="Carregando..." description="Buscando tarefas de producao." className="min-h-[120px]" />
           ) : activeTasks.length === 0 ? (
-             <EmptyState icon={Factory} title="Fila Limpa" description="Sem tarefas pendentes no momento." className="min-h-[120px]" />
+            <EmptyState icon={Factory} title="Fila Limpa" description="Sem tarefas pendentes no momento." className="min-h-[120px]" />
           ) : (
-             activeTasks.map((task) => renderTaskCard(task))
+            activeTasks.map((task) => renderTaskCard(task))
           )}
         </div>
       </CardContent>
 
-      {historyTasks.length > 0 && (
+      {historyTasks.length > 0 ? (
         <CardContent className="pt-2">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-0 sm:px-4 py-2 bg-muted/20 rounded-xl border border-muted/50">
             <div className="flex-1">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Histórico de produção</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Historico de producao</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">
                 {historyTasks.length} tarefas finalizadas
               </p>
             </div>
             <Button className="w-full sm:w-auto h-9 font-bold text-xs" variant="outline" onClick={() => setShowHistory((prev) => !prev)}>
-              {showHistory ? 'Ocultar histórico' : 'Ver histórico'}
+              {showHistory ? 'Ocultar historico' : 'Ver historico'}
             </Button>
           </div>
-          {showHistory && (
-             <div className="mt-4 space-y-4 animate-in fade-in duration-300">
-                {/* Mobile History Cards */}
-                <div className="grid grid-cols-1 gap-4 md:hidden">
-                  {historyTasks.map((task) => renderTaskCard(task))}
-                </div>
-                {/* Desktop History Table */}
-                <div className="hidden md:block overflow-x-auto">
-                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Pedido</TableHead>
-                        <TableHead>Material</TableHead>
-                        <TableHead>Desc</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead className="text-right">Qtd Solic.</TableHead>
-                        <TableHead className="text-center w-[100px]">Qtd Prod.</TableHead>
-                        <TableHead className="text-center w-[100px]">Peso (KG)</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Atualizado</TableHead>
-                        <TableHead className="text-right">Acoes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {historyTasks.map((task) => renderTaskRow(task))}
-                    </TableBody>
-                  </Table>
-                </div>
-             </div>
-          )}
+          {showHistory ? (
+            <div className="mt-4 space-y-4 animate-in fade-in duration-300">
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {historyTasks.map((task) => renderTaskCard(task))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Desc</TableHead>
+                      <TableHead>Cor</TableHead>
+                      <TableHead className="text-right">Qtd Solic.</TableHead>
+                      <TableHead className="text-center w-[100px]">Qtd Prod.</TableHead>
+                      <TableHead className="text-center w-[100px]">Peso (KG)</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Atualizado</TableHead>
+                      <TableHead className="text-right">Acoes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {historyTasks.map((task) => renderTaskRow(task))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
-      )}
+      ) : null}
     </Card>
   );
 }

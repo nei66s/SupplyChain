@@ -18,6 +18,9 @@ import {
     List,
     Activity,
     AlertTriangle,
+    Globe,
+    Pencil,
+    Save,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -44,6 +47,7 @@ type Tenant = {
     user_count: string;
     last_user_created_at: string | null;
     subscription_status?: string;
+    login_domains?: string[];
 };
 
 const STATUS_CONFIG = {
@@ -146,15 +150,43 @@ function TenantCard({
     tenant,
     onStatusChange,
     onPlanChange,
+    onLoginDomainsChange,
 }: {
     tenant: Tenant;
     onStatusChange: (id: string, status: Tenant['status'], reason?: string) => void;
     onPlanChange: (id: string, plan: Tenant['plan']) => void;
+    onLoginDomainsChange: (id: string, domains: string[]) => Promise<void>;
 }) {
     const [showBlockForm, setShowBlockForm] = useState(false);
     const [blockReason, setBlockReason] = useState('');
     const [showPlanMenu, setShowPlanMenu] = useState(false);
+    const [editingDomains, setEditingDomains] = useState(false);
+    const [domainDraft, setDomainDraft] = useState((tenant.login_domains ?? []).join('\n'));
+    const [savingDomains, setSavingDomains] = useState(false);
     const statusCfg = STATUS_CONFIG[tenant.status] ?? STATUS_CONFIG.ACTIVE;
+
+    useEffect(() => {
+        setDomainDraft((tenant.login_domains ?? []).join('\n'));
+    }, [tenant.login_domains]);
+
+    const parseDomains = (rawValue: string) => {
+        return [...new Set(
+            rawValue
+                .split(/[\n,;\s]+/)
+                .map((value) => value.trim().toLowerCase())
+                .filter(Boolean)
+        )];
+    };
+
+    const handleSaveDomains = async () => {
+        setSavingDomains(true);
+        try {
+            await onLoginDomainsChange(tenant.id, parseDomains(domainDraft));
+            setEditingDomains(false);
+        } finally {
+            setSavingDomains(false);
+        }
+    };
 
     return (
         <div className={cn(
@@ -231,6 +263,74 @@ function TenantCard({
                         <p className="text-xs text-slate-400">Desde</p>
                         <p className="font-semibold text-slate-700 dark:text-slate-300 text-xs">{formatDate(tenant.created_at)}</p>
                     </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Globe className="w-4 h-4 text-slate-500" />
+                            <div className="min-w-0">
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Dominios de Login</p>
+                                <p className="text-[11px] text-slate-400">Usados para ajudar a identificar o tenant certo no login.</p>
+                            </div>
+                        </div>
+                        {!tenant.is_platform_owner && !editingDomains && (
+                            <button
+                                onClick={() => setEditingDomains(true)}
+                                className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 transition-colors"
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Editar
+                            </button>
+                        )}
+                    </div>
+
+                    {editingDomains ? (
+                        <div className="space-y-2">
+                            <textarea
+                                value={domainDraft}
+                                onChange={(e) => setDomainDraft(e.target.value)}
+                                rows={3}
+                                placeholder="saojosecordas.com"
+                                className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <p className="text-[11px] text-slate-400">Use um dominio por linha. Exemplo: `saojosecordas.com`</p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleSaveDomains}
+                                    disabled={savingDomains}
+                                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                                >
+                                    <Save className="w-3.5 h-3.5" />
+                                    {savingDomains ? 'Salvando...' : 'Salvar dominios'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setDomainDraft((tenant.login_domains ?? []).join('\n'));
+                                        setEditingDomains(false);
+                                    }}
+                                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {(tenant.login_domains ?? []).length > 0 ? (
+                                (tenant.login_domains ?? []).map((domain) => (
+                                    <span
+                                        key={domain}
+                                        className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                    >
+                                        {domain}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-xs text-slate-400">Nenhum dominio configurado.</span>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Blocked reason */}
@@ -397,6 +497,28 @@ export default function PlatformTenantsPage() {
         if (res.ok) {
             setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, plan } : t));
         }
+    };
+
+    const handleLoginDomainsChange = async (tenantId: string, loginDomains: string[]) => {
+        const currentTenant = tenants.find(t => t.id === tenantId);
+        const res = await fetch('/api/platform/tenants', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenantId,
+                status: currentTenant?.status,
+                plan: currentTenant?.plan,
+                loginDomains,
+            }),
+        });
+
+        if (res.ok) {
+            setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, login_domains: loginDomains } : t));
+            return;
+        }
+
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? 'Erro ao salvar dominios');
     };
 
     const filtered = tenants.filter(t => {
@@ -571,6 +693,7 @@ export default function PlatformTenantsPage() {
                                 tenant={tenant}
                                 onStatusChange={handleStatusChange}
                                 onPlanChange={handlePlanChange}
+                                onLoginDomainsChange={handleLoginDomainsChange}
                             />
                         ))}
                     </div>

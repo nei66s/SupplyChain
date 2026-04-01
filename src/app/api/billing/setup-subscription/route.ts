@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             if (body && typeof body.quantity === 'number' && body.quantity > 0) {
                 quantity = body.quantity;
             }
-        } catch (e) {
+        } catch {
             // Ignore if no body
         }
 

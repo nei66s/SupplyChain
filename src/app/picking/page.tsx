@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { FileText, PackageCheck, RefreshCw } from 'lucide-react';
+import { FileText, PackageCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,25 +37,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-type LoadPickingOptions = {
-  skipLoading?: boolean;
-};
-
 export default function PickingPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stockBalances, setStockBalances] = useState<StockBalance[]>([]);
-  const [loading, setLoading] = useState(true);
   const dataFingerprintRef = useRef('');
 
   const [filter, setFilter] = React.useState<'READY_FULL' | 'READY_PARTIAL' | 'ALL'>('ALL');
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null);
 
-  const loadData = useCallback(async (opts?: LoadPickingOptions) => {
-    const skipLoading = opts?.skipLoading;
-    if (!skipLoading) {
-      setLoading(true);
-    }
+  const loadData = useCallback(async () => {
     let refreshed = false;
     try {
       const [ordersRes, usersRes, inventoryRes] = await Promise.all([
@@ -95,9 +86,6 @@ export default function PickingPage() {
         refreshed = true;
       }
     } finally {
-      if (!skipLoading) {
-        setLoading(false);
-      }
       if (refreshed) {
         notifyDataRefreshed();
       }
@@ -107,8 +95,6 @@ export default function PickingPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-
 
   const queue = orders
     .filter((order) => ['EM_PICKING', 'ABERTO', 'SAIDA_CONCLUIDA'].includes(order.status))
@@ -148,11 +134,11 @@ export default function PickingPage() {
         order.id !== orderId
           ? order
           : {
-            ...order,
-            items: order.items.map((item) =>
-              item.id !== itemId ? item : { ...item, qtySeparated: qty }
-            ),
-          }
+              ...order,
+              items: order.items.map((item) =>
+                item.id !== itemId ? item : { ...item, qtySeparated: qty }
+              ),
+            }
       )
     );
   };
@@ -163,11 +149,11 @@ export default function PickingPage() {
         order.id !== orderId
           ? order
           : {
-            ...order,
-            items: order.items.map((item) =>
-              item.id !== itemId ? item : { ...item, separatedWeight: weight }
-            ),
-          }
+              ...order,
+              items: order.items.map((item) =>
+                item.id !== itemId ? item : { ...item, separatedWeight: weight }
+              ),
+            }
       )
     );
   };
@@ -178,7 +164,7 @@ export default function PickingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: qty }),
     });
-    await loadData({ skipLoading: true });
+    await loadData();
   };
 
   const commitSeparatedWeight = async (orderId: string, itemId: string, weight: number) => {
@@ -187,7 +173,7 @@ export default function PickingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update_separated_weight', itemId, separatedWeight: weight }),
     });
-    await loadData({ skipLoading: true });
+    await loadData();
   };
 
   const concludePicking = async (orderId: string) => {
@@ -208,7 +194,7 @@ export default function PickingPage() {
           </div>
           <CardDescription>Filtre por prontidao e conclua separacao com baixa de saida simulada.</CardDescription>
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtro de prontidão</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Filtro de prontidao</Label>
             <Select value={filter} onValueChange={(value) => setFilter(value as 'READY_FULL' | 'READY_PARTIAL' | 'ALL')}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Filtrar por status" />
@@ -260,40 +246,37 @@ export default function PickingPage() {
                   </CardDescription>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                  {
-                    (() => {
-                      const hasProductionBlocking = selected.items.some((it) => it.qtyToProduce > 0);
-                      const isPickingLabelPrinted = !!selected.picking_label_printed;
-                      const isFullyTyped = selected.items.every(item => item.qtySeparated >= item.qtyReservedFromStock);
-                      const canConclude = isPickingLabelPrinted && isFullyTyped && !hasProductionBlocking;
+                  {(() => {
+                    const hasProductionBlocking = selected.items.some((it) => it.qtyToProduce > 0);
+                    const isPickingLabelPrinted = !!selected.picking_label_printed;
+                    const isFullyTyped = selected.items.every(item => item.qtySeparated >= item.qtyReservedFromStock);
+                    const canConclude = isPickingLabelPrinted && isFullyTyped && !hasProductionBlocking;
 
-                      return (
-                        <>
-                          <Button
-                            className="w-full sm:w-auto"
-                            variant="outline"
-                            onClick={handlePrintLabels}
-                            disabled={hasProductionBlocking}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            {isPickingLabelPrinted ? 'Reimprimir etiquetas de separação' : 'Imprimir etiquetas de separação'}
-                          </Button>
-                          <Button
-                            className="w-full sm:w-auto"
-                            onClick={() => concludePicking(selected.id)}
-                            disabled={!canConclude}
-                          >
-                            {isFullyTyped ? 'Concluir picking' : 'Aguardando quantidades'}
-                          </Button>
-                        </>
-                      )
-                    })()
-                  }
+                    return (
+                      <>
+                        <Button
+                          className="w-full sm:w-auto"
+                          variant="outline"
+                          onClick={handlePrintLabels}
+                          disabled={hasProductionBlocking}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          {isPickingLabelPrinted ? 'Reimprimir etiquetas de separacao' : 'Imprimir etiquetas de separacao'}
+                        </Button>
+                        <Button
+                          className="w-full sm:w-auto"
+                          onClick={() => concludePicking(selected.id)}
+                          disabled={!canConclude}
+                        >
+                          {isFullyTyped ? 'Concluir picking' : 'Aguardando quantidades'}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Desktop Picking Table */}
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
@@ -328,7 +311,7 @@ export default function PickingPage() {
                               <p className="text-[10px] text-muted-foreground">{item.uom}</p>
                               {item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0 ? (
                                 <div className="mt-1">
-                                  <Badge variant="outline">Em produção</Badge>
+                                  <Badge variant="outline">Em producao</Badge>
                                 </div>
                               ) : null}
                             </TableCell>
@@ -370,7 +353,6 @@ export default function PickingPage() {
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    // Focus next item's weight
                                     const itemIdx = selected.items.findIndex(it => it.id === item.id);
                                     const nextItem = selected.items[itemIdx + 1];
                                     if (nextItem) {
@@ -384,24 +366,16 @@ export default function PickingPage() {
                           <TableRow>
                             <TableCell colSpan={8} className="bg-muted/30">
                               <div className="space-y-2">
-                                <Label>Condições do item</Label>
+                                <Label>Condicoes do item</Label>
                                 {item.conditions && item.conditions.length > 0 ? (
                                   item.conditions.map((cond, idx) => (
                                     <div key={idx} className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                                      <Input
-                                        placeholder="Campo (ex: Cor)"
-                                        value={cond.key}
-                                        readOnly
-                                      />
-                                      <Input
-                                        placeholder="Valor (ex: Vermelho)"
-                                        value={cond.value}
-                                        readOnly
-                                      />
+                                      <Input placeholder="Campo" value={cond.key} readOnly />
+                                      <Input placeholder="Valor" value={cond.value} readOnly />
                                     </div>
                                   ))
                                 ) : (
-                                  <p className="text-muted-foreground">Sem condições adicionadas.</p>
+                                  <p className="text-muted-foreground">Sem condicoes adicionadas.</p>
                                 )}
                               </div>
                             </TableCell>
@@ -413,7 +387,6 @@ export default function PickingPage() {
                 </Table>
               </div>
 
-              {/* Mobile Picking Cards */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {selected.items.map((item) => {
                   const currentStock = stockByMaterial.get(item.materialId);
@@ -445,7 +418,7 @@ export default function PickingPage() {
 
                       {isBlocked ? (
                         <div className="flex items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 p-3">
-                          <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-tighter">🔒 Aguardando Produção</p>
+                          <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-tighter">Aguardando producao</p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
@@ -475,15 +448,15 @@ export default function PickingPage() {
                         </div>
                       )}
 
-                      {item.conditions && item.conditions.length > 0 && (
-                         <div className="rounded-lg bg-slate-100/50 dark:bg-slate-800/50 p-2 space-y-1">
-                            {item.conditions.map((c, i) => (
-                              <p key={i} className="text-[10px] text-slate-600 dark:text-slate-400">
-                                <span className="font-bold uppercase">{c.key}:</span> {c.value}
-                              </p>
-                            ))}
-                         </div>
-                      )}
+                      {item.conditions && item.conditions.length > 0 ? (
+                        <div className="rounded-lg bg-slate-100/50 dark:bg-slate-800/50 p-2 space-y-1">
+                          {item.conditions.map((condition, index) => (
+                            <p key={index} className="text-[10px] text-slate-600 dark:text-slate-400">
+                              <span className="font-bold uppercase">{condition.key}:</span> {condition.value}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

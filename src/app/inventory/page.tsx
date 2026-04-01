@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useMemo, useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Bell, Inbox, Warehouse, ChevronDown, ChevronUp, History, Plus, AlertCircle } from 'lucide-react';
+import { Warehouse, ChevronDown, ChevronUp, History, Plus, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,12 +35,10 @@ import dynamic from 'next/dynamic';
 const MrpPanel = dynamic(() => import('@/components/mrp-panel'), { ssr: false });
 import { formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
-import { notificationTypeLabel } from '@/lib/domain/i18n';
 import {
   ConditionVariant,
   InventoryAdjustment,
   Material,
-  Notification,
   Order,
   StockBalance,
   StockReservation,
@@ -50,13 +48,11 @@ function InventoryPageContent() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [stockBalances, setStockBalances] = useState<StockBalance[]>([]);
   const [stockReservations, setStockReservations] = useState<StockReservation[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [conditionVariants, setConditionVariants] = useState<ConditionVariant[]>([]);
   const [expandedVariantRows, setExpandedVariantRows] = useState<Record<string, boolean>>({});
   const [inventoryAdjustments, setInventoryAdjustments] = useState<InventoryAdjustment[]>([]);
 
-  // Dialog state
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [selectedMaterialForAdjust, setSelectedMaterialForAdjust] = useState<Material | null>(null);
   const [adjustmentReason, setAdjustmentReason] = useState('');
@@ -65,9 +61,8 @@ function InventoryPageContent() {
 
   const loadData = useCallback(async () => {
     try {
-      const [inventoryRes, notificationsRes, ordersRes] = await Promise.all([
+      const [inventoryRes, ordersRes] = await Promise.all([
         fetch('/api/inventory', { cache: 'no-store' }),
-        fetch('/api/notifications', { cache: 'no-store' }),
         fetch('/api/orders', { cache: 'no-store' }),
       ]);
       if (inventoryRes.ok) {
@@ -80,10 +75,6 @@ function InventoryPageContent() {
         );
         setInventoryAdjustments(Array.isArray(payload.adjustments) ? payload.adjustments : []);
       }
-      if (notificationsRes.ok) {
-        const payload = await notificationsRes.json();
-        setNotifications(Array.isArray(payload) ? payload : []);
-      }
       if (ordersRes.ok) {
         const payload = await ordersRes.json();
         setOrders(Array.isArray(payload) ? payload : []);
@@ -94,9 +85,7 @@ function InventoryPageContent() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      await loadData();
-    })()
+    void loadData();
   }, [loadData]);
 
   const stockView = useMemo(() => {
@@ -128,15 +117,6 @@ function InventoryPageContent() {
     }));
   }, []);
 
-  const markNotification = async (id: string, read: boolean) => {
-    await fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, read }),
-    }).catch(() => { });
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: read ? new Date().toISOString() : undefined } : n)));
-  };
-
   const openAdjustDialog = (material: Material) => {
     setSelectedMaterialForAdjust(material);
     setAdjustDelta(0);
@@ -152,7 +132,7 @@ function InventoryPageContent() {
 
     const delta = Number(adjustDelta);
     if (isNaN(delta)) {
-      alert('Por favor, insira uma quantidade válida.');
+      alert('Por favor, insira uma quantidade valida.');
       return;
     }
 
@@ -199,16 +179,13 @@ function InventoryPageContent() {
 
   return (
     <Tabs value={currentTab} onValueChange={onTabChange} className="space-y-4">
-      {/* Top menu removed as it is now in the sidebar hierarchy */}
-
       <TabsContent value="stock">
         <Card>
           <CardHeader>
             <CardTitle className="font-headline">Saldo de estoque</CardTitle>
-            <CardDescription>Em estoque, reservado e disponível calculados em tempo real.</CardDescription>
+            <CardDescription>Em estoque, reservado e disponivel calculados em tempo real.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Desktop Table - Hidden on Mobile */}
             <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -217,7 +194,7 @@ function InventoryPageContent() {
                     <TableHead>Material</TableHead>
                     <TableHead className="text-right">Em estoque</TableHead>
                     <TableHead className="text-right">Reservado</TableHead>
-                    <TableHead className="text-right">Reservado produção</TableHead>
+                    <TableHead className="text-right">Reservado producao</TableHead>
                     <TableHead className="text-right">Disponivel</TableHead>
                     <TableHead className="text-right">Status</TableHead>
                   </TableRow>
@@ -249,7 +226,7 @@ function InventoryPageContent() {
                                 Vertentes
                               </Button>
                             ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -264,7 +241,7 @@ function InventoryPageContent() {
                             <Badge variant={statusVariant}>{statusVariant === 'destructive' ? 'RUPTURA' : statusVariant === 'warning' ? 'BAIXO' : 'OK'}</Badge>
                           </TableCell>
                         </TableRow>
-                        {isExpanded && variantRows.length > 0 && (
+                        {isExpanded && variantRows.length > 0 ? (
                           <TableRow key={`${entry.materialId}-variants`}>
                             <TableCell className="border-none p-0" />
                             <TableCell colSpan={6} className="border-none bg-muted/10 px-3 py-4 sm:px-6">
@@ -276,7 +253,7 @@ function InventoryPageContent() {
                                       variant.conditions
                                         .map((cond) => `${cond.key}: ${cond.value}`)
                                         .filter(Boolean)
-                                        .join(' • ') || 'Sem condições';
+                                        .join(' • ') || 'Sem condicoes';
                                     const variantKey = `${entry.materialId}-${variantIndex}-${summary}`;
                                     return (
                                       <div key={variantKey} className="rounded-2xl border border-border bg-background/70 p-3 shadow-sm">
@@ -292,7 +269,7 @@ function InventoryPageContent() {
                                             <p className="text-sm font-semibold text-foreground">{variant.reservedFromStock}</p>
                                           </div>
                                           <div>
-                                            <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Produção</p>
+                                            <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Producao</p>
                                             <p className="text-sm font-semibold text-amber-600">{variant.qtyToProduce}</p>
                                           </div>
                                           <div>
@@ -307,7 +284,7 @@ function InventoryPageContent() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        )}
+                        ) : null}
                       </Fragment>
                     );
                   })}
@@ -315,7 +292,6 @@ function InventoryPageContent() {
               </Table>
             </div>
 
-            {/* Mobile Cards - Visible only on Mobile */}
             <div className="grid grid-cols-1 gap-4 md:hidden">
               {stockView.map((entry) => {
                 const material = entry.material;
@@ -348,12 +324,12 @@ function InventoryPageContent() {
                         <p className="text-sm font-bold">{entry.productionReserved ?? 0}</p>
                       </div>
                       <div className="border-l border-slate-100 dark:border-slate-800 pl-3">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-500">Disponível</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-indigo-500">Disponivel</p>
                         <p className="text-base font-black text-indigo-600 dark:text-indigo-400">{entry.available}</p>
                       </div>
                     </div>
 
-                    {hasVariants && (
+                    {hasVariants ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -366,9 +342,9 @@ function InventoryPageContent() {
                           <>Ver Vertentes ({variantRows.length}) <ChevronDown className="ml-2 h-3.5 w-3.5" /></>
                         )}
                       </Button>
-                    )}
+                    ) : null}
 
-                    {isExpanded && variantRows.length > 0 && (
+                    {isExpanded && variantRows.length > 0 ? (
                       <div className="mt-1 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                         {variantRows.map((variant, idx) => (
                           <div key={idx} className="rounded-xl border border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/10 p-3">
@@ -383,7 +359,7 @@ function InventoryPageContent() {
                           </div>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -396,8 +372,8 @@ function InventoryPageContent() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline">Ajuste / Inventário</CardTitle>
-              <CardDescription>Clique no botão &quot;+&quot; para lançar um ajuste de estoque para um material específico.</CardDescription>
+              <CardTitle className="font-headline">Ajuste / Inventario</CardTitle>
+              <CardDescription>Clique no botao &quot;+&quot; para lancar um ajuste de estoque para um material especifico.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -405,23 +381,23 @@ function InventoryPageContent() {
                   <TableRow>
                     <TableHead>Material</TableHead>
                     <TableHead className="text-right">Saldo Atual (Sistema)</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
+                    <TableHead className="text-right">Acao</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {materials.map((m) => {
-                    const balance = stockBalances.find(b => b.materialId === m.id);
+                  {materials.map((material) => {
+                    const balance = stockBalances.find(b => b.materialId === material.id);
                     return (
-                      <TableRow key={m.id}>
+                      <TableRow key={material.id}>
                         <TableCell>
-                          <p className="font-medium text-sm">{m.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{m.id}</p>
+                          <p className="font-medium text-sm">{material.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{material.id}</p>
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">
                           {balance?.onHand ?? 0}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openAdjustDialog(m)}>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openAdjustDialog(material)}>
                             <Plus className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -435,30 +411,32 @@ function InventoryPageContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2"><History className="h-4 w-4" /> Histórico de Lançamentos</CardTitle>
-              <CardDescription>Últimos ajustes realizados manualmente.</CardDescription>
+              <CardTitle className="font-headline flex items-center gap-2"><History className="h-4 w-4" /> Historico de Lancamentos</CardTitle>
+              <CardDescription>Ultimos ajustes realizados manualmente.</CardDescription>
             </CardHeader>
             <CardContent className="px-0">
               <div className="max-h-[600px] overflow-auto px-6">
                 <div className="space-y-4">
                   {inventoryAdjustments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-4 text-center">Nenhum lançamento registrado.</p>
+                    <p className="text-xs text-muted-foreground py-4 text-center">Nenhum lancamento registrado.</p>
                   ) : (
-                    inventoryAdjustments.map((adj) => (
-                      <div key={adj.id} className="border-b pb-3 last:border-0">
+                    inventoryAdjustments.map((adjustment) => (
+                      <div key={adjustment.id} className="border-b pb-3 last:border-0">
                         <div className="flex justify-between items-start gap-2">
-                          <p className="font-medium text-xs truncate max-w-[180px]">{adj.materialName}</p>
-                          <Badge variant={adj.adjustmentQty > 0 ? "positive" : "destructive"} className="text-[10px] h-4 px-1">
-                            {adj.adjustmentQty > 0 ? "+" : ""}{adj.adjustmentQty}
+                          <p className="font-medium text-xs truncate max-w-[180px]">{adjustment.materialName}</p>
+                          <Badge variant={adjustment.adjustmentQty > 0 ? 'positive' : 'destructive'} className="text-[10px] h-4 px-1">
+                            {adjustment.adjustmentQty > 0 ? '+' : ''}{adjustment.adjustmentQty}
                           </Badge>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1">Saldo: {adj.qtyBefore} → {adj.qtyAfter}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Saldo: {adjustment.qtyBefore} {'->'} {adjustment.qtyAfter}
+                        </p>
                         <div className="mt-2 bg-muted/30 p-2 rounded text-[10px] italic text-muted-foreground">
-                          &quot;{adj.reason}&quot;
+                          &quot;{adjustment.reason}&quot;
                         </div>
                         <div className="mt-2 flex justify-between items-center text-[9px] uppercase tracking-tighter text-muted-foreground/60">
-                          <span>{adj.actor}</span>
-                          <span>{formatDate(adj.createdAt)}</span>
+                          <span>{adjustment.actor}</span>
+                          <span>{formatDate(adjustment.createdAt)}</span>
                         </div>
                       </div>
                     ))
@@ -474,20 +452,20 @@ function InventoryPageContent() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-amber-600" />
-                Lançamento Manual de Estoque
+                Lancamento Manual de Estoque
               </DialogTitle>
               <DialogDescription>
-                Você está prestes a alterar manualmente o saldo do material <strong>{selectedMaterialForAdjust?.name}</strong>.
+                Voce esta prestes a alterar manualmente o saldo do material <strong>{selectedMaterialForAdjust?.name}</strong>.
               </DialogDescription>
             </DialogHeader>
 
             <Alert variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900 [&>svg]:text-amber-600">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Aviso Crítico</AlertTitle>
+              <AlertTitle>Aviso Critico</AlertTitle>
               <AlertDescription className="text-xs">
-                Ajustes manuais ignoram reservas ativas e processos de produção em curso.
-                Isso pode causar discrepâncias graves no planejamento MRP e na fila de picking.
-                <strong> Use apenas para correções de inventário físico confirmadas.</strong>
+                Ajustes manuais ignoram reservas ativas e processos de producao em curso.
+                Isso pode causar discrepancias graves no planejamento MRP e na fila de picking.
+                <strong> Use apenas para correcoes de inventario fisico confirmadas.</strong>
               </AlertDescription>
             </Alert>
 
@@ -515,18 +493,18 @@ function InventoryPageContent() {
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Novo Saldo Resultante</span>
                   <span className="text-lg font-black font-mono">
                     {(() => {
-                      const cur = stockBalances.find(b => b.materialId === selectedMaterialForAdjust?.id)?.onHand ?? 0;
+                      const current = stockBalances.find(b => b.materialId === selectedMaterialForAdjust?.id)?.onHand ?? 0;
                       const delta = Number(adjustDelta) || 0;
-                      return cur + delta;
+                      return current + delta;
                     })()}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Justificativa do Ajuste (Obrigatório)</Label>
+                <Label className="text-xs">Justificativa do Ajuste (Obrigatorio)</Label>
                 <Textarea
-                  placeholder="Ex: Quebra física identificada, Erro de lançamento anterior, Inventário rotativo..."
+                  placeholder="Ex: Quebra fisica identificada, Erro de lancamento anterior, Inventario rotativo..."
                   value={adjustmentReason}
                   onChange={e => setAdjustmentReason(e.target.value)}
                   className="min-h-[100px] text-sm"
@@ -588,9 +566,7 @@ function InventoryPageContent() {
         </Card>
       </TabsContent>
 
-
       <TabsContent value="mrp">
-        {/* Lazy-loaded MRP panel */}
         <div>
           <MrpPanel />
         </div>
@@ -601,7 +577,7 @@ function InventoryPageContent() {
 
 export default function InventoryPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Carregando inventário...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Carregando inventario...</div>}>
       <InventoryPageContent />
     </Suspense>
   );

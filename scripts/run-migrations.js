@@ -4,9 +4,14 @@ require('dotenv').config()
 const { Client } = require('pg')
 
 async function main() {
+  if (process.env.SKIP_DB_CHECK === '1') {
+    console.log('SKIP_DB_CHECK=1. Skipping migrations.')
+    return
+  }
+
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) {
-    if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.SKIP_DB_CHECK === '1') {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
       console.log('DATABASE_URL not set. Skipping migrations during build phase.')
       return
     }

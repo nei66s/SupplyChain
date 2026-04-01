@@ -6,10 +6,8 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // 1. If at /login and already have a token, go to dashboard or the redirect param
-    if ((pathname === '/login' || pathname === '/platform-login') && token) {
-        let defaultRedirect = '/dashboard';
-        if (pathname === '/platform-login') defaultRedirect = '/platform/tenants';
-        
+    if (pathname === '/login' && token) {
+        const defaultRedirect = '/dashboard';
         const redirectUrl = request.nextUrl.searchParams.get('redirect') || defaultRedirect;
         return NextResponse.redirect(new URL(redirectUrl, request.url));
     }

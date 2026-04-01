@@ -175,5 +175,5 @@ export function useRealtime() {
                 setIsConnected(false);
             }
         };
-    }, [router, setIsConnected, setIsConnecting]);
+    }, [notifyNotification, router, setIsConnected, setIsConnecting]);
 }

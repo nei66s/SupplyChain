@@ -51,19 +51,13 @@ export function useSiteBranding() {
       };
 
       setBranding(newBranding);
-
-      // Persist to local storage for instant client-side retrieval
       localStorage.setItem(CACHE_KEY, JSON.stringify(newBranding));
-
-      // Notify other hook instances in the same window
       window.dispatchEvent(new Event('site-branding-updated'));
 
-      // Persist to cookies for potential SSR support (matching theme pattern)
       try {
         const cookieValue = btoa(JSON.stringify(newBranding));
         document.cookie = `${COOKIE_KEY}=${cookieValue};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-      } catch { }
-
+      } catch {}
     } catch (error) {
       console.error('Branding fetch error:', error);
     } finally {
@@ -76,16 +70,14 @@ export function useSiteBranding() {
   useEffect(() => {
     let active = true;
 
-    // 1. Initial hydration on client: read from cache immediately after mount
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         setBranding(JSON.parse(cached));
-      } catch { }
+      } catch {}
     }
     setHasHydrated(true);
 
-    // 2. Refresh from API
     fetchBranding(active);
 
     const updateFromCache = () => {
@@ -93,20 +85,18 @@ export function useSiteBranding() {
       if (currentCache) {
         try {
           setBranding(JSON.parse(currentCache));
-        } catch { }
+        } catch {}
       }
     };
 
-    // 3. Listen for storage changes (cross-tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === CACHE_KEY && e.newValue) {
         try {
           setBranding(JSON.parse(e.newValue));
-        } catch { }
+        } catch {}
       }
     };
 
-    // 4. Listen for custom event (same-tab)
     window.addEventListener('site-branding-updated', updateFromCache);
     window.addEventListener('storage', handleStorageChange);
 
@@ -121,6 +111,6 @@ export function useSiteBranding() {
     branding,
     loading: loading && !hasHydrated,
     hasHydrated,
-    refreshBranding: () => fetchBranding(true)
+    refreshBranding: () => fetchBranding(true),
   };
 }

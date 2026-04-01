@@ -20,7 +20,6 @@ import {
   Trash2,
   ClipboardList,
   BookmarkCheck,
-  Bell,
   Zap,
   Users,
   TrendingUp,
@@ -28,7 +27,6 @@ import {
   Menu,
   RefreshCcw,
   Clock,
-  Inbox,
   CreditCard,
 } from 'lucide-react';
 
@@ -41,7 +39,6 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
   SidebarTrigger,
   SidebarInset,
   SidebarMenuSub,
@@ -521,12 +518,12 @@ function AppShellContent({ children, initialUser }: { children: React.ReactNode,
           lastBadgesFetch = Date.now();
           setBadges(data);
         }
-      } catch (err) { }
+      } catch { }
     };
     fetchBadges();
     const interval = setInterval(() => fetchBadges(true), 30000); // refresh every 30s
     return () => clearInterval(interval);
-  }, [authUser]);
+  }, [authUser, badges]);
 
   const displayUser = authUser ?? null;
   const displayRoleLabel = displayUser ? roleLabel(displayUser.role) : '---';
