@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { getTenantFromSession, requireAdmin } from '@/lib/auth';
 import { getSiteSettings, updateSiteSettings } from '@/lib/domain/site-settings';
+import { getTenantOperationMode, setTenantOperationMode } from '@/features/tenant-operation-mode/server';
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,9 @@ function parseDataUrl(value: string) {
 export async function GET() {
   try {
     const settings = await getSiteSettings();
-    return NextResponse.json(settings);
+    const tenantId = await getTenantFromSession();
+    const operationMode = tenantId ? await getTenantOperationMode(tenantId) : 'BOTH';
+    return NextResponse.json({ ...settings, operationMode });
   } catch (error) {
     console.error('site GET error', error);
     return NextResponse.json(FALLBACK_SETTINGS, { status: 200 });
@@ -37,7 +41,7 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireAdmin(request);
+    const auth = await requireAdmin(request);
     const body = await request.json();
     const companyName =
       typeof body.companyName === 'string' ? body.companyName.trim() : '';
@@ -46,6 +50,7 @@ export async function PATCH(request: NextRequest) {
     const address = typeof body.address === 'string' ? body.address.trim() : null;
     const rawLogoData =
       typeof body.logoDataUrl === 'string' ? body.logoDataUrl.trim() : '';
+    const operationMode = normalizeTenantOperationMode(body.operationMode);
 
     if (!companyName) {
       return NextResponse.json(
@@ -72,6 +77,7 @@ export async function PATCH(request: NextRequest) {
       logoContentType: parsedLogo ? parsedLogo.contentType : undefined,
       logoUrl: parsedLogo ? null : undefined, // Only reset URL if new data provided
     });
+    await setTenantOperationMode(auth.tenantId, operationMode);
 
     return NextResponse.json({
       companyName: updated.companyName,
@@ -80,6 +86,7 @@ export async function PATCH(request: NextRequest) {
       address: updated.address,
       platformLabel: updated.platformLabel,
       logoDataUrl: updated.logoDataUrl,
+      operationMode,
     });
   } catch (error) {
     if ((error as Error).message === 'Unauthorized') {

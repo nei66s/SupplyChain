@@ -15,6 +15,8 @@ export type OrderStatus =
   | 'FINALIZADO'
   | 'CANCELADO';
 
+export type OperationMode = 'QUANTITY' | 'WEIGHT' | 'BOTH';
+
 export type ReadinessFlag = 'READY_FULL' | 'READY_PARTIAL' | 'NOT_READY';
 
 export type ProductionTaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE';
@@ -110,6 +112,7 @@ export type OrderItem = {
   description?: string;
   shortageAction?: 'PRODUCE' | 'BUY';
   qtyRequested: number;
+  requestedWeight?: number;
   qtyReservedFromStock: number;
   qtyToProduce: number;
   qtyToBuy?: number;
@@ -134,6 +137,7 @@ export type AuditEvent = {
 export type Order = {
   id: string;
   orderNumber: string;
+  operationMode?: OperationMode;
   clientId: string;
   clientName: string;
   status: OrderStatus;

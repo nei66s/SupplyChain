@@ -21,8 +21,11 @@ import {
     Globe,
     Pencil,
     Save,
+    Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { operationModeLabel } from '@/features/tenant-operation-mode/helpers';
+import { TenantOperationMode } from '@/features/tenant-operation-mode/types';
 import {
     XAxis,
     YAxis,
@@ -48,6 +51,7 @@ type Tenant = {
     last_user_created_at: string | null;
     subscription_status?: string;
     login_domains?: string[];
+    operation_mode: TenantOperationMode;
 };
 
 const STATUS_CONFIG = {
@@ -151,11 +155,13 @@ function TenantCard({
     onStatusChange,
     onPlanChange,
     onLoginDomainsChange,
+    onOperationModeChange,
 }: {
     tenant: Tenant;
     onStatusChange: (id: string, status: Tenant['status'], reason?: string) => void;
     onPlanChange: (id: string, plan: Tenant['plan']) => void;
     onLoginDomainsChange: (id: string, domains: string[]) => Promise<void>;
+    onOperationModeChange: (id: string, mode: TenantOperationMode) => Promise<void>;
 }) {
     const [showBlockForm, setShowBlockForm] = useState(false);
     const [blockReason, setBlockReason] = useState('');
@@ -262,6 +268,32 @@ function TenantCard({
                     <div className="text-center">
                         <p className="text-xs text-slate-400">Desde</p>
                         <p className="font-semibold text-slate-700 dark:text-slate-300 text-xs">{formatDate(tenant.created_at)}</p>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Scale className="w-4 h-4 text-slate-500" />
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Modo de Operacao</p>
+                            <p className="text-[11px] text-slate-400">Define se o tenant trabalha por quantidade, peso ou ambos.</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {(['QUANTITY', 'WEIGHT', 'BOTH'] as TenantOperationMode[]).map((mode) => (
+                            <button
+                                key={mode}
+                                onClick={() => void onOperationModeChange(tenant.id, mode)}
+                                className={cn(
+                                    'rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors',
+                                    tenant.operation_mode === mode
+                                        ? 'border-indigo-600 bg-indigo-600 text-white'
+                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                                )}
+                            >
+                                {operationModeLabel(mode)}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -521,6 +553,24 @@ export default function PlatformTenantsPage() {
         throw new Error(data?.message ?? 'Erro ao salvar dominios');
     };
 
+    const handleOperationModeChange = async (tenantId: string, operationMode: TenantOperationMode) => {
+        const currentTenant = tenants.find(t => t.id === tenantId);
+        const res = await fetch('/api/platform/tenants', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenantId,
+                status: currentTenant?.status,
+                plan: currentTenant?.plan,
+                operationMode,
+            }),
+        });
+
+        if (res.ok) {
+            setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, operation_mode: operationMode } : t));
+        }
+    };
+
     const filtered = tenants.filter(t => {
         const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase());
         const matchStatus = filterStatus === 'ALL' || t.status === filterStatus;
@@ -694,6 +744,7 @@ export default function PlatformTenantsPage() {
                                 onStatusChange={handleStatusChange}
                                 onPlanChange={handlePlanChange}
                                 onLoginDomainsChange={handleLoginDomainsChange}
+                                onOperationModeChange={handleOperationModeChange}
                             />
                         ))}
                     </div>

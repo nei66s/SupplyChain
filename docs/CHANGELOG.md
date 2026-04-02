@@ -1,30 +1,34 @@
-# Registro de Alterações (Changelog)
+# Registro de Alteracoes (Changelog)
 
-Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Todas as mudancas notaveis neste projeto sao documentadas aqui.
+
+O formato e baseado em Keep a Changelog, com versoes seguindo Semantic Versioning quando aplicavel.
 
 ## [Unreleased]
 
 ### Adicionado
-- **Contadores de Navegação (Badges)**: Novo endpoint `/api/badges` para viabilizar os números em tempo real no menu lateral de Gestão (Pedidos, Picking, Produção).
-- **Suporte ao Cliente**: Inclusão de um novo botão flutuante de contato do WhatsApp diretamente integrado na interface global (`WhatsAppButton.tsx`).
+- Tipo do pedido por ordem operacional com suporte a `QUANTITY`, `WEIGHT` e `BOTH`.
+- Persistencia de `operation_mode` em `orders`.
+- Persistencia de `requested_weight` em `order_items` para o cenario `BOTH`.
+- Documentacao tecnica atualizada para refletir o fluxo por pedido.
 
 ### Corrigido / Aprimorado
-- **Dashboard UI**: Resolução de avisos (warnings) do pacote de gráficos `recharts` através da remoção de dimensões fixas (hardcoded) no wrapper `ResponsiveContainer`.
-- **Estabilidade do Realtime**: O hook `useRealtime` responsável pelos WebSockets recebeu uma lógica de "Exponential Backoff" para não floodar o console local quando o servidor de Websocket estiver indisponível e melhorar a resiliência reconectando suavemente.
-
----
+- Tela de `Pedidos` ajustada para reagir ao tipo do pedido durante a edicao.
+- `Picking` passou a usar o modo do proprio pedido, com labels e validacoes especificas.
+- `Producao` passou a usar o modo do proprio pedido, com badges e validacoes coerentes.
+- `Picking` e `Producao` passaram a exibir `peso solicitado` como referencia visual quando disponivel.
 
 ## [0.1.0] - 2026-03-09
-- **Piloto Operacional**: Lançamento inicial da UX completa para Pedidos, Produção, Estoque e Picking.
-- **Engine de Reservas**: Implementação de reservas com TTL de 5 minutos e heartbeat.
-- **IA (MRP)**: Integração com Genkit/Gemini para sugestões de reposição baseadas em heurísticas.
-- **Impressão de Etiquetas**: Suporte a geração de PDF/QR Code para volumes de separação.
-- **Autenticação**: Sistema RBAC básico para Admin, Gestor, Vendedor, Operador e Picker.
-- **Documentação Profissional**: Novas guias de Arquitetura, API, Scripts e Contribuição.
 
----
+### Adicionado
+- Piloto operacional inicial para Pedidos, Producao, Estoque e Picking.
+- Engine de reservas com TTL e heartbeat.
+- Integracao de IA para sugestoes de reposicao.
+- Suporte a impressao de etiquetas com PDF e QR Code.
+- Sistema inicial de autenticacao com perfis operacionais.
+- Conjunto inicial de documentacao tecnica do projeto.
 
-### Versões Anteriores (DRAFT)
-- **v0.0.1**: Setup inicial do Next.js + Tailwind + Mock de dados iniciais.
-- **v0.0.5**: Implementação do Repository Pattern para desacoplamento de backend.
-- **v0.0.9**: Adição das tabelas PostgreSQL para persistência MRP.
+### Rascunho historico
+- `v0.0.1`: setup inicial com Next.js, Tailwind e dados mockados.
+- `v0.0.5`: adocao de repository pattern para desacoplamento de backend.
+- `v0.0.9`: persistencia inicial em PostgreSQL para o fluxo de MRP.

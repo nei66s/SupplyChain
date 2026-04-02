@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers';
+import { TenantOperationMode } from '@/features/tenant-operation-mode/types';
 
 const AUTH_COOKIE_NAME = 'sc-session';
 const AUTH_TOKEN_TTL_SECONDS = 60 * 60 * 8;
@@ -11,6 +13,7 @@ export type AuthUser = {
   email: string;
   role: string;
   tenantId: string;
+  tenantOperationMode: TenantOperationMode;
   avatarUrl?: string;
   subscriptionStatus?: string;
   subscriptionExpiresAt?: string;
@@ -117,7 +120,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return unstable_cache(
       async () => {
         const result = await query(
-          `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status, t.subscription_expires_at
+          `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status, t.subscription_expires_at, t.operation_mode
            FROM users u
            JOIN tenants t ON t.id = u.tenant_id
            WHERE u.id = $1`,
@@ -133,6 +136,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           email: user.email,
           role: user.role,
           tenantId: user.tenant_id,
+          tenantOperationMode: normalizeTenantOperationMode(user.operation_mode),
           avatarUrl: user.avatar_url ?? undefined,
           subscriptionStatus: user.subscription_status,
           subscriptionExpiresAt: user.subscription_expires_at,

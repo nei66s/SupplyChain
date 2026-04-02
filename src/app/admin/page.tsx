@@ -16,6 +16,8 @@ import { useAuthUser } from '@/hooks/use-auth';
 import { useSiteBranding } from '@/hooks/use-site-branding';
 import { Role } from '@/lib/domain/types'; // Role is still needed for AccountForm and roleOptions
 import { roleLabel } from '@/lib/domain/i18n';
+import { TenantOperationMode } from '@/features/tenant-operation-mode/types';
+import { operationModeLabel } from '@/features/tenant-operation-mode/helpers';
 
 type AccountForm = {
   name: string;
@@ -50,6 +52,7 @@ export default function AdminPage() {
   const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [operationMode, setOperationMode] = useState<TenantOperationMode>('BOTH');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [logoFileName, setLogoFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +95,7 @@ export default function AdminPage() {
         if (!response.ok) {
           throw new Error('Nao foi possivel carregar a marca');
         }
-        return (await response.json()) as { companyName: string; document?: string; phone?: string; address?: string; logoDataUrl: string | null };
+        return (await response.json()) as { companyName: string; document?: string; phone?: string; address?: string; logoDataUrl: string | null; operationMode?: TenantOperationMode };
       })
       .then((payload) => {
         if (!active) return;
@@ -100,6 +103,7 @@ export default function AdminPage() {
         setDocument(payload.document || '');
         setPhone(payload.phone || '');
         setAddress(payload.address || '');
+        setOperationMode(payload.operationMode || 'BOTH');
         setLogoDataUrl(payload.logoDataUrl);
         setLogoFileName(payload.logoDataUrl ? 'Logo salvo' : null);
       })
@@ -148,6 +152,7 @@ export default function AdminPage() {
       address: address.trim() || null,
       platformLabel: 'Inventário Ágil',
       logoDataUrl,
+      operationMode,
     };
 
     try {
@@ -165,6 +170,7 @@ export default function AdminPage() {
       setDocument(result.document || '');
       setPhone(result.phone || '');
       setAddress(result.address || '');
+      setOperationMode(result.operationMode || 'BOTH');
       setLogoDataUrl(result.logoDataUrl ?? null);
       setLogoFileName(result.logoDataUrl ? 'Logo enviado' : null);
 
@@ -408,6 +414,27 @@ export default function AdminPage() {
                 onChange={(event) => setAddress(event.target.value)}
                 placeholder="Rua, Número - Bairro, Cidade - Estado, CEP"
               />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <Label htmlFor="site-operation-mode">Modo operacional</Label>
+              <Select
+                value={operationMode}
+                onValueChange={(value) => setOperationMode(value as TenantOperationMode)}
+              >
+                <SelectTrigger id="site-operation-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['QUANTITY', 'WEIGHT', 'BOTH'] as TenantOperationMode[]).map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {operationModeLabel(mode)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[13px] text-muted-foreground">
+                Escolha se esse tenant trabalha por quantidade, por peso ou com os dois.
+              </p>
             </div>
             <div className="grid gap-4 md:col-span-2 border-t pt-4 mt-2">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

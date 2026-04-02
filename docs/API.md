@@ -1,74 +1,132 @@
-# Referência da API (Next.js Routes)
+# Referencia da API (Next.js Routes)
 
-A API do **Inventário Ágil** é baseada em rotas do Next.js e utiliza autenticação via JWT/Session.
+A API do `Inventario Agil` e baseada em rotas do Next.js e utiliza autenticacao via sessao JWT/cookie.
 
-## 🔑 Autenticação
+## Autenticacao
 
-Todas as rotas (exceto login) exigem um token válido.
-- Path: `/api/auth/*`
-- Método: POST
-- Retorno: `Set-Cookie` com a sessão ou Token JSON.
+Todas as rotas privadas exigem usuario autenticado.
+- Path base: `/api/auth/*`
+- Metodos principais: `POST` e `GET`
+- Retorno: cookie de sessao e dados do usuario autenticado
 
 ---
 
-## 📦 Pedidos (`/api/orders`)
+## Pedidos (`/api/orders`)
 
-Gerencia o ciclo de vida dos pedidos de venda e transferências.
+Gerencia o ciclo de vida dos pedidos de venda e transferencias.
 
 ### `GET /api/orders`
-Retorna a lista de todos os pedidos não arquivados.
-- **Campos Principais**:
-  - `id`: Prefixo `O-` seguido do ID numérico.
-  - `status`: `RASCUNHO`, `ABERTO`, `EM_PICKING`, `FINALIZADO`, `CANCELADO`.
-  - `readiness`: `NOT_READY`, `READY_PARTIAL`, `READY_FULL` (calculado via estoque).
-  - `items`: Lista de materiais, quantidades e status de reserva.
+
+Retorna a lista de pedidos nao arquivados.
+
+Campos principais por pedido:
+- `id`: prefixo `O-` seguido do id numerico
+- `status`: `RASCUNHO`, `ABERTO`, `EM_PICKING`, `FINALIZADO`, `CANCELADO`
+- `readiness`: `NOT_READY`, `READY_PARTIAL`, `READY_FULL`
+- `operationMode`: `QUANTITY`, `WEIGHT` ou `BOTH`
+- `items`: lista de itens do pedido
+- `items[].qtyRequested`: quantidade solicitada
+- `items[].requestedWeight`: peso solicitado do item quando aplicavel
 
 ### `POST /api/orders`
-Cria um novo pedido (vazio ou com itens).
-- **Payload**: `{ clientName: string, dueDate?: string, source?: 'manual'|'mrp' }`
+
+Cria um novo pedido.
+
+Payload relevante:
+
+```json
+{
+  "clientName": "Cliente Exemplo",
+  "dueDate": "2026-04-10",
+  "source": "manual",
+  "operationMode": "BOTH"
+}
+```
+
+### `PATCH /api/orders/[id]`
+
+Atualiza metadados, itens e a operacao do pedido.
+
+Acoes relevantes:
+- `action: "update_meta"` aceita `operationMode`
+- `action: "save_order"` aceita `operationMode`
+- `action: "update_item"` aceita `qtyRequested` e `requestedWeight`
+- `action: "complete_picking"` valida o preenchimento conforme o `operationMode` do pedido
+
+### `POST /api/orders/submit`
+
+Ao enviar o pedido para o fluxo operacional, os itens podem persistir:
+- `qtyRequested`
+- `requestedWeight`
+
+### Regras do tipo do pedido
+
+- `QUANTITY`: o fluxo usa quantidade como preenchimento principal.
+- `WEIGHT`: o fluxo usa peso como preenchimento principal.
+- `BOTH`: o fluxo exige quantidade e peso.
 
 ---
 
-## 🏗 Produção (`/api/production`)
+## Producao (`/api/production`)
 
-Controla as ordens que precisam ser fabricadas.
+Controla as ordens e tarefas que precisam ser fabricadas.
 
 ### `GET /api/production`
-Lista tarefas pendentes ou concluídas.
-- **Filtros**: `status=PENDING`, `status=DONE`.
+
+Lista tarefas pendentes ou concluidas.
+
+Campos relevantes:
+- `status`: `PENDING` ou `DONE`
+- `operationMode`: modo operacional do pedido de origem
+- `requestedWeight`: peso solicitado do item, usado como referencia visual
 
 ### `PATCH /api/production`
-Atualiza o progresso de uma tarefa ou a marca como concluída.
+
+Atualiza o progresso de uma tarefa ou a marca como concluida.
+
+As validacoes seguem o `operationMode` do pedido:
+- `QUANTITY`: exige quantidade produzida
+- `WEIGHT`: exige peso produzido
+- `BOTH`: exige quantidade e peso
 
 ---
 
-## 📉 MRP (`/api/mrp-suggestions`)
+## MRP (`/api/mrp-suggestions`)
 
-Interface com o motor de inteligência artificial.
+Interface com o motor de inteligencia artificial.
 
 ### `GET /api/mrp-suggestions`
-Retorna as sugestões geradas pela última rodada da IA.
-- **Campos**: `materialId`, `suggestedQty`, `reasoning` (explicação da IA), `status` (PENDING, APPROVED, REJECTED).
+
+Retorna as sugestoes geradas pela ultima rodada da IA.
+
+Campos comuns:
+- `materialId`
+- `suggestedQty`
+- `reasoning`
+- `status`
 
 ---
 
-## 🔔 Notificações (`/api/notifications`)
+## Notificacoes (`/api/notifications`)
 
-Sistema de alertas interno (Inbox).
+Sistema de alertas interno.
 
 ### `GET /api/notifications`
-Retorna alertas de estoque baixo, rupturas e novas alocações.
+
+Retorna alertas de estoque baixo, rupturas e novas alocacoes.
 
 ---
 
-## 📊 Indicadores (`/api/people-indicators`)
+## Indicadores (`/api/people-indicators`)
 
-Dados para os dashboards de performance.
-- Retorna métricas agregadas por dia/operador (Picking Rate, Lead Time Médio).
+Dados para dashboards de performance.
+
+Retorna metricas agregadas por dia e por operador.
 
 ---
 
-## 🛠 Notas Técnicas
-- **Formato**: JSON.
-- **Erros**: Retorna objeto `{ error: "mensagem" }` com status HTTP correspondente (401, 400, 500).
-- **Realtime**: Algumas rotas disparam eventos via PubSub/Redis para atualização da UI sem refresh.
+## Notas tecnicas
+
+- Formato principal: JSON
+- Erros: `{ "error": "mensagem" }` com status HTTP correspondente
+- Realtime: algumas rotas publicam eventos para atualizar a UI sem refresh

@@ -6,6 +6,8 @@ import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboard
 import { refreshMaterialsSnapshot } from '@/lib/repository/materials'
 import { logActivity } from '@/lib/log-activity'
 import { publishRealtimeEvent } from '@/lib/pubsub'
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers'
+import { getOrderOperationModeWithClient } from '@/features/tenant-operation-mode/server'
 
 type RouteParams = { id: string }
 
@@ -161,7 +163,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       await client.query(`SET app.current_tenant_id = ${client.escapeLiteral(auth.tenantId)}`)
       await client.query('BEGIN')
 
-      const statusRes = await client.query('SELECT status FROM orders WHERE id = $1', [orderId])
+      const statusRes = await client.query('SELECT status, operation_mode FROM orders WHERE id = $1', [orderId])
       const currentStatus = statusRes.rows[0]?.status
       const isFinalized = currentStatus === 'FINALIZADO' || currentStatus === 'SAIDA_CONCLUIDA'
 
@@ -192,6 +194,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (body.volumeCount !== undefined) {
           updates.push(`volume_count = $${values.length + 1}`)
           values.push(Math.max(1, Number(body.volumeCount)))
+        }
+        if (body.operationMode !== undefined) {
+          updates.push(`operation_mode = $${values.length + 1}`)
+          values.push(normalizeTenantOperationMode(body.operationMode))
         }
         if (updates.length > 0) {
           values.push(orderId)
@@ -244,6 +250,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (body.qtyRequested !== undefined) {
           updates.push(`quantity = $${values.length + 1}`)
           values.push(Math.max(0, Number(body.qtyRequested)))
+        }
+        if (body.requestedWeight !== undefined) {
+          updates.push(`requested_weight = $${values.length + 1}`)
+          values.push(Math.max(0, Number(body.requestedWeight)))
         }
         if (body.color !== undefined) {
           updates.push(`color = $${values.length + 1}`)
@@ -341,14 +351,40 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             next,
           ])
         } else {
-          await client.query('UPDATE order_items SET separated_weight = $3 WHERE id = $1 AND order_id = $2', [
-            itemId,
-            orderId,
-            Number(body.separatedWeight ?? 0),
-          ])
+          const operationMode = await getOrderOperationModeWithClient(client, orderId)
+          if (operationMode === 'WEIGHT') {
+            await client.query(
+              `UPDATE order_items
+               SET separated_weight = $3,
+                   qty_separated = qty_reserved_from_stock
+               WHERE id = $1 AND order_id = $2`,
+              [itemId, orderId, Number(body.separatedWeight ?? 0)]
+            )
+          } else {
+            await client.query('UPDATE order_items SET separated_weight = $3 WHERE id = $1 AND order_id = $2', [
+              itemId,
+              orderId,
+              Number(body.separatedWeight ?? 0),
+            ])
+          }
         }
       } else if (action === 'complete_picking') {
-        const items = await client.query('SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity FROM order_items WHERE order_id = $1', [orderId])
+        const operationMode = await getOrderOperationModeWithClient(client, orderId)
+        if (operationMode === 'WEIGHT') {
+          await client.query(
+            `UPDATE order_items
+             SET qty_separated = qty_reserved_from_stock
+             WHERE order_id = $1
+               AND COALESCE(separated_weight, 0) > 0
+               AND qty_reserved_from_stock > 0`,
+            [orderId]
+          )
+        }
+
+        const items = await client.query(
+          'SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity, separated_weight FROM order_items WHERE order_id = $1',
+          [orderId]
+        )
 
         for (const item of items.rows) {
           const qtySeparated = Math.max(0, Number(item.qty_separated ?? 0))
@@ -375,13 +411,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
 
         const allItems = await client.query(
-          'SELECT quantity, qty_separated FROM order_items WHERE order_id = $1',
+          'SELECT quantity, qty_separated, qty_reserved_from_stock, separated_weight FROM order_items WHERE order_id = $1',
           [orderId]
         )
-        const allItemsRows = allItems.rows as { quantity: string | number; qty_separated: string | number }[]
-        const allSeparated = allItemsRows.every(
-          (row) => Number(row.qty_separated ?? 0) >= Number(row.quantity ?? 0)
-        )
+        const allItemsRows = allItems.rows as {
+          quantity: string | number;
+          qty_separated: string | number;
+          qty_reserved_from_stock: string | number;
+          separated_weight: string | number | null;
+        }[]
+        const allSeparated = allItemsRows.every((row) => {
+          if (operationMode === 'WEIGHT') {
+            const reserved = Number(row.qty_reserved_from_stock ?? 0)
+            return reserved <= 0 || Number(row.separated_weight ?? 0) > 0
+          }
+          return Number(row.qty_separated ?? 0) >= Number(row.quantity ?? 0)
+        })
         const nextStatus = allSeparated ? 'FINALIZADO' : 'SAIDA_CONCLUIDA'
         await client.query('UPDATE orders SET status = $2, picker_id = $3 WHERE id = $1', [
           orderId,
@@ -445,6 +490,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (body.volumeCount !== undefined) {
           updates.push(`volume_count = $${values.length + 1}`);
           values.push(Math.max(1, Number(body.volumeCount)));
+        }
+        if (body.operationMode !== undefined) {
+          updates.push(`operation_mode = $${values.length + 1}`);
+          values.push(normalizeTenantOperationMode(body.operationMode));
         }
 
         await client.query(

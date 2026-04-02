@@ -4,10 +4,12 @@ import { isUnauthorizedError, requireAuth } from '@/lib/auth'
 import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
 import { logActivity } from '@/lib/log-activity'
 import { publishRealtimeEvent } from '@/lib/pubsub'
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers'
 
 type ApiOrder = {
   id: string
   orderNumber: string
+  operationMode: 'QUANTITY' | 'WEIGHT' | 'BOTH'
   clientId: string
   clientName: string
   status: 'RASCUNHO' | 'ABERTO' | 'EM_PICKING' | 'FINALIZADO' | 'SAIDA_CONCLUIDA' | 'CANCELADO'
@@ -26,6 +28,7 @@ type ApiOrder = {
     description?: string
     shortageAction?: 'PRODUCE' | 'BUY'
     qtyRequested: number
+    requestedWeight?: number
     qtyReservedFromStock: number
     qtyToProduce: number
     qtySeparated: number
@@ -70,12 +73,14 @@ type OrderRow = {
   qty_to_produce: string | number | null
   qty_separated: string | number | null
   separated_weight: string | number | null
+  requested_weight: string | number | null
   item_condition: string | null
   condition_template_name: string | null
   conditions: any | null
   item_description: string | null
   has_pending_production?: boolean | null
   order_source: string | null
+  order_operation_mode: string | null
 }
 
 const statusMap: Record<string, ApiOrder['status']> = {
@@ -149,6 +154,7 @@ export async function GET(request: NextRequest) {
       `SELECT
          o.id as order_id,
          o.order_number,
+         o.operation_mode AS order_operation_mode,
          o.status,
          o.total,
          o.created_at,
@@ -172,6 +178,7 @@ export async function GET(request: NextRequest) {
          oi.qty_to_produce,
          oi.qty_separated,
          oi.separated_weight,
+         oi.requested_weight,
          oi.item_condition,
          oi.condition_template_name,
          oi.item_description,
@@ -217,6 +224,7 @@ export async function GET(request: NextRequest) {
         map.set(oid, {
           id: `O-${oid}`,
           orderNumber,
+          operationMode: normalizeTenantOperationMode(r.order_operation_mode),
           clientId: r.client_id ? `C-${r.client_id}` : '',
           clientName: r.client_name ?? '',
           status: normalizedStatus,
@@ -250,6 +258,7 @@ export async function GET(request: NextRequest) {
           description: r.item_description ?? undefined,
           shortageAction: (String(r.shortage_action ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'),
           qtyRequested,
+          requestedWeight: r.requested_weight ? Number(r.requested_weight) : undefined,
           qtyReservedFromStock,
           qtyToProduce,
           qtySeparated: Number(r.qty_separated ?? 0),
@@ -321,10 +330,11 @@ export async function POST(request: NextRequest) {
     const dueDate = payload.dueDate ? new Date(payload.dueDate) : null
     const sourceRaw = String(payload.source ?? '').trim().toLowerCase()
     const source = sourceRaw === 'mrp' ? 'mrp' : 'manual'
+    const operationMode = normalizeTenantOperationMode(payload.operationMode)
 
     const client = await query(
-      'INSERT INTO orders (status, total, created_by, client_name, due_date, source, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at',
-      [status, 0, auth.userId, clientName || null, dueDate, source, auth.tenantId]
+      'INSERT INTO orders (status, total, created_by, client_name, due_date, source, operation_mode, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, created_at',
+      [status, 0, auth.userId, clientName || null, dueDate, source, operationMode, auth.tenantId]
     )
     const orderId = Number(client.rows[0].id)
     const createdAt = client.rows[0].created_at ?? new Date().toISOString()
@@ -341,6 +351,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       id: `O-${orderId}`,
       orderNumber,
+      operationMode,
       status: normalizeStatus(status),
       clientId: '',
       clientName,

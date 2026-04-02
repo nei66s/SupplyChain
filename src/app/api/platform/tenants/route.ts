@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPayload } from '@/lib/auth';
 import { getPool } from '@/lib/db';
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers';
 
 export async function GET(req: NextRequest) {
     const auth = getAuthPayload(req);
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
         t.slug,
         t.status,
         t.plan,
+        t.operation_mode,
         t.subscription_status,
         t.is_platform_owner,
         t.blocked_reason,
@@ -98,7 +100,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { tenantId, status, plan, blockedReason, loginDomains } = body;
+        const { tenantId, status, plan, blockedReason, loginDomains, operationMode } = body;
 
         if (!tenantId || !status) {
             return NextResponse.json({ message: 'tenantId e status sao obrigatorios' }, { status: 400 });
@@ -116,10 +118,11 @@ export async function PATCH(req: NextRequest) {
             `UPDATE tenants SET
         status = $1,
         plan = COALESCE($2, plan),
-        blocked_reason = $3,
-        blocked_at = $4
-       WHERE id = $5`,
-            [status, plan ?? null, clearBlockedReason, blockedAt, tenantId]
+        operation_mode = COALESCE($3, operation_mode),
+        blocked_reason = $4,
+        blocked_at = $5
+       WHERE id = $6`,
+            [status, plan ?? null, operationMode ? normalizeTenantOperationMode(operationMode) : null, clearBlockedReason, blockedAt, tenantId]
         );
 
         if (Array.isArray(loginDomains)) {

@@ -13,6 +13,7 @@ import { publishRealtimeEvent } from '@/lib/pubsub'
 type ItemPayload = {
   materialId: number
   quantity: number
+  requestedWeight?: number
   unitPrice?: number
   shortageAction?: 'PRODUCE' | 'BUY'
   description?: string | null
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
 
       const qty = Number(it.quantity)
       const unitPrice = Number(it.unitPrice ?? 0)
+      const requestedWeight = it && 'requestedWeight' in it ? Number((it as any).requestedWeight ?? 0) : undefined
       const shortageAction: 'PRODUCE' | 'BUY' = String(it.shortageAction ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'
       const descriptionValue = typeof it.description === 'string' ? it.description.trim() : ''
       const normalizedDescription = descriptionValue.length > 0 ? descriptionValue : null
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
       if (Number.isNaN(qty) || qty <= 0) errors[`items[${idx}].quantity`] = 'Quantidade inválida'
       if (Number.isNaN(unitPrice) || unitPrice < 0) errors[`items[${idx}].unitPrice`] = 'Preço unitário inválido'
 
-      items.push({ materialId: materialIdNum ?? 0, quantity: qty, unitPrice, shortageAction, description: normalizedDescription })
+      items.push({ materialId: materialIdNum ?? 0, quantity: qty, requestedWeight, unitPrice, shortageAction, description: normalizedDescription })
     }
 
     if (rawItems.length === 0) errors.items = 'Pedido deve conter pelo menos um item'
@@ -126,8 +128,8 @@ export async function POST(request: NextRequest) {
       for (const it of items) {
         const description = it.description ?? (await resolveMaterialDescription(it.materialId))
         await client.query(
-          'INSERT INTO order_items (order_id, material_id, quantity, unit_price, conditions, shortage_action, item_description, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-          [orderId, it.materialId, Number(it.quantity), Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description, auth.tenantId]
+          'INSERT INTO order_items (order_id, material_id, quantity, requested_weight, unit_price, conditions, shortage_action, item_description, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+          [orderId, it.materialId, Number(it.quantity), it.requestedWeight ?? null, Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description, auth.tenantId]
         )
       }
 

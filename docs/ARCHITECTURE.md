@@ -1,119 +1,127 @@
-# Arquitetura do Sistema: Inventário Ágil
+# Arquitetura do Sistema: Inventario Agil
 
-Este documento detalha o design e a estrutura técnica por trás do **Inventário Ágil**. O sistema foi concebido para ser altamente responsivo, suportar operações offline-first (em certas camadas) e permitir uma transição suave para um backend cloud.
+Este documento resume a estrutura tecnica do `Inventario Agil` e os principais fluxos de operacao.
 
-## 🏗 Visão Geral da Arquitetura
+## Visao geral
 
-O sistema segue uma abordagem de **Clean Architecture** mínima, desacoplando a lógica de negócio (Engine) da persistência de dados (Repositories/Contracts).
-
-### Diagrama de Blocos
+O sistema segue uma separacao simples entre interface, regras de negocio e persistencia:
 
 ```mermaid
 graph TD
-    UI[Frontend: Next.js + Tailwind] --> Engine[Engine: Regras de Negócio]
-    Engine --> Store[Zustand: State Management]
-    Store --> Repo[Repository: Abstração de Dados]
-    
-    Repo --> LS[(Local Storage / Cache)]
-    Repo --> API[API: Next.js Routes]
-    
-    API --> PG[(PostgreSQL: Dados Persistentes)]
-    API --> RD[(Redis: Filas e Cache)]
-    
-    API --> AI[Genkit: IA para MRP]
+    UI[Frontend: Next.js + Tailwind] --> Engine[Regras de negocio]
+    Engine --> Store[Estado local e hooks]
+    Store --> API[API Routes]
+    API --> PG[(PostgreSQL)]
+    API --> RD[(Redis e cache opcional)]
+    API --> AI[Genkit e rotinas de IA]
 ```
 
-## 🛠 Componentes Principais
+## Componentes principais
 
-### 1. Camada de Contratos (`src/lib/pilot/contracts.ts`)
-Define as interfaces para todas as entidades (Material, Order, Stock, etc.). Isso permite que a UI não precise saber se os dados vêm de uma API ou de um banco local.
+### Frontend
 
-### 2. Motor de Reservas (Reservations Engine)
-Implementa a lógica de reserva "soft" e "hard".
-- **Soft Reservation**: Ocorre no `blur` de um campo de quantidade no pedido.
-- **TTL (Time to Live)**: Reservas expiram em 5 minutos se não houver atividade (heartbeat).
-- **Consistência**: Garante que o `available` estoque seja calculado em tempo real: `onHand - reservedTotal`.
+- Next.js App Router para paginas operacionais e administrativas
+- React + TypeScript para as telas
+- Hooks e componentes compartilhados para auth, branding e operacao
 
-### 3. MRP (Material Requirements Planning)
-Utiliza IA (via Genkit/Gemini) para analisar:
-- Histórico de consumo das últimas 4 semanas.
-- Lead time dos materiais.
-- Estoque atual vs. Ponto de pedido.
-- **Fluxo**: IA gera sugestões -> Gestor revisa -> Ordem de Produção é criada.
+### Backend
 
-### 4. Fluxo de Produção para Estoque (IN/OUT)
-Separamos a conclusão da produção da entrada física no estoque:
-1. **Produção**: Operador conclui a tarefa.
-2. **Receipt DRAFT**: O sistema gera um documento de entrada pendente.
-3. **Alocação**: O operador de entrada (Inbox) confirma a entrada e decide se a quantidade deve ser auto-alocada para pedidos em espera (`READY_FULL` / `READY_PARTIAL`).
+- Rotas em `src/app/api/*`
+- Autenticacao por sessao
+- Isolamento multi-tenant por `tenant_id`
+- Regras operacionais aplicadas no servidor para pedidos, picking e producao
 
-## 📊 Modelo de Dados (PostgreSQL)
+### Persistencia
 
-Atualmente gerenciado via tabelas para:
-- `mrp_suggestions`: Armazena insights da IA.
-- `inventory_receipts`: Controle de entradas.
-- `production_tasks`: Gerenciamento de fila de fábrica.
+- PostgreSQL como fonte principal de dados
+- Redis opcional para cache e sinais de atualizacao
 
-## 🌐 Camada SaaS & Marketing
+## Multi-tenant
 
-O sistema evoluiu para uma estrutura SaaS (Software as a Service) com suporte a multi-branding e páginas institucionais:
+O isolamento principal continua sendo feito por `tenant_id` no banco e na sessao autenticada.
 
-- **Site Branding**: Gerenciado dinamicamente via `useSiteBranding()` e tabela `site_settings`. Permite personalizar o nome da empresa e logo sem alteração de código.
-- **Landing Page**: Implementada no `src/app/page.tsx` com componentes modulares para marketing (Hero, Features, Pricing).
-- **Roadmap & Security**: Páginas dedicadas para transparência técnica e retenção de leads B2B.
+Pontos importantes:
+- login e plataforma administrativa sao separados
+- tenants podem ter `login_domains` para facilitar o roteamento correto no login
+- a seguranca continua baseada em sessao + `tenant_id`, nao apenas no dominio informado
 
-## ⚡ Otimização de Performance & Escalabilidade
+## Fluxo operacional
 
-O sistema utiliza diversas técnicas avançadas para garantir latência mínima, mesmo em conexões remotas:
+### Pedidos
 
-### 1. Sistema de Cache em Duas Camadas (Dual-Layer)
-Para minimizar o impacto da latência de rede (RTT) entre a aplicação e o Redis/DB:
-- **L1 (In-Memory Cache)**: Localizado na memória do servidor (Map). Possui TTL curto (5s) para dados de altíssima frequência como Site Branding e Logos. Latência: **0ms**.
-- **L2 (Redis)**: Persistência temporária centralizada para dashboards e snapshots. Latência: **~200ms**.
+O pedido nasce em `/orders`, onde o usuario define cliente, itens e o tipo operacional do pedido.
 
-### 2. Otimização de Multi-Tenancy (Database Level)
-- **Tenant Indices**: Todas as tabelas possuem índices automáticos em `tenant_id` para acelerar o filtro RLS.
-- **Tenant Sticky Connections**: O driver de banco de dados (`db.ts`) rastreia o último `tenant_id` definido em cada conexão do pool, evitando comandos `SET app.current_tenant_id` repetitivos e desnecessários.
-- **Default Constraints**: O banco de dados preenche automaticamente o `tenant_id` a partir da sessão se ele for omitido no `INSERT`.
+Cada pedido agora possui `operation_mode` proprio:
+- `QUANTITY`
+- `WEIGHT`
+- `BOTH`
 
-### 3. Concorrência e Paralelismo
-- **Parallel Fetching**: Páginas críticas como o Dashboard carregam indicadores em paralelo usando `Promise.all`, reduzindo o tempo total de carregamento ao tempo da consulta mais lenta.
-- **Concurrent Materialized Views**: Tabelas de resumo são atualizadas via `REFRESH MATERIALIZED VIEW CONCURRENTLY`, permitindo leitura ininterrupta dos dados enquanto a atualização ocorre em background.
+Essa escolha faz parte do proprio pedido e nao depende de uma preferencia global do tenant ou do navegador.
 
----
-## 🔐 Segurança e Autenticação
+### Picking
 
-O sistema utiliza uma estratégia de **Zero-Flash Auth Redirection** para garantir uma experiência de usuário premium e proteger rotas privadas.
+O fluxo de picking le o `operation_mode` do pedido selecionado:
+- `QUANTITY`: foco em quantidade separada
+- `WEIGHT`: foco em peso separado
+- `BOTH`: exige quantidade e peso
 
-### Prevenção de "Flash" de Conteúdo
-Para evitar que partes da interface protegida apareçam antes do redirecionamento para o login, utilizamos três camadas de proteção:
+Quando houver `requested_weight`, esse valor aparece como referencia visual do item.
 
-1.  **Middleware (Edge Level)**: Localizado em `src/middleware.ts`, intercepta a requisição antes que ela chegue ao navegador. Se o token de sessão estiver ausente, o Next.js redireciona instantaneamente no lado do servidor.
-2.  **Server-Side Layout Guard**: Todos os `layout.tsx` de rotas protegidas verificam a presença do cookie de sessão. Por serem *Server Components*, eles bloqueiam a renderização de qualquer HTML se o usuário não estiver autenticado, executando um `redirect()` imediato.
-3.  **AppShell Validation**: No lado do cliente, o componente `AppShell` mantém o estado de `authLoading` e não renderiza os `children` até que a validação da sessão seja confirmada pelo hook `useAuthUser`.
+### Producao
 
-### Fluxo de Acesso
-```mermaid
-sequenceDiagram
-    participant U as Usuário
-    participant M as Middleware (Server)
-    participant L as Layout (Server)
-    participant C as Component (Client)
+As tarefas de producao tambem respeitam o `operation_mode` do pedido de origem:
+- `QUANTITY`: exige quantidade produzida
+- `WEIGHT`: exige peso produzido
+- `BOTH`: exige ambos
 
-    U->>M: Requisição /dashboard
-    alt Sem Token
-        M-->>U: 302 Redirect /login
-    else Com Token
-        M->>L: Prossegue para Layout
-        L->>L: Valida Cookie
-        L-->>U: Envia HTML estrutural
-        U->>C: Hidratação e useAuthUser
-        C->>C: Renderiza conteúdo final
-    end
-```
+O `requested_weight` do item pode aparecer como referencia visual na tarefa.
 
----
-## 🚀 Estratégia de Deploy
+## Modelo de dados
 
----
-Consulte o arquivo [blueprint.md](./blueprint.md) para os requisitos originais de design.
+As tabelas mais relevantes para essa feature sao:
+
+- `orders`
+  - `tenant_id`
+  - `status`
+  - `operation_mode`
+
+- `order_items`
+  - `order_id`
+  - `material_id`
+  - `qty_requested`
+  - `requested_weight`
+
+- `production_tasks`
+  - referencia o item e o pedido de origem para aplicar o modo correto
+
+Outras tabelas importantes no produto:
+- `mrp_suggestions`
+- `inventory_receipts`
+- `site_settings`
+- `tenant_login_domains`
+
+## Performance e escalabilidade
+
+O sistema usa tecnicas simples para manter boa resposta no uso diario:
+- consultas filtradas por `tenant_id`
+- carregamento paralelo nas paginas criticas
+- cache de curta duracao para dados de alta frequencia
+
+## Seguranca e autenticacao
+
+As rotas protegidas combinam:
+- middleware
+- validacao server-side
+- verificacao de sessao no App Shell
+
+Isso evita exibir conteudo privado antes do redirecionamento para login.
+
+## Resumo da feature "Tipo do pedido"
+
+O tipo operacional e uma capacidade padrao do aplicativo, disponivel para qualquer tenant.
+
+Resumo:
+- a escolha acontece por pedido
+- o backend continua suportando `WEIGHT`
+- `BOTH` adiciona o peso solicitado no item
+- `Pedidos`, `Picking` e `Producao` mostram e respeitam esse contexto

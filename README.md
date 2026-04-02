@@ -10,11 +10,23 @@ O projeto foi construido com Next.js App Router e TypeScript, com persistencia e
 
 - Gestao de pedidos com reserva de estoque e sinalizacao de falta de material.
 - Fluxo de producao e picking integrado ao status operacional.
+- Tipo de pedido por ordem operacional com suporte a `Quantidade`, `Peso` e `Ambos`.
 - Arquitetura multi-tenant com RLS no banco.
 - Login com suporte a dominio por tenant para ajudar no roteamento da empresa correta.
 - Painel da plataforma separado do login operacional dos tenants.
 - Dashboard com consultas otimizadas e atualizacao em segundo plano.
 - Onboarding de tenants e estrutura de billing recorrente.
+
+## Tipo do pedido
+
+- Cada pedido possui seu proprio `operation_mode`, independente da configuracao padrao do tenant.
+- Os modos disponiveis sao:
+- `QUANTITY`: o fluxo operacional valida e destaca quantidade.
+- `WEIGHT`: o fluxo operacional valida e destaca peso.
+- `BOTH`: o pedido exige quantidade e peso no fluxo operacional.
+- A escolha e feita na tela `/orders`, no campo `Tipo do pedido`.
+- Em `BOTH`, o item do pedido tambem armazena `requested_weight`, usado como referencia visual em Picking e Producao.
+- Picking e Producao leem o modo do proprio pedido, nao uma preferencia global do navegador.
 
 ## Tenants e dominios de login
 

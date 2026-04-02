@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getAuthPayload } from '@/lib/auth';
+import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status, t.subscription_expires_at
+      `SELECT u.id, u.name, u.email, u.role, u.tenant_id, u.avatar_url, t.subscription_status, t.subscription_expires_at, t.operation_mode
        FROM users u
        JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1`,
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
         email: user.email,
         role: user.role,
         tenantId: user.tenant_id,
+        tenantOperationMode: normalizeTenantOperationMode(user.operation_mode),
         avatarUrl: user.avatar_url ?? undefined,
         subscriptionStatus: user.subscription_status,
         subscriptionExpiresAt: user.subscription_expires_at,

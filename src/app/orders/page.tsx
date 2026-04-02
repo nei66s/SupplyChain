@@ -28,6 +28,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { readinessLabel } from '@/lib/domain/i18n';
 import { getFirstApiErrorMessage } from '@/lib/api/errors';
 import { useAuthUser } from '@/hooks/use-auth';
+import { OperationModeSelector } from '@/features/tenant-operation-mode/operation-mode-selector';
 import { Material, Order, StockBalance, StockReservation, User } from '@/lib/domain/types';
 
 type ConditionCategory = {
@@ -169,7 +170,7 @@ export default function OrdersPage() {
     await refreshOrders();
   }, [refreshOrders]);
 
-  const updateOrderMeta = React.useCallback(async (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number }) => {
+  const updateOrderMeta = React.useCallback(async (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number; operationMode?: Order['operationMode'] }) => {
     await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -199,6 +200,7 @@ export default function OrdersPage() {
   const updateOrderItemField = React.useCallback(
     (orderId: string, itemId: string, payload: {
       qtyRequested?: number;
+      requestedWeight?: number;
       color?: string;
       shortageAction?: 'PRODUCE' | 'BUY';
       itemCondition?: string;
@@ -229,6 +231,7 @@ export default function OrdersPage() {
   const persistOrderItemField = React.useCallback(
     async (orderId: string, itemId: string, payload: {
       qtyRequested?: number;
+      requestedWeight?: number;
       color?: string;
       shortageAction?: 'PRODUCE' | 'BUY';
       itemCondition?: string;
@@ -302,7 +305,16 @@ export default function OrdersPage() {
     } else {
       order.items.forEach((item, idx) => {
         if (Number(item.qtyRequested) <= 0) {
-          errors.push(`Item ${idx + 1}: Quantidade maior que zero.`);
+          const fieldName =
+            order.operationMode === 'WEIGHT'
+              ? 'Peso'
+              : order.operationMode === 'QUANTITY'
+                ? 'Quantidade'
+                : 'Quantidade ou peso';
+          errors.push(`Item ${idx + 1}: ${fieldName} maior que zero.`);
+        }
+        if (order.operationMode === 'BOTH' && Number(item.requestedWeight ?? 0) <= 0) {
+          errors.push(`Item ${idx + 1}: Peso maior que zero.`);
         }
         if (!item.color || item.color.trim().length === 0) {
           errors.push(`Item ${idx + 1}: Cor obrigatória.`);
@@ -324,7 +336,8 @@ export default function OrdersPage() {
           action: 'save_order',
           clientName: order.clientName,
           dueDate: order.dueDate,
-          volumeCount: order.volumeCount
+          volumeCount: order.volumeCount,
+          operationMode: order.operationMode ?? 'BOTH',
         }),
       });
       if (!res.ok) {
@@ -496,6 +509,25 @@ export default function OrdersPage() {
   const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
   const isFinalized = selectedOrder ? (selectedOrder.status === 'FINALIZADO' || selectedOrder.status === 'SAIDA_CONCLUIDA') : false;
   const selectedOrderIsMrp = selectedOrder ? isMrpOrder(selectedOrder) : false;
+  const selectedOrderOperationMode = selectedOrder?.operationMode ?? 'BOTH';
+  const showRequestedWeightField = selectedOrderOperationMode === 'BOTH';
+  const requestFieldLabel =
+    selectedOrderOperationMode === 'WEIGHT'
+      ? 'Peso solicitado'
+      : selectedOrderOperationMode === 'QUANTITY'
+        ? 'Quantidade solicitada'
+        : 'Quantidade / Peso solicitado';
+  const requestFieldShortLabel =
+    selectedOrderOperationMode === 'WEIGHT'
+      ? 'Peso Sol.'
+      : selectedOrderOperationMode === 'QUANTITY'
+        ? 'Qtd. Sol.'
+        : 'Qtd./Peso';
+  const reserveFieldLabel =
+    selectedOrderOperationMode === 'WEIGHT' ? 'Peso reservado' : 'Reservado agora';
+  const produceFieldLabel =
+    selectedOrderOperationMode === 'WEIGHT' ? 'Peso a produzir' : 'Produzir';
+  const orderTableColSpan = showRequestedWeightField ? 11 : 10;
 
   React.useEffect(() => {
     if (!selectedOrder) {
@@ -751,6 +783,22 @@ export default function OrdersPage() {
                     onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   />
                 </div>
+                <div>
+                  <Label>Tipo do pedido</Label>
+                  <OperationModeSelector
+                    value={selectedOrder.operationMode ?? 'BOTH'}
+                    onChange={(value) => {
+                      setDb((prev) => ({
+                        ...prev,
+                        orders: prev.orders.map((o) =>
+                          o.id === selectedOrder.id ? { ...o, operationMode: value } : o
+                        ),
+                      }));
+                      updateOrderMeta(selectedOrder.id, { operationMode: value });
+                    }}
+                    className="w-full"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -785,13 +833,16 @@ export default function OrdersPage() {
                   <TableHeader className="hidden lg:table-header-group">
                     <TableRow>
                       <TableHead className="w-[180px]">Material</TableHead>
-                      <TableHead className="text-right w-[90px]" title="Quantidade solicitada">Qtd. Sol.</TableHead>
+                      <TableHead className="text-right w-[90px]" title={requestFieldLabel}>{requestFieldShortLabel}</TableHead>
+                      {showRequestedWeightField ? (
+                        <TableHead className="text-right w-[90px]" title="Peso solicitado">Peso Sol.</TableHead>
+                      ) : null}
                       <TableHead className="w-[110px]" title="Ação de falta de estoque">Ação</TableHead>
                       <TableHead className="text-right w-[70px]" title="Quantidade em estoque">Estoque</TableHead>
                       <TableHead className="text-right w-[80px]" title="Reservado por outros pedidos">Reserv. (Outros)</TableHead>
                       <TableHead className="text-right w-[100px] leading-tight" title="Disponível para este pedido">Disp. P/</TableHead>
-                      <TableHead className="text-right w-[90px] leading-tight" title="Quantidade reservada do estoque">Qtd. Res. (Est.)</TableHead>
-                      <TableHead className="text-right w-[90px] leading-tight" title="Quantidade para produzir">Qtd. Prod.</TableHead>
+                      <TableHead className="text-right w-[90px] leading-tight" title={reserveFieldLabel}>Res. Est.</TableHead>
+                      <TableHead className="text-right w-[90px] leading-tight" title={produceFieldLabel}>A Produzir</TableHead>
                       <TableHead className="w-[100px]">Cor</TableHead>
                       <TableHead className="text-center w-[50px]">Atos</TableHead>
                     </TableRow>
@@ -799,7 +850,7 @@ export default function OrdersPage() {
                   <TableBody className="block lg:table-row-group">
                     {selectedOrder.items.length === 0 ? (
                       <TableRow className="block lg:table-row">
-                        <TableCell colSpan={10} className="block lg:table-cell h-20 text-center text-muted-foreground">
+                        <TableCell colSpan={orderTableColSpan} className="block lg:table-cell h-20 text-center text-muted-foreground">
                           Adicione itens para iniciar a reserva.
                         </TableCell>
                       </TableRow>
@@ -826,13 +877,15 @@ export default function OrdersPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
-                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Qtd. Solicitada</span>
+                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">{requestFieldLabel}</span>
                                 <div className="w-[140px] lg:w-full lg:max-w-[7rem] ml-auto">
                                   <EditableInput
                                     id={`qty-${item.id}`}
                                     name={`qty-${item.id}`}
                                     type="number"
+                                    step={selectedOrderOperationMode === 'WEIGHT' ? '0.01' : undefined}
                                     value={String(item.qtyRequested ?? '')}
+                                    placeholder={selectedOrderOperationMode === 'WEIGHT' ? 'Peso' : 'Qtd.'}
                                     onSave={(val) => {
                                       const qty = val === '' ? 0 : Number(val);
                                       updateOrderItemField(selectedOrder.id, item.id, {
@@ -851,6 +904,29 @@ export default function OrdersPage() {
                                   />
                                 </div>
                               </TableCell>
+                              {showRequestedWeightField ? (
+                                <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
+                                  <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Peso solicitado</span>
+                                  <div className="w-[140px] lg:w-full lg:max-w-[7rem] ml-auto">
+                                    <EditableInput
+                                      id={`requested-weight-${item.id}`}
+                                      name={`requested-weight-${item.id}`}
+                                      type="number"
+                                      step="0.01"
+                                      value={String(item.requestedWeight ?? '')}
+                                      placeholder="Peso"
+                                      onSave={(val) => {
+                                        const requestedWeight = val === '' ? 0 : Number(val);
+                                        const nextValue = Number.isFinite(requestedWeight) ? requestedWeight : 0;
+                                        updateOrderItemField(selectedOrder.id, item.id, { requestedWeight: nextValue });
+                                        persistOrderItemField(selectedOrder.id, item.id, { requestedWeight: nextValue });
+                                      }}
+                                      className="w-full text-right"
+                                      disabled={isFinalized}
+                                    />
+                                  </div>
+                                </TableCell>
+                              ) : null}
                               <TableCell className="flex items-center justify-between lg:table-cell p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
                                 <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Ação</span>
                                 <div className="w-[140px] lg:w-full lg:min-w-[7rem] ml-auto">
@@ -886,11 +962,11 @@ export default function OrdersPage() {
                                 <span>{availableForThisOrder}</span>
                               </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
-                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Reservado Agora</span>
+                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">{reserveFieldLabel}</span>
                                 <span className="font-semibold text-primary">{item.qtyReservedFromStock}</span>
                               </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
-                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Produzir</span>
+                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">{produceFieldLabel}</span>
                                 <span className="font-semibold text-amber-600">{item.qtyToProduce}</span>
                               </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
@@ -937,7 +1013,7 @@ export default function OrdersPage() {
                               </TableCell>
                             </TableRow>
                             <TableRow className="block lg:table-row border border-t-0 lg:border-t border-slate-200/60 dark:border-slate-800/60 rounded-b-2xl lg:rounded-none mb-6 lg:mb-0 shadow-sm lg:shadow-none bg-slate-50/50 lg:bg-transparent dark:bg-slate-900/30 overflow-hidden">
-                              <TableCell colSpan={10} className="block lg:table-cell bg-muted/30 lg:bg-transparent p-3 lg:p-4">
+                              <TableCell colSpan={orderTableColSpan} className="block lg:table-cell bg-muted/30 lg:bg-transparent p-3 lg:p-4">
                                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                   <div className="space-y-2 min-w-0">
                                     <Label>Condicao especifica do item</Label>

@@ -20,8 +20,10 @@ type DbRow = {
   color?: string | null
   description?: string | null
   conditions?: string | { key: string; value: string }[] | null
+  requested_weight?: string | number | null
   produced_qty?: string | number | null
   produced_weight?: string | number | null
+  order_operation_mode: string | null
   label_printed: boolean
 }
 
@@ -43,6 +45,7 @@ function toApiTask(row: DbRow) {
     orderId: `O-${row.order_id}`,
     materialId: `M-${row.material_id}`,
     orderNumber: row.order_number || `O-${row.order_id}`,
+    operationMode: row.order_operation_mode || 'BOTH',
     materialName: row.material_name || `M-${row.material_id}`,
     qtyToProduce: Number(row.qty_to_produce ?? 0),
     status: row.status,
@@ -52,6 +55,7 @@ function toApiTask(row: DbRow) {
     color: row.color ?? '',
     description: row.description ?? undefined,
     conditions: parseJson(row.conditions, []),
+    requestedWeight: row.requested_weight !== null ? Number(row.requested_weight) : undefined,
     producedQty: row.produced_qty !== null ? Number(row.produced_qty) : undefined,
     producedWeight: row.produced_weight !== null ? Number(row.produced_weight) : undefined,
     labelPrinted: row.label_printed,
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
          pt.status,
          pt.produced_qty,
          pt.produced_weight,
+         o.operation_mode AS order_operation_mode,
          pt.label_printed,
          pt.created_at,
          pt.updated_at,
@@ -83,7 +88,8 @@ export async function GET(request: NextRequest) {
        m.name AS material_name,
         oi.color AS color,
         oi.item_description AS description,
-        oi.conditions AS conditions
+        oi.conditions AS conditions,
+        oi.requested_weight AS requested_weight
        FROM production_tasks pt
        LEFT JOIN orders o ON o.id = pt.order_id
        LEFT JOIN materials m ON m.id = pt.material_id
@@ -133,11 +139,13 @@ export async function POST(request: NextRequest) {
          updated_at = now()
        RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at,
          (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
+         (SELECT operation_mode FROM orders WHERE id = production_tasks.order_id) AS order_operation_mode,
          (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
         (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name,
         (SELECT color FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS color,
         (SELECT item_description FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS description,
-        (SELECT conditions FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS conditions`,
+        (SELECT conditions FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS conditions,
+        (SELECT requested_weight FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS requested_weight`,
       [orderId, materialId, qtyToProduce, auth.tenantId]
     )
     const createdRow = res.rows[0] as DbRow
