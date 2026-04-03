@@ -1,8 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -157,9 +159,14 @@ export default function ReportPage() {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle className="font-headline">Relatorio</CardTitle>
-          <CardDescription>Registro das saidas concluidas, inspirado na planilha antiga.</CardDescription>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle className="font-headline">Relatorio</CardTitle>
+            <CardDescription>Registro das saidas concluidas, inspirado na planilha antiga.</CardDescription>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/report/analise">Ver analise consolidada</Link>
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

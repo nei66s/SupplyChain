@@ -80,6 +80,7 @@ const navItems = [
   { href: '/materials', icon: Bot, label: 'Materiais' },
   { href: '/production', icon: Factory, label: 'Producao' },
   { href: '/report', icon: FileText, label: 'Relatório' },
+  { href: '/report/analise', icon: Search, label: 'Análise relatório' },
   { href: '/picking', icon: PackageCheck, label: 'Separacao' },
   { href: '/admin', icon: Shield, label: 'Administracao' },
 ];
@@ -172,6 +173,7 @@ function AppSidebar({ badges }: { badges?: { orders: number; production: number;
       { href: '/inventory', icon: Warehouse, label: 'Estoque', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
       { href: '/inventory?tab=mrp', icon: AreaChart, label: 'MRP', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
       { href: '/report', icon: FileText, label: 'Relatórios', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+      { href: '/report/analise', icon: Search, label: 'Análise relatório', color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/30' },
       { href: '/production', icon: Factory, label: 'Produção', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-50 dark:bg-pink-900/20', badge: badges?.production },
       { href: '/picking', icon: PackageCheck, label: 'Separação', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', badge: badges?.picking },
       { href: '/materials', icon: Bot, label: 'Materiais', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-900/20' },
