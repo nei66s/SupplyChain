@@ -42,6 +42,11 @@ function parseJson<T>(value: unknown, fallback: T): T {
   return value as T
 }
 
+function usesMeasuredUom(uom?: string | null) {
+  const normalized = String(uom ?? '').trim().toUpperCase()
+  return normalized === 'KG' || normalized === 'M'
+}
+
 type OrderRow = {
   order_id: number
   order_number: string | null
@@ -62,6 +67,7 @@ type OrderRow = {
   unit_price: string | number | null
   material_name: string | null
   material_unit: string | null
+  requested_uom: string | null
   color: string | null
   shortage_action: string | null
   qty_reserved_from_stock: string | number | null
@@ -92,6 +98,7 @@ const orderQuery = `SELECT
   oi.quantity,
   oi.conditions,
   oi.unit_price,
+  oi.requested_uom,
   oi.color,
   oi.shortage_action,
   oi.qty_reserved_from_stock,
@@ -153,21 +160,31 @@ function buildOrdersFromRows(rows: OrderRow[]): Order[] {
 
     if (row.item_id) {
       const order = map.get(oid)!
-      const qtyRequested = Number(row.quantity ?? 0)
+      const uom = row.requested_uom || row.material_unit || 'EA'
+      const baseQtyRequested = Number(row.quantity ?? 0)
+      const compatRequestedWeight = Number((row as any).requested_weight ?? 0)
+      const qtyRequested = usesMeasuredUom(uom) && compatRequestedWeight > 0
+        ? compatRequestedWeight
+        : baseQtyRequested
       const qtyReservedFromStock = Math.max(0, Number(row.qty_reserved_from_stock ?? 0))
       const qtyToProduce = Math.max(0, Number(row.qty_to_produce ?? 0))
+      const baseQtySeparated = Number(row.qty_separated ?? 0)
+      const compatSeparatedWeight = Number(row.separated_weight ?? 0)
+      const qtySeparated = usesMeasuredUom(uom) && compatSeparatedWeight > 0
+        ? compatSeparatedWeight
+        : baseQtySeparated
       order.items.push({
         id: `itm-${row.item_id}`,
         materialId: row.material_id ? `M-${row.material_id}` : `M-${row.item_id}`,
         materialName: row.material_name || '',
-        uom: row.material_unit || 'EA',
+        uom,
         color: row.color ?? '',
         shortageAction: (String(row.shortage_action ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'),
         qtyRequested,
         qtyReservedFromStock,
         qtyToProduce,
-        qtySeparated: Number(row.qty_separated ?? 0),
-        separatedWeight: row.separated_weight ? Number(row.separated_weight) : undefined,
+        qtySeparated,
+        separatedWeight: usesMeasuredUom(uom) ? Number(row.separated_weight ?? qtySeparated) : undefined,
         itemCondition: row.item_condition ?? undefined,
         conditionTemplateName: row.condition_template_name ?? undefined,
         conditions: parseJson(row.conditions, []),

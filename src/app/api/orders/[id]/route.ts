@@ -6,8 +6,6 @@ import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboard
 import { refreshMaterialsSnapshot } from '@/lib/repository/materials'
 import { logActivity } from '@/lib/log-activity'
 import { publishRealtimeEvent } from '@/lib/pubsub'
-import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers'
-import { getOrderOperationModeWithClient } from '@/features/tenant-operation-mode/server'
 import { lockMaterialMutations, lockOrderMutation } from '@/lib/concurrency'
 
 type RouteParams = { id: string }
@@ -146,6 +144,11 @@ async function recalcReservationForItem(
   await updateProductionTask(client, orderId, materialId, qtyToProduce, tenantId)
 }
 
+function usesMeasuredUomValue(uom?: string | null) {
+  const normalized = String(uom ?? '').trim().toUpperCase()
+  return normalized === 'KG' || normalized === 'M'
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
   try {
     const auth = await requireAuth(request)
@@ -197,10 +200,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           updates.push(`volume_count = $${values.length + 1}`)
           values.push(Math.max(1, Number(body.volumeCount)))
         }
-        if (body.operationMode !== undefined) {
-          updates.push(`operation_mode = $${values.length + 1}`)
-          values.push(normalizeTenantOperationMode(body.operationMode))
-        }
         if (updates.length > 0) {
           values.push(orderId)
           await client.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${values.length}`, values)
@@ -216,14 +215,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
         await lockMaterialMutations(client, auth.tenantId, [materialId])
         const descRes = await client.query(
-          'SELECT description FROM materials WHERE id = $1',
+          'SELECT description, unit FROM materials WHERE id = $1',
           [materialId]
         )
         const materialDescription = descRes.rows[0]?.description ?? null
+        const materialUnit = descRes.rows[0]?.unit ?? 'EA'
         await client.query(
-          `INSERT INTO order_items (order_id, material_id, quantity, unit_price, color, shortage_action, item_description, tenant_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [orderId, materialId, 0, 0, '', 'PRODUCE', materialDescription, auth.tenantId]
+          `INSERT INTO order_items (order_id, material_id, quantity, unit_price, requested_uom, color, shortage_action, item_description, tenant_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [orderId, materialId, 0, 0, materialUnit, '', 'PRODUCE', materialDescription, auth.tenantId]
         )
       } else if (action === 'remove_item') {
         const itemId = parseItemId(body.itemId ?? '')
@@ -261,12 +261,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           values.push(Math.max(0, Number(body.qtyRequested)))
         }
         if (body.requestedWeight !== undefined) {
-          updates.push(`requested_weight = $${values.length + 1}`)
-          values.push(Math.max(0, Number(body.requestedWeight)))
+          // Backward compatibility: legacy clients may still send requestedWeight.
+          if (body.qtyRequested === undefined) {
+            updates.push(`quantity = $${values.length + 1}`)
+            values.push(Math.max(0, Number(body.requestedWeight)))
+          }
         }
         if (body.color !== undefined) {
           updates.push(`color = $${values.length + 1}`)
           values.push(String(body.color))
+        }
+        if (body.uom !== undefined) {
+          updates.push(`requested_uom = $${values.length + 1}`)
+          const uom = typeof body.uom === 'string' ? body.uom.trim().toUpperCase() : ''
+          values.push(uom || 'EA')
         }
         if (body.shortageAction !== undefined) {
           updates.push(`shortage_action = $${values.length + 1}`)
@@ -288,6 +296,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (updates.length > 0) {
           values.push(itemId, orderId)
           await client.query(`UPDATE order_items SET ${updates.join(', ')} WHERE id = $${values.length - 1} AND order_id = $${values.length}`, values)
+        }
+        if (body.qtyRequested !== undefined || body.requestedWeight !== undefined || body.uom !== undefined) {
+          await client.query(
+            `UPDATE order_items
+             SET requested_weight = CASE
+               WHEN upper(coalesce(requested_uom, 'EA')) IN ('KG', 'M') THEN quantity
+               ELSE NULL
+             END
+             WHERE id = $1 AND order_id = $2`,
+            [itemId, orderId]
+          )
         }
         await recalcReservationForItem(client, orderId, itemId, auth.userId, auth.tenantId)
       } else if (action === 'add_item_condition' || action === 'update_item_condition' || action === 'remove_item_condition') {
@@ -365,27 +384,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             next,
           ])
         } else {
-          const operationMode = await getOrderOperationModeWithClient(client, orderId)
-          if (operationMode === 'WEIGHT') {
+          const itemMetaRes = await client.query(
+            'SELECT requested_uom, qty_reserved_from_stock FROM order_items WHERE id = $1 AND order_id = $2',
+            [itemId, orderId]
+          )
+          const itemUom = String(itemMetaRes.rows[0]?.requested_uom ?? '').trim().toUpperCase()
+          const separatedWeight = Math.max(0, Number(body.separatedWeight ?? 0))
+          if (usesMeasuredUomValue(itemUom)) {
             await client.query(
               `UPDATE order_items
                SET separated_weight = $3,
-                   qty_separated = qty_reserved_from_stock
+                   qty_separated = $3
                WHERE id = $1 AND order_id = $2`,
-              [itemId, orderId, Number(body.separatedWeight ?? 0)]
+              [itemId, orderId, separatedWeight]
             )
           } else {
             await client.query('UPDATE order_items SET separated_weight = $3 WHERE id = $1 AND order_id = $2', [
               itemId,
               orderId,
-              Number(body.separatedWeight ?? 0),
+              separatedWeight,
             ])
           }
         }
       } else if (action === 'complete_picking') {
-        const operationMode = await getOrderOperationModeWithClient(client, orderId)
         const items = await client.query(
-          'SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity, separated_weight FROM order_items WHERE order_id = $1',
+          'SELECT id, material_id, qty_separated, qty_reserved_from_stock, quantity, separated_weight, requested_uom FROM order_items WHERE order_id = $1',
           [orderId]
         )
         await lockMaterialMutations(
@@ -393,16 +416,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           auth.tenantId,
           items.rows.map((item) => Number(item.material_id))
         )
-        if (operationMode === 'WEIGHT') {
-          await client.query(
-            `UPDATE order_items
-             SET qty_separated = qty_reserved_from_stock
-             WHERE order_id = $1
-               AND COALESCE(separated_weight, 0) > 0
-               AND qty_reserved_from_stock > 0`,
-            [orderId]
-          )
-        }
+        await client.query(
+          `UPDATE order_items
+           SET qty_separated = qty_reserved_from_stock
+           WHERE order_id = $1
+             AND upper(coalesce(requested_uom, '')) IN ('KG', 'M')
+             AND COALESCE(separated_weight, 0) > 0
+             AND qty_reserved_from_stock > 0`,
+          [orderId]
+        )
 
         for (const item of items.rows) {
           const qtySeparated = Math.max(0, Number(item.qty_separated ?? 0))
@@ -429,7 +451,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
 
         const allItems = await client.query(
-          'SELECT quantity, qty_separated, qty_reserved_from_stock, separated_weight FROM order_items WHERE order_id = $1',
+          'SELECT quantity, qty_separated, qty_reserved_from_stock, separated_weight, requested_uom FROM order_items WHERE order_id = $1',
           [orderId]
         )
         const allItemsRows = allItems.rows as {
@@ -437,9 +459,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           qty_separated: string | number;
           qty_reserved_from_stock: string | number;
           separated_weight: string | number | null;
+          requested_uom: string | null;
         }[]
         const allSeparated = allItemsRows.every((row) => {
-          if (operationMode === 'WEIGHT') {
+          if (usesMeasuredUomValue(row.requested_uom)) {
             const reserved = Number(row.qty_reserved_from_stock ?? 0)
             return reserved <= 0 || Number(row.separated_weight ?? 0) > 0
           }
@@ -508,10 +531,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (body.volumeCount !== undefined) {
           updates.push(`volume_count = $${values.length + 1}`);
           values.push(Math.max(1, Number(body.volumeCount)));
-        }
-        if (body.operationMode !== undefined) {
-          updates.push(`operation_mode = $${values.length + 1}`);
-          values.push(normalizeTenantOperationMode(body.operationMode));
         }
 
         await client.query(

@@ -4,13 +4,12 @@ import { isUnauthorizedError, requireAuth } from '@/lib/auth'
 import { invalidateDashboardCache, refreshDashboardSnapshot, revalidateDashboardTag } from '@/lib/repository/dashboard'
 import { logActivity } from '@/lib/log-activity'
 import { publishRealtimeEvent } from '@/lib/pubsub'
-import { normalizeTenantOperationMode } from '@/features/tenant-operation-mode/helpers'
 import { nextManualOrderNumber } from '@/lib/concurrency'
 
 type ApiOrder = {
   id: string
   orderNumber: string
-  operationMode: 'QUANTITY' | 'WEIGHT' | 'BOTH'
+  operationMode?: 'QUANTITY' | 'WEIGHT' | 'BOTH'
   clientId: string
   clientName: string
   status: 'RASCUNHO' | 'ABERTO' | 'EM_PICKING' | 'FINALIZADO' | 'SAIDA_CONCLUIDA' | 'CANCELADO'
@@ -68,6 +67,7 @@ type OrderRow = {
   unit_price: string | number | null
   material_name: string | null
   material_unit: string | null
+  requested_uom: string | null
   color: string | null
   shortage_action: string | null
   qty_reserved_from_stock: string | number | null
@@ -125,6 +125,27 @@ function computeReadiness(items: ApiOrder['items']) {
   return 'READY_PARTIAL'
 }
 
+function usesMeasuredUom(uom?: string | null) {
+  const normalized = String(uom ?? '').trim().toUpperCase()
+  return normalized === 'KG' || normalized === 'M'
+}
+
+function resolveRequestedQty(row: Pick<OrderRow, 'quantity' | 'requested_weight' | 'requested_uom' | 'material_unit'>) {
+  const uom = row.requested_uom || row.material_unit || 'EA'
+  const quantity = Number(row.quantity ?? 0)
+  const requestedWeight = Number(row.requested_weight ?? 0)
+  if (usesMeasuredUom(uom) && requestedWeight > 0) return requestedWeight
+  return quantity
+}
+
+function resolveSeparatedQty(row: Pick<OrderRow, 'qty_separated' | 'separated_weight' | 'requested_uom' | 'material_unit'>) {
+  const uom = row.requested_uom || row.material_unit || 'EA'
+  const qtySeparated = Number(row.qty_separated ?? 0)
+  const separatedWeight = Number(row.separated_weight ?? 0)
+  if (usesMeasuredUom(uom) && separatedWeight > 0) return separatedWeight
+  return qtySeparated
+}
+
 const perfEnabled = process.env.NODE_ENV !== 'production' || process.env.DEBUG_PERF === 'true'
 
 function errorMessage(err: unknown): string {
@@ -158,6 +179,7 @@ export async function GET(request: NextRequest) {
          oi.quantity,
       oi.conditions,
          oi.unit_price,
+         oi.requested_uom,
          oi.color,
          oi.shortage_action,
          oi.qty_reserved_from_stock,
@@ -210,7 +232,7 @@ export async function GET(request: NextRequest) {
         map.set(oid, {
           id: `O-${oid}`,
           orderNumber,
-          operationMode: normalizeTenantOperationMode(r.order_operation_mode),
+          operationMode: 'BOTH',
           clientId: r.client_id ? `C-${r.client_id}` : '',
           clientName: r.client_name ?? '',
           status: normalizedStatus,
@@ -232,23 +254,26 @@ export async function GET(request: NextRequest) {
       }
       if (r.item_id) {
         const order = map.get(oid)!
-        const qtyRequested = Number(r.quantity ?? 0)
+        const qtyRequested = resolveRequestedQty(r)
         const qtyReservedFromStock = Math.max(0, Number(r.qty_reserved_from_stock ?? 0))
         const qtyToProduce = Math.max(0, Number(r.qty_to_produce ?? 0))
+        const qtySeparated = resolveSeparatedQty(r)
         order.items.push({
           id: `itm-${r.item_id}`,
           materialId: `M-${r.material_id}`,
           materialName: r.material_name || `M-${r.material_id}`,
-          uom: r.material_unit || 'EA',
+          uom: r.requested_uom || r.material_unit || 'EA',
           color: r.color ?? '',
           description: r.item_description ?? undefined,
           shortageAction: (String(r.shortage_action ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'),
           qtyRequested,
-          requestedWeight: r.requested_weight ? Number(r.requested_weight) : undefined,
+          requestedWeight: usesMeasuredUom(r.requested_uom || r.material_unit) ? qtyRequested : undefined,
           qtyReservedFromStock,
           qtyToProduce,
-          qtySeparated: Number(r.qty_separated ?? 0),
-          separatedWeight: r.separated_weight ? Number(r.separated_weight) : undefined,
+          qtySeparated,
+          separatedWeight: usesMeasuredUom(r.requested_uom || r.material_unit)
+            ? Number(r.separated_weight ?? qtySeparated)
+            : undefined,
           itemCondition: r.item_condition ?? undefined,
           conditionTemplateName: r.condition_template_name ?? undefined,
           conditions: Array.isArray(r.conditions) ? r.conditions : (r.conditions ? JSON.parse(String(r.conditions)) : []),
@@ -316,7 +341,7 @@ export async function POST(request: NextRequest) {
     const dueDate = payload.dueDate ? new Date(payload.dueDate) : null
     const sourceRaw = String(payload.source ?? '').trim().toLowerCase()
     const source = sourceRaw === 'mrp' ? 'mrp' : 'manual'
-    const operationMode = normalizeTenantOperationMode(payload.operationMode)
+    const operationMode = 'BOTH'
 
     const client = await query(
       'INSERT INTO orders (status, total, created_by, client_name, due_date, source, operation_mode, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, created_at',

@@ -22,6 +22,8 @@ type DbRow = {
   description?: string | null
   conditions?: string | { key: string; value: string }[] | null
   requested_weight?: string | number | null
+  requested_uom?: string | null
+  material_unit?: string | null
   produced_qty?: string | number | null
   produced_weight?: string | number | null
   order_operation_mode: string | null
@@ -41,6 +43,14 @@ function parseJson<T>(value: unknown, fallback: T): T {
 }
 
 function toApiTask(row: DbRow) {
+  const uom = row.requested_uom || row.material_unit || 'EA'
+  const usesMeasuredUom = uom === 'KG' || uom === 'M'
+  const requestedValue = usesMeasuredUom
+    ? Number(row.requested_weight ?? row.qty_to_produce ?? 0)
+    : Number(row.qty_to_produce ?? 0)
+  const producedValue = usesMeasuredUom
+    ? Number(row.produced_weight ?? row.produced_qty ?? 0)
+    : Number(row.produced_qty ?? 0)
   return {
     id: `PT-${row.id}`,
     orderId: `O-${row.order_id}`,
@@ -56,7 +66,10 @@ function toApiTask(row: DbRow) {
     color: row.color ?? '',
     description: row.description ?? undefined,
     conditions: parseJson(row.conditions, []),
+    requestedValue,
     requestedWeight: row.requested_weight !== null ? Number(row.requested_weight) : undefined,
+    uom,
+    producedValue,
     producedQty: row.produced_qty !== null ? Number(row.produced_qty) : undefined,
     producedWeight: row.produced_weight !== null ? Number(row.produced_weight) : undefined,
     labelPrinted: row.label_printed,
@@ -90,7 +103,9 @@ export async function GET(request: NextRequest) {
         oi.color AS color,
         oi.item_description AS description,
         oi.conditions AS conditions,
-        oi.requested_weight AS requested_weight
+        oi.requested_weight AS requested_weight,
+        oi.requested_uom AS requested_uom,
+        m.unit AS material_unit
        FROM production_tasks pt
        LEFT JOIN orders o ON o.id = pt.order_id
        LEFT JOIN materials m ON m.id = pt.material_id
@@ -154,7 +169,9 @@ export async function POST(request: NextRequest) {
           (SELECT color FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS color,
           (SELECT item_description FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS description,
           (SELECT conditions FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS conditions,
-          (SELECT requested_weight FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS requested_weight`,
+          (SELECT requested_weight FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS requested_weight,
+          (SELECT requested_uom FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS requested_uom,
+          (SELECT unit FROM materials WHERE id = production_tasks.material_id) AS material_unit`,
         [orderId, materialId, qtyToProduce, auth.tenantId]
       )
       createdRow = res.rows[0] as DbRow

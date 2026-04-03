@@ -28,7 +28,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { readinessLabel } from '@/lib/domain/i18n';
 import { getFirstApiErrorMessage } from '@/lib/api/errors';
 import { useAuthUser } from '@/hooks/use-auth';
-import { OperationModeSelector } from '@/features/tenant-operation-mode/operation-mode-selector';
 import { Material, Order, StockBalance, StockReservation, User } from '@/lib/domain/types';
 import { applyOrderDraft, OrderDraft, pruneResolvedOrderDraft } from '@/lib/frontend/orders-client-state';
 
@@ -44,6 +43,17 @@ type ConditionPickerTarget = {
 };
 
 const defaultConditionCategories = ['Fibra', 'FibraCor', 'Corda', 'CordaCor', 'Trico', 'TricoCor', 'Fio', 'Fiocor'];
+const REQUEST_UOM_OPTIONS = ['PC', 'KG', 'M'];
+
+const normalizeRequestedUom = (value?: string | null) => {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  return normalized || 'PC';
+};
+
+const usesWeightedValue = (uom?: string | null) => {
+  const normalized = normalizeRequestedUom(uom);
+  return normalized === 'KG' || normalized === 'M';
+};
 
 const isMrpOrder = (order: Order) =>
   Boolean(order.isMrp ?? String(order.orderNumber ?? '').startsWith('MRP-'));
@@ -205,7 +215,7 @@ export default function OrdersPage() {
     await refreshOrders();
   }, [refreshOrders]);
 
-  const updateOrderMeta = React.useCallback(async (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number; operationMode?: Order['operationMode'] }) => {
+  const updateOrderMeta = React.useCallback(async (orderId: string, payload: { clientId?: string; dueDate?: string; volumeCount?: number }) => {
     await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -234,7 +244,7 @@ export default function OrdersPage() {
   }, [refreshOrders]);
 
   const updateOrderMetaLocal = React.useCallback(
-    (orderId: string, payload: Partial<Pick<Order, 'dueDate' | 'volumeCount' | 'operationMode'>>) => {
+    (orderId: string, payload: Partial<Pick<Order, 'dueDate' | 'volumeCount'>>) => {
       updateOrderDraft(orderId, (draft) => ({ ...draft, ...payload }));
       setDb((prev) => ({
         ...prev,
@@ -247,7 +257,7 @@ export default function OrdersPage() {
   const updateOrderItemField = React.useCallback(
     (orderId: string, itemId: string, payload: {
       qtyRequested?: number;
-      requestedWeight?: number;
+      uom?: string;
       color?: string;
       shortageAction?: 'PRODUCE' | 'BUY';
       itemCondition?: string;
@@ -314,7 +324,7 @@ export default function OrdersPage() {
   const persistOrderItemField = React.useCallback(
     async (orderId: string, itemId: string, payload: {
       qtyRequested?: number;
-      requestedWeight?: number;
+      uom?: string;
       color?: string;
       shortageAction?: 'PRODUCE' | 'BUY';
       itemCondition?: string;
@@ -368,6 +378,34 @@ export default function OrdersPage() {
     await refreshInventory();
   }, [refreshOrders, refreshInventory]);
 
+  const getItemMeasurementValue = React.useCallback((item: Order['items'][number]) => {
+    return usesWeightedValue(item.uom)
+      ? Number(item.qtyRequested ?? item.requestedWeight ?? 0)
+      : Number(item.qtyRequested ?? 0);
+  }, []);
+
+  const updateOrderItemMeasurement = React.useCallback(
+    (orderId: string, itemId: string, value: number, uom: string) => {
+      const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+      updateOrderItemField(orderId, itemId, {
+        qtyRequested: safeValue,
+        uom: normalizeRequestedUom(uom),
+      });
+    },
+    [updateOrderItemField]
+  );
+
+  const persistOrderItemMeasurement = React.useCallback(
+    async (orderId: string, itemId: string, value: number, uom: string) => {
+      const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+      await persistOrderItemField(orderId, itemId, {
+        qtyRequested: safeValue,
+        uom: normalizeRequestedUom(uom),
+      });
+    },
+    [persistOrderItemField]
+  );
+
   const heartbeatOrder = React.useCallback(async (orderId: string) => {
     await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
@@ -387,17 +425,8 @@ export default function OrdersPage() {
       errors.push('Adicione ao menos um item.');
     } else {
       order.items.forEach((item, idx) => {
-        if (Number(item.qtyRequested) <= 0) {
-          const fieldName =
-            order.operationMode === 'WEIGHT'
-              ? 'Peso'
-              : order.operationMode === 'QUANTITY'
-                ? 'Quantidade'
-                : 'Quantidade ou peso';
-          errors.push(`Item ${idx + 1}: ${fieldName} maior que zero.`);
-        }
-        if (order.operationMode === 'BOTH' && Number(item.requestedWeight ?? 0) <= 0) {
-          errors.push(`Item ${idx + 1}: Peso maior que zero.`);
+        if (getItemMeasurementValue(item) <= 0) {
+          errors.push(`Item ${idx + 1}: valor maior que zero.`);
         }
         if (!item.color || item.color.trim().length === 0) {
           errors.push(`Item ${idx + 1}: Cor obrigatória.`);
@@ -420,7 +449,6 @@ export default function OrdersPage() {
           clientName: order.clientName,
           dueDate: order.dueDate,
           volumeCount: order.volumeCount,
-          operationMode: order.operationMode ?? 'BOTH',
         }),
       });
       if (!res.ok) {
@@ -592,25 +620,9 @@ export default function OrdersPage() {
   const selectedOrder = db.orders.find((item) => item.id === selectedOrderId) ?? null;
   const isFinalized = selectedOrder ? (selectedOrder.status === 'FINALIZADO' || selectedOrder.status === 'SAIDA_CONCLUIDA') : false;
   const selectedOrderIsMrp = selectedOrder ? isMrpOrder(selectedOrder) : false;
-  const selectedOrderOperationMode = selectedOrder?.operationMode ?? 'BOTH';
-  const showRequestedWeightField = selectedOrderOperationMode === 'BOTH';
-  const requestFieldLabel =
-    selectedOrderOperationMode === 'WEIGHT'
-      ? 'Peso solicitado'
-      : selectedOrderOperationMode === 'QUANTITY'
-        ? 'Quantidade solicitada'
-        : 'Quantidade / Peso solicitado';
-  const requestFieldShortLabel =
-    selectedOrderOperationMode === 'WEIGHT'
-      ? 'Peso Sol.'
-      : selectedOrderOperationMode === 'QUANTITY'
-        ? 'Qtd. Sol.'
-        : 'Qtd./Peso';
-  const reserveFieldLabel =
-    selectedOrderOperationMode === 'WEIGHT' ? 'Peso reservado' : 'Reservado agora';
-  const produceFieldLabel =
-    selectedOrderOperationMode === 'WEIGHT' ? 'Peso a produzir' : 'Produzir';
-  const orderTableColSpan = showRequestedWeightField ? 11 : 10;
+  const reserveFieldLabel = 'Reservado';
+  const produceFieldLabel = 'A produzir';
+  const orderTableColSpan = 11;
 
   React.useEffect(() => {
     if (!selectedOrder) {
@@ -856,17 +868,6 @@ export default function OrdersPage() {
                     onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                   />
                 </div>
-                <div>
-                  <Label>Tipo do pedido</Label>
-                  <OperationModeSelector
-                    value={selectedOrder.operationMode ?? 'BOTH'}
-                    onChange={(value) => {
-                      updateOrderMetaLocal(selectedOrder.id, { operationMode: value });
-                      updateOrderMeta(selectedOrder.id, { operationMode: value });
-                    }}
-                    className="w-full"
-                  />
-                </div>
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -901,10 +902,8 @@ export default function OrdersPage() {
                   <TableHeader className="hidden lg:table-header-group">
                     <TableRow>
                       <TableHead className="w-[180px]">Material</TableHead>
-                      <TableHead className="text-right w-[90px]" title={requestFieldLabel}>{requestFieldShortLabel}</TableHead>
-                      {showRequestedWeightField ? (
-                        <TableHead className="text-right w-[90px]" title="Peso solicitado">Peso Sol.</TableHead>
-                      ) : null}
+                      <TableHead className="text-right w-[90px]" title="Valor solicitado">Valor</TableHead>
+                      <TableHead className="w-[90px]" title="Unidade de medida">UM</TableHead>
                       <TableHead className="w-[110px]" title="Ação de falta de estoque">Ação</TableHead>
                       <TableHead className="text-right w-[70px]" title="Quantidade em estoque">Estoque</TableHead>
                       <TableHead className="text-right w-[80px]" title="Reservado por outros pedidos">Reserv. (Outros)</TableHead>
@@ -945,32 +944,34 @@ export default function OrdersPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
-                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">{requestFieldLabel}</span>
+                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Valor</span>
                                 <div className="w-[140px] lg:w-full lg:max-w-[7rem] ml-auto">
                                   <EditableInput
                                     id={`qty-${item.id}`}
                                     name={`qty-${item.id}`}
                                     type="number"
-                                    step={selectedOrderOperationMode === 'WEIGHT' ? '0.01' : undefined}
-                                    value={String(item.qtyRequested ?? '')}
-                                    placeholder={selectedOrderOperationMode === 'WEIGHT' ? 'Peso' : 'Qtd.'}
+                                    step={usesWeightedValue(item.uom) ? '0.01' : undefined}
+                                    value={String(getItemMeasurementValue(item) || '')}
+                                    placeholder="Valor"
                                     onChangeClient={(val) => {
-                                      const qty = val === '' ? 0 : Number(val);
-                                      updateOrderItemField(selectedOrder.id, item.id, {
-                                        qtyRequested: Number.isFinite(qty) ? qty : 0,
-                                      });
+                                      const measurement = val === '' ? 0 : Number(val);
+                                      updateOrderItemMeasurement(
+                                        selectedOrder.id,
+                                        item.id,
+                                        Number.isFinite(measurement) ? measurement : 0,
+                                        item.uom
+                                      );
                                     }}
                                     onSave={(val) => {
-                                      const qty = val === '' ? 0 : Number(val);
-                                      updateOrderItemField(selectedOrder.id, item.id, {
-                                        qtyRequested: Number.isFinite(qty) ? qty : 0,
-                                      });
-                                      onQtyBlurReserve(selectedOrder.id, item.id, Number(val || 0));
+                                      const measurement = val === '' ? 0 : Number(val);
+                                      const nextValue = Number.isFinite(measurement) ? measurement : 0;
+                                      updateOrderItemMeasurement(selectedOrder.id, item.id, nextValue, item.uom);
+                                      void persistOrderItemMeasurement(selectedOrder.id, item.id, nextValue, item.uom);
                                     }}
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        document.getElementById(`color-${item.id}`)?.focus();
+                                        document.getElementById(`uom-${item.id}`)?.focus();
                                       }
                                     }}
                                     className="w-full text-right"
@@ -978,34 +979,32 @@ export default function OrdersPage() {
                                   />
                                 </div>
                               </TableCell>
-                              {showRequestedWeightField ? (
-                                <TableCell className="flex items-center justify-between lg:table-cell lg:text-right p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
-                                  <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Peso solicitado</span>
-                                  <div className="w-[140px] lg:w-full lg:max-w-[7rem] ml-auto">
-                                    <EditableInput
-                                      id={`requested-weight-${item.id}`}
-                                      name={`requested-weight-${item.id}`}
-                                      type="number"
-                                      step="0.01"
-                                      value={String(item.requestedWeight ?? '')}
-                                      placeholder="Peso"
-                                      onChangeClient={(val) => {
-                                        const requestedWeight = val === '' ? 0 : Number(val);
-                                        const nextValue = Number.isFinite(requestedWeight) ? requestedWeight : 0;
-                                        updateOrderItemField(selectedOrder.id, item.id, { requestedWeight: nextValue });
-                                      }}
-                                      onSave={(val) => {
-                                        const requestedWeight = val === '' ? 0 : Number(val);
-                                        const nextValue = Number.isFinite(requestedWeight) ? requestedWeight : 0;
-                                        updateOrderItemField(selectedOrder.id, item.id, { requestedWeight: nextValue });
-                                        persistOrderItemField(selectedOrder.id, item.id, { requestedWeight: nextValue });
-                                      }}
-                                      className="w-full text-right"
-                                      disabled={isFinalized}
-                                    />
-                                  </div>
-                                </TableCell>
-                              ) : null}
+                              <TableCell className="flex items-center justify-between lg:table-cell p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
+                                <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">UM</span>
+                                <div className="w-[140px] lg:w-full lg:min-w-[5.5rem] ml-auto">
+                                  <Select
+                                    value={normalizeRequestedUom(item.uom)}
+                                    disabled={isFinalized}
+                                    onValueChange={(value) => {
+                                      const normalizedUom = normalizeRequestedUom(value);
+                                      const currentMeasurement = getItemMeasurementValue(item);
+                                      updateOrderItemMeasurement(selectedOrder.id, item.id, currentMeasurement, normalizedUom);
+                                      void persistOrderItemMeasurement(selectedOrder.id, item.id, currentMeasurement, normalizedUom);
+                                    }}
+                                  >
+                                    <SelectTrigger id={`uom-${item.id}`} className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from(new Set([...REQUEST_UOM_OPTIONS, normalizeRequestedUom(item.uom)])).map((uomOption) => (
+                                        <SelectItem key={uomOption} value={uomOption}>
+                                          {uomOption}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </TableCell>
                               <TableCell className="flex items-center justify-between lg:table-cell p-2 lg:px-4 lg:py-3 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/50">
                                 <span className="lg:hidden text-[10px] font-bold text-muted-foreground uppercase">Ação</span>
                                 <div className="w-[140px] lg:w-full lg:min-w-[7rem] ml-auto">

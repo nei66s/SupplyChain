@@ -3,11 +3,11 @@ import { Order } from '@/lib/domain/types'
 export type OrderItemDraft = Partial<
   Pick<
     Order['items'][number],
-    'qtyRequested' | 'requestedWeight' | 'color' | 'shortageAction' | 'itemCondition' | 'conditionTemplateName' | 'conditions'
+    'qtyRequested' | 'uom' | 'color' | 'shortageAction' | 'itemCondition' | 'conditionTemplateName' | 'conditions'
   >
 >
 
-export type OrderDraft = Partial<Pick<Order, 'clientName' | 'dueDate' | 'volumeCount' | 'operationMode'>> & {
+export type OrderDraft = Partial<Pick<Order, 'clientName' | 'dueDate' | 'volumeCount'>> & {
   items?: Record<string, OrderItemDraft>
 }
 
@@ -19,7 +19,6 @@ export function applyOrderDraft(order: Order, draft?: OrderDraft): Order {
     ...(draft.clientName !== undefined ? { clientName: draft.clientName } : {}),
     ...(draft.dueDate !== undefined ? { dueDate: draft.dueDate } : {}),
     ...(draft.volumeCount !== undefined ? { volumeCount: draft.volumeCount } : {}),
-    ...(draft.operationMode !== undefined ? { operationMode: draft.operationMode } : {}),
   }
 
   if (!draft.items) {
@@ -41,7 +40,6 @@ export function pruneResolvedOrderDraft(serverOrder: Order, draft?: OrderDraft):
   if (draft.clientName === serverOrder.clientName) delete nextDraft.clientName
   if (draft.dueDate === serverOrder.dueDate) delete nextDraft.dueDate
   if (draft.volumeCount === serverOrder.volumeCount) delete nextDraft.volumeCount
-  if (draft.operationMode === serverOrder.operationMode) delete nextDraft.operationMode
 
   if (draft.items) {
     const nextItemDrafts: Record<string, OrderItemDraft> = {}
@@ -54,7 +52,7 @@ export function pruneResolvedOrderDraft(serverOrder: Order, draft?: OrderDraft):
 
       const nextItemDraft: OrderItemDraft = { ...itemDraft }
       if (itemDraft.qtyRequested === serverItem.qtyRequested) delete nextItemDraft.qtyRequested
-      if (itemDraft.requestedWeight === serverItem.requestedWeight) delete nextItemDraft.requestedWeight
+      if (itemDraft.uom === serverItem.uom) delete nextItemDraft.uom
       if (itemDraft.color === serverItem.color) delete nextItemDraft.color
       if (itemDraft.shortageAction === serverItem.shortageAction) delete nextItemDraft.shortageAction
       if (itemDraft.itemCondition === serverItem.itemCondition) delete nextItemDraft.itemCondition

@@ -23,11 +23,17 @@ type DbRow = {
   label_printed: boolean
   order_number: string | null
   material_name: string | null
+  requested_uom?: string | null
   order_source: string | null
   order_created_by: string | null
 }
 
 function toApiTask(row: DbRow) {
+  const uom = String(row.requested_uom ?? '').trim().toUpperCase() || 'EA'
+  const usesMeasuredUom = uom === 'KG' || uom === 'M'
+  const producedValue = usesMeasuredUom
+    ? Number(row.produced_weight ?? row.produced_qty ?? 0)
+    : Number(row.produced_qty ?? row.produced_weight ?? 0)
   return {
     id: `PT-${row.id}`,
     orderId: `O-${row.order_id}`,
@@ -38,6 +44,8 @@ function toApiTask(row: DbRow) {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    uom,
+    producedValue,
     producedQty: row.produced_qty !== null && row.produced_qty !== undefined ? Number(row.produced_qty) : undefined,
     producedWeight: row.produced_weight !== null && row.produced_weight !== undefined ? Number(row.produced_weight) : undefined,
     isMrp: String(row.order_source ?? '').toLowerCase() === 'mrp',
@@ -70,8 +78,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (!auth.tenantId) return NextResponse.json({ error: 'Tenant context missing' }, { status: 403 })
 
     if (action === 'update_produced') {
-      const producedQty = payload.producedQty !== undefined ? Number(payload.producedQty) : null
-      const producedWeight = payload.producedWeight !== undefined ? Number(payload.producedWeight) : null
+      const uomRes = await getPool().query(
+        `SELECT oi.requested_uom
+         FROM production_tasks pt
+         LEFT JOIN order_items oi ON oi.order_id = pt.order_id AND oi.material_id = pt.material_id
+         WHERE pt.id = $1 AND pt.tenant_id = $2
+         LIMIT 1`,
+        [taskId, auth.tenantId]
+      )
+      const uom = String(uomRes.rows[0]?.requested_uom ?? '').trim().toUpperCase() || 'EA'
+      const usesMeasuredUom = uom === 'KG' || uom === 'M'
+      const producedValueRaw = payload.producedValue ?? payload.producedWeight ?? payload.producedQty
+      const producedValue = producedValueRaw !== undefined ? Number(producedValueRaw) : null
+      if (producedValue !== null && !Number.isFinite(producedValue)) {
+        return NextResponse.json({ error: 'producedValue inválido' }, { status: 400 })
+      }
+      const producedQty = producedValue === null ? null : (usesMeasuredUom ? producedValue : producedValue)
+      const producedWeight = producedValue === null ? null : (usesMeasuredUom ? producedValue : null)
 
       const res = await getPool().query(
         `UPDATE production_tasks
@@ -80,6 +103,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
          RETURNING id, order_id, material_id, qty_to_produce, status, produced_qty, produced_weight, label_printed, created_at, updated_at, tenant_id,
           (SELECT order_number FROM orders WHERE id = production_tasks.order_id) AS order_number,
           (SELECT source FROM orders WHERE id = production_tasks.order_id) AS order_source,
+          (SELECT requested_uom FROM order_items WHERE order_id = production_tasks.order_id AND material_id = production_tasks.material_id LIMIT 1) AS requested_uom,
           (SELECT name FROM materials WHERE id = production_tasks.material_id) AS material_name`,
         [taskId, producedQty, producedWeight, auth.tenantId]
       )
@@ -132,7 +156,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }
         await client.query('BEGIN');
         const pick = await client.query(
-          'SELECT qty_to_produce, produced_qty, material_id, label_printed, tenant_id FROM production_tasks WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
+          `SELECT qty_to_produce, produced_qty, produced_weight, material_id, label_printed, tenant_id,
+                  (SELECT requested_uom FROM order_items oi WHERE oi.order_id = production_tasks.order_id AND oi.material_id = production_tasks.material_id LIMIT 1) AS requested_uom
+           FROM production_tasks
+           WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
           [taskId, auth.tenantId]
         );
         if (pick.rowCount === 0) {
@@ -140,12 +167,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
         }
 
-        const pickRow = pick.rows[0] as { qty_to_produce: string | number; produced_qty: string | number | null; material_id: number; label_printed: boolean } | undefined;
+        const pickRow = pick.rows[0] as {
+          qty_to_produce: string | number;
+          produced_qty: string | number | null;
+          produced_weight: string | number | null;
+          requested_uom: string | null;
+          material_id: number;
+          label_printed: boolean;
+        } | undefined;
         if (pickRow && !pickRow.label_printed) {
           await client.query('ROLLBACK');
           return NextResponse.json({ error: 'A etiqueta deve ser impressa antes de concluir.' }, { status: 403 });
         }
-        let qtyProduced = Number(pickRow?.produced_qty ?? 0);
+        const requestedUom = String(pickRow?.requested_uom ?? '').trim().toUpperCase();
+        const usesMeasuredUom = requestedUom === 'KG' || requestedUom === 'M';
+        let qtyProduced = usesMeasuredUom
+          ? Number(pickRow?.produced_weight ?? 0)
+          : Number(pickRow?.produced_qty ?? 0);
         if (qtyProduced <= 0) {
           qtyProduced = Number(pickRow?.qty_to_produce ?? 0);
         }

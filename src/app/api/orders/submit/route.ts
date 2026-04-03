@@ -14,7 +14,7 @@ import { lockMaterialMutations, nextManualOrderNumber } from '@/lib/concurrency'
 type ItemPayload = {
   materialId: number
   quantity: number
-  requestedWeight?: number
+  uom?: string
   unitPrice?: number
   shortageAction?: 'PRODUCE' | 'BUY'
   description?: string | null
@@ -22,7 +22,7 @@ type ItemPayload = {
 }
 
 type MaterialLookupRow = { id: number }
-type MaterialDescriptionRow = { description: string | null }
+type MaterialDescriptionRow = { description: string | null; unit?: string | null }
 type CreatedOrderItemRow = {
   order_number: string | null
   status: string | null
@@ -80,15 +80,19 @@ export async function POST(request: NextRequest) {
       const qty = Number(it.quantity)
       const unitPrice = Number(it.unitPrice ?? 0)
       const requestedWeight = it && 'requestedWeight' in it ? Number((it as any).requestedWeight ?? 0) : undefined
+      const requestedUom = typeof (it as any).uom === 'string' ? String((it as any).uom).trim().toUpperCase() : ''
       const shortageAction: 'PRODUCE' | 'BUY' = String(it.shortageAction ?? 'PRODUCE').toUpperCase() === 'BUY' ? 'BUY' : 'PRODUCE'
       const descriptionValue = typeof it.description === 'string' ? it.description.trim() : ''
       const normalizedDescription = descriptionValue.length > 0 ? descriptionValue : null
+      const canonicalQty = Number.isFinite(qty) && qty > 0
+        ? qty
+        : (Number.isFinite(requestedWeight) && Number(requestedWeight) > 0 ? Number(requestedWeight) : qty)
 
       if (!materialIdNum) errors[`items[${idx}].materialId`] = 'materialId é obrigatório'
-      if (Number.isNaN(qty) || qty <= 0) errors[`items[${idx}].quantity`] = 'Quantidade inválida'
+      if (Number.isNaN(canonicalQty) || canonicalQty <= 0) errors[`items[${idx}].quantity`] = 'Quantidade inválida'
       if (Number.isNaN(unitPrice) || unitPrice < 0) errors[`items[${idx}].unitPrice`] = 'Preço unitário inválido'
 
-      items.push({ materialId: materialIdNum ?? 0, quantity: qty, requestedWeight, unitPrice, shortageAction, description: normalizedDescription })
+      items.push({ materialId: materialIdNum ?? 0, quantity: canonicalQty, uom: requestedUom || undefined, unitPrice, shortageAction, description: normalizedDescription })
     }
 
     if (rawItems.length === 0) errors.items = 'Pedido deve conter pelo menos um item'
@@ -124,7 +128,7 @@ export async function POST(request: NextRequest) {
       const materialDescriptionCache = new Map<number, string | null>()
       const resolveMaterialDescription = async (materialId: number) => {
         if (!materialDescriptionCache.has(materialId)) {
-          const matRes = await client.query('SELECT description FROM materials WHERE id = $1', [materialId])
+          const matRes = await client.query('SELECT description, unit FROM materials WHERE id = $1', [materialId])
           const matRow = matRes.rows[0] as MaterialDescriptionRow | undefined
           materialDescriptionCache.set(materialId, matRow?.description ?? null)
         }
@@ -133,9 +137,13 @@ export async function POST(request: NextRequest) {
 
       for (const it of items) {
         const description = it.description ?? (await resolveMaterialDescription(it.materialId))
+        const unitRes = await client.query('SELECT unit FROM materials WHERE id = $1', [it.materialId])
+        const defaultUom = String(unitRes.rows[0]?.unit ?? 'EA').trim().toUpperCase() || 'EA'
+        const effectiveUom = (it.uom ?? defaultUom).trim().toUpperCase() || 'EA'
+        const requestedWeight = effectiveUom === 'KG' || effectiveUom === 'M' ? Number(it.quantity) : null
         await client.query(
-          'INSERT INTO order_items (order_id, material_id, quantity, requested_weight, unit_price, conditions, shortage_action, item_description, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-          [orderId, it.materialId, Number(it.quantity), it.requestedWeight ?? null, Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description, auth.tenantId]
+          'INSERT INTO order_items (order_id, material_id, quantity, requested_weight, requested_uom, unit_price, conditions, shortage_action, item_description, tenant_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+          [orderId, it.materialId, Number(it.quantity), requestedWeight, effectiveUom, Number(it.unitPrice ?? 0), JSON.stringify(it.conditions ?? []), it.shortageAction ?? 'PRODUCE', description, auth.tenantId]
         )
       }
 

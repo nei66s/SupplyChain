@@ -37,8 +37,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { quantityEnabled, weightEnabled } from '@/features/tenant-operation-mode/helpers';
-
 export default function PickingPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -122,31 +120,34 @@ export default function PickingPage() {
   }, [stockBalances]);
 
   const selected = queue.find((order) => order.id === selectedOrderId) ?? queue[0] ?? null;
-  const operationMode = selected?.operationMode ?? 'BOTH';
-  const showSeparatedWeight = weightEnabled(operationMode);
-  const showSeparatedQty = quantityEnabled(operationMode);
-  const detailColSpan = 6 + (showSeparatedWeight ? 1 : 0) + (showSeparatedQty ? 1 : 0);
-  const operationModeLabel =
-    operationMode === 'WEIGHT'
-      ? 'Peso'
-      : operationMode === 'QUANTITY'
-        ? 'Quantidade'
-        : 'Qtd + Peso';
-  const completionLabel =
-    operationMode === 'WEIGHT'
-      ? 'Aguardando preenchimento do peso'
-      : operationMode === 'QUANTITY'
-        ? 'Aguardando preenchimento da quantidade'
-        : 'Aguardando preenchimento de quantidade e peso';
+  const detailColSpan = 7;
+  const usesMeasuredUom = useCallback((uom?: string) => {
+    const normalized = String(uom ?? '').trim().toUpperCase();
+    return normalized === 'KG' || normalized === 'M';
+  }, []);
+  const requestedValue = useCallback((item: Order['items'][number]) => {
+    return usesMeasuredUom(item.uom)
+      ? Number(item.qtyRequested ?? item.requestedWeight ?? 0)
+      : Number(item.qtyRequested ?? 0);
+  }, [usesMeasuredUom]);
+  const separatedValue = useCallback((item: Order['items'][number]) => {
+    return usesMeasuredUom(item.uom)
+      ? Number(item.qtySeparated ?? item.separatedWeight ?? 0)
+      : Number(item.qtySeparated ?? 0);
+  }, [usesMeasuredUom]);
+  const separatedInputValue = useCallback((item: Order['items'][number]) => {
+    const value = separatedValue(item);
+    return value > 0 ? String(value) : '';
+  }, [separatedValue]);
+  const reservedValue = useCallback((item: Order['items'][number]) => {
+    return Number(item.qtyReservedFromStock ?? 0);
+  }, []);
+  const completionLabel = 'Aguardando preenchimento da separacao';
 
   const isItemReadyForCompletion = useCallback((item: Order['items'][number]) => {
-    const quantityReady = item.qtySeparated >= item.qtyReservedFromStock;
-    const weightReady = Number(item.separatedWeight ?? 0) > 0;
-
-    if (operationMode === 'WEIGHT') return weightReady;
-    if (operationMode === 'QUANTITY') return quantityReady;
-    return quantityReady && weightReady;
-  }, [operationMode]);
+    if (usesMeasuredUom(item.uom)) return Number(item.qtySeparated ?? item.separatedWeight ?? 0) > 0;
+    return item.qtySeparated >= item.qtyReservedFromStock;
+  }, [usesMeasuredUom]);
 
   React.useEffect(() => {
     if (!selectedOrderId && queue[0]) {
@@ -166,7 +167,7 @@ export default function PickingPage() {
     await loadData();
   };
 
-  const updateSeparatedQtyLocal = (orderId: string, itemId: string, qty: number) => {
+  const updateSeparatedQtyLocal = (orderId: string, itemId: string, qty?: number) => {
     pendingPickingDraftsRef.current[orderId] = {
       ...(pendingPickingDraftsRef.current[orderId] ?? {}),
       [itemId]: {
@@ -181,14 +182,14 @@ export default function PickingPage() {
           : {
               ...order,
               items: order.items.map((item) =>
-                item.id !== itemId ? item : { ...item, qtySeparated: qty }
+                item.id !== itemId ? item : { ...item, qtySeparated: qty as number }
               ),
             }
       )
     );
   };
 
-  const updateSeparatedWeightLocal = (orderId: string, itemId: string, weight: number, autoSeparatedQty?: number) => {
+  const updateSeparatedWeightLocal = (orderId: string, itemId: string, weight?: number, autoSeparatedQty?: number) => {
     pendingPickingDraftsRef.current[orderId] = {
       ...(pendingPickingDraftsRef.current[orderId] ?? {}),
       [itemId]: {
@@ -208,7 +209,7 @@ export default function PickingPage() {
                   ? item
                   : {
                       ...item,
-                      separatedWeight: weight,
+                      separatedWeight: weight as number | undefined,
                       qtySeparated:
                         autoSeparatedQty !== undefined ? autoSeparatedQty : item.qtySeparated,
                     }
@@ -218,30 +219,46 @@ export default function PickingPage() {
     );
   };
 
-  const commitSeparatedQty = async (orderId: string, itemId: string, qty: number) => {
+  const commitSeparatedQty = async (orderId: string, itemId: string, qty?: number) => {
     await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: qty }),
+      body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: qty ?? 0 }),
     });
     await loadData();
   };
 
-  const commitSeparatedWeight = async (orderId: string, itemId: string, weight: number, autoSeparatedQty?: number) => {
+  const commitSeparatedWeight = async (orderId: string, itemId: string, weight?: number, autoSeparatedQty?: number) => {
     await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_separated_weight', itemId, separatedWeight: weight }),
+      body: JSON.stringify({ action: 'update_separated_weight', itemId, separatedWeight: weight ?? 0 }),
     });
     if (autoSeparatedQty !== undefined) {
       await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: autoSeparatedQty }),
+        body: JSON.stringify({ action: 'update_separated_qty', itemId, qtySeparated: autoSeparatedQty ?? 0 }),
       });
     }
     await loadData();
   };
+
+  const updateSeparatedValueLocal = useCallback((orderId: string, item: Order['items'][number], value?: number) => {
+    if (usesMeasuredUom(item.uom)) {
+      updateSeparatedWeightLocal(orderId, item.id, value, item.qtyReservedFromStock);
+      return;
+    }
+    updateSeparatedQtyLocal(orderId, item.id, value);
+  }, [updateSeparatedQtyLocal, updateSeparatedWeightLocal, usesMeasuredUom]);
+
+  const commitSeparatedValue = useCallback(async (orderId: string, item: Order['items'][number], value?: number) => {
+    if (usesMeasuredUom(item.uom)) {
+      await commitSeparatedWeight(orderId, item.id, value, item.qtyReservedFromStock);
+      return;
+    }
+    await commitSeparatedQty(orderId, item.id, value);
+  }, [commitSeparatedQty, commitSeparatedWeight, usesMeasuredUom]);
 
   const concludePicking = async (orderId: string) => {
     await fetch(`/api/orders/${orderId}`, {
@@ -285,14 +302,6 @@ export default function PickingPage() {
                 className={`w-full rounded-xl border border-border/70 bg-muted/20 p-2 text-left transition hover:border-primary sm:p-3 ${selectedOrderId === order.id ? 'border-primary bg-primary/5' : ''}`}
               >
                 {(() => {
-                  const orderOperationMode = order.operationMode ?? 'BOTH';
-                  const orderOperationModeLabel =
-                    orderOperationMode === 'WEIGHT'
-                      ? 'Peso'
-                      : orderOperationMode === 'QUANTITY'
-                        ? 'Quantidade'
-                        : 'Qtd + Peso';
-
                   return (
                     <>
                 <div className="flex items-center justify-between gap-2">
@@ -302,7 +311,6 @@ export default function PickingPage() {
                 <p className="truncate text-xs text-muted-foreground" title={order.clientName}>{order.clientName} - {formatDate(order.orderDate)}</p>
                 <div className="mt-2 flex gap-2">
                   <Badge variant="outline">{order.status}</Badge>
-                  <Badge variant="outline">{orderOperationModeLabel}</Badge>
                   <Badge variant={order.readiness === 'READY_FULL' ? 'positive' : order.readiness === 'READY_PARTIAL' ? 'warning' : 'outline'}>
                     {readinessLabel(order.readiness)}
                   </Badge>
@@ -326,9 +334,6 @@ export default function PickingPage() {
                   <CardDescription>
                     {selected.clientName} - entrega em {formatDate(selected.dueDate)}
                   </CardDescription>
-                  <div className="mt-2">
-                    <Badge variant="outline">Modo do pedido: {operationModeLabel}</Badge>
-                  </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                   {(() => {
@@ -372,11 +377,10 @@ export default function PickingPage() {
                       <TableHead>Material</TableHead>
                       <TableHead>Desc</TableHead>
                       <TableHead>Cor</TableHead>
-                      {showSeparatedWeight ? <TableHead className="text-right">{operationMode === 'BOTH' ? 'Peso separado' : 'Peso'}</TableHead> : null}
-                      <TableHead className="text-right">{operationMode === 'WEIGHT' ? 'Peso solicitado' : operationMode === 'BOTH' ? 'Quantidade solicitada' : 'Qtd. solicitada'}</TableHead>
-                      <TableHead className="text-right">{operationMode === 'WEIGHT' ? 'Reservado' : operationMode === 'BOTH' ? 'Qtd. reservada' : 'Qtd. reservada'}</TableHead>
+                      <TableHead className="text-right">Solicitado</TableHead>
+                      <TableHead className="text-right">Reservado</TableHead>
                       <TableHead className="text-right">Estoque atual</TableHead>
-                      {showSeparatedQty ? <TableHead className="text-right">{operationMode === 'BOTH' ? 'Quantidade separada' : 'Qtd. separada'}</TableHead> : null}
+                      <TableHead className="text-right">Separado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -397,11 +401,9 @@ export default function PickingPage() {
                                 </Tooltip>
                               </TooltipProvider>
                               <p className="text-[10px] text-muted-foreground">{item.uom}</p>
-                              {item.requestedWeight ? (
-                                <p className="text-[10px] font-medium text-sky-700 dark:text-sky-300">
-                                  Peso solicitado: {item.requestedWeight}
-                                </p>
-                              ) : null}
+                              <p className="text-[10px] font-medium text-sky-700 dark:text-sky-300">
+                                Solicitado: {requestedValue(item)} {item.uom}
+                              </p>
                               {item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0 ? (
                                 <div className="mt-1">
                                   <Badge variant="outline">Em producao</Badge>
@@ -410,78 +412,34 @@ export default function PickingPage() {
                             </TableCell>
                             <TableCell className="text-left text-sm text-muted-foreground">{item.description ?? item.materialName}</TableCell>
                             <TableCell className="text-left text-sm text-muted-foreground">{item.color}</TableCell>
-                            {showSeparatedWeight ? (
-                              <TableCell className="text-right">
-                                <Input
-                                  id={`weight-${item.id}`}
-                                  type="number"
-                                  step="0.01"
-                                  min={0}
-                                  className="ml-auto w-full max-w-[5.5rem] text-right"
-                                  value={item.separatedWeight ?? ''}
-                                  onChange={(e) =>
-                                    updateSeparatedWeightLocal(
-                                      selected.id,
-                                      item.id,
-                                      Number(e.target.value),
-                                      operationMode === 'WEIGHT' ? item.qtyReservedFromStock : undefined
-                                    )}
-                                  onBlur={(e) =>
-                                    commitSeparatedWeight(
-                                      selected.id,
-                                      item.id,
-                                      Number(e.target.value),
-                                      operationMode === 'WEIGHT' ? item.qtyReservedFromStock : undefined
-                                    )}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      if (showSeparatedQty) {
-                                        document.getElementById(`qty-${item.id}`)?.focus();
-                                      }
-                                    }
-                                  }}
-                                />
-                              </TableCell>
-                            ) : null}
                             <TableCell className="text-right">
-                              <div className="space-y-1">
-                                <div>{item.qtyRequested}</div>
-                                {item.requestedWeight ? (
-                                  <div className="text-[11px] font-medium text-sky-700 dark:text-sky-300">
-                                    Peso: {item.requestedWeight}
-                                  </div>
-                                ) : null}
-                              </div>
+                              <div>{requestedValue(item)} {item.uom}</div>
                             </TableCell>
-                            <TableCell className="text-right">{item.qtyReservedFromStock}</TableCell>
+                            <TableCell className="text-right">{reservedValue(item)} {item.uom}</TableCell>
                             <TableCell className="text-right">{currentStock?.onHand ?? 0}</TableCell>
-                            {showSeparatedQty ? (
-                              <TableCell className="text-right">
-                                <Input
-                                  id={`qty-${item.id}`}
-                                  type="number"
-                                  min={0}
-                                  max={item.qtyReservedFromStock}
-                                  className="ml-auto w-full max-w-[5.5rem] text-right font-bold"
-                                  value={item.qtySeparated}
-                                  onChange={(e) => updateSeparatedQtyLocal(selected.id, item.id, Number(e.target.value))}
-                                  onBlur={(e) => commitSeparatedQty(selected.id, item.id, Number(e.target.value))}
-                                  readOnly={item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0}
-                                  disabled={item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      const itemIdx = selected.items.findIndex(it => it.id === item.id);
-                                      const nextItem = selected.items[itemIdx + 1];
-                                      if (nextItem && showSeparatedWeight) {
-                                        document.getElementById(`weight-${nextItem.id}`)?.focus();
-                                      }
-                                    }
-                                  }}
-                                />
-                              </TableCell>
-                            ) : null}
+                            <TableCell className="text-right">
+                              <Input
+                                id={`separated-${item.id}`}
+                                type="number"
+                                step={usesMeasuredUom(item.uom) ? '0.01' : undefined}
+                                min={0}
+                                max={!usesMeasuredUom(item.uom) ? item.qtyReservedFromStock : undefined}
+                                className="ml-auto w-full max-w-[5.5rem] text-right font-bold"
+                                value={separatedInputValue(item)}
+                                onChange={(e) => {
+                                  const rawValue = e.target.value;
+                                  const nextValue = rawValue === '' ? undefined : Number(rawValue);
+                                  updateSeparatedValueLocal(selected.id, item, Number.isFinite(nextValue as number) ? nextValue : undefined);
+                                }}
+                                onBlur={(e) => {
+                                  const rawValue = e.target.value;
+                                  const nextValue = rawValue === '' ? undefined : Number(rawValue);
+                                  void commitSeparatedValue(selected.id, item, Number.isFinite(nextValue as number) ? nextValue : undefined);
+                                }}
+                                readOnly={item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0}
+                                disabled={item.qtyToProduce > 0 && item.qtyReservedFromStock <= 0}
+                              />
+                            </TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell colSpan={detailColSpan} className="bg-muted/30">
@@ -523,21 +481,12 @@ export default function PickingPage() {
 
                       <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col items-center justify-center rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-2">
-                          <span className="text-[8px] uppercase font-bold text-slate-400">
-                            {operationMode === 'WEIGHT' ? 'Peso pedido' : operationMode === 'BOTH' ? 'Qtd pedida' : 'Solicitado'}
-                          </span>
-                          <span className="text-sm font-bold">{item.qtyRequested}</span>
-                          {item.requestedWeight ? (
-                            <span className="text-[9px] font-semibold text-sky-700 dark:text-sky-300">
-                              Peso {item.requestedWeight}
-                            </span>
-                          ) : null}
+                          <span className="text-[8px] uppercase font-bold text-slate-400">Solicitado</span>
+                          <span className="text-sm font-bold">{requestedValue(item)} {item.uom}</span>
                         </div>
                         <div className="flex flex-col items-center justify-center rounded-lg bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-2">
-                          <span className="text-[8px] uppercase font-bold text-indigo-500">
-                            {operationMode === 'WEIGHT' ? 'Reservado' : operationMode === 'BOTH' ? 'Qtd reservada' : 'Reservado'}
-                          </span>
-                          <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{item.qtyReservedFromStock}</span>
+                          <span className="text-[8px] uppercase font-bold text-indigo-500">Reservado</span>
+                          <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{reservedValue(item)} {item.uom}</span>
                         </div>
                         <div className="flex flex-col items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-2">
                           <span className="text-[8px] uppercase font-bold text-slate-400">Estoque</span>
@@ -550,50 +499,31 @@ export default function PickingPage() {
                           <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-tighter">Aguardando producao</p>
                         </div>
                       ) : (
-                        <div className={`grid gap-3 ${showSeparatedQty && showSeparatedWeight ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                          {showSeparatedWeight ? (
-                            <div className="space-y-1.5">
-                              <Label htmlFor={`weight-mob-${item.id}`} className="text-[10px] font-bold uppercase text-slate-500">
-                                {operationMode === 'BOTH' ? 'Peso separado' : 'Peso / Metragem'}
-                              </Label>
-                              <Input
-                                id={`weight-mob-${item.id}`}
-                                type="number"
-                                step="0.01"
-                                className="h-11 text-center font-bold text-lg"
-                                value={item.separatedWeight ?? ''}
-                                onChange={(e) =>
-                                  updateSeparatedWeightLocal(
-                                    selected.id,
-                                    item.id,
-                                    Number(e.target.value),
-                                    operationMode === 'WEIGHT' ? item.qtyReservedFromStock : undefined
-                                  )}
-                                onBlur={(e) =>
-                                  commitSeparatedWeight(
-                                    selected.id,
-                                    item.id,
-                                    Number(e.target.value),
-                                    operationMode === 'WEIGHT' ? item.qtyReservedFromStock : undefined
-                                  )}
-                              />
-                            </div>
-                          ) : null}
-                          {showSeparatedQty ? (
-                            <div className="space-y-1.5">
-                              <Label htmlFor={`qty-mob-${item.id}`} className="text-[10px] font-bold uppercase text-indigo-500">
-                                {operationMode === 'BOTH' ? 'Qtd. separada' : 'Qtd. Separada'}
-                              </Label>
-                              <Input
-                                id={`qty-mob-${item.id}`}
-                                type="number"
-                                className="h-11 text-center font-bold text-lg border-indigo-200 dark:border-indigo-800 focus:ring-indigo-500"
-                                value={item.qtySeparated}
-                                onChange={(e) => updateSeparatedQtyLocal(selected.id, item.id, Number(e.target.value))}
-                                onBlur={(e) => commitSeparatedQty(selected.id, item.id, Number(e.target.value))}
-                              />
-                            </div>
-                          ) : null}
+                        <div className="grid gap-3 grid-cols-1">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`separated-mob-${item.id}`} className="text-[10px] font-bold uppercase text-indigo-500">
+                              Separado
+                            </Label>
+                            <Input
+                              id={`separated-mob-${item.id}`}
+                              type="number"
+                              step={usesMeasuredUom(item.uom) ? '0.01' : undefined}
+                              className="h-11 text-center font-bold text-lg border-indigo-200 dark:border-indigo-800 focus:ring-indigo-500"
+                              value={separatedInputValue(item)}
+                              onChange={(e) => {
+                                const rawValue = e.target.value;
+                                const nextValue = rawValue === '' ? undefined : Number(rawValue);
+                                updateSeparatedValueLocal(selected.id, item, Number.isFinite(nextValue as number) ? nextValue : undefined);
+                              }}
+                              onBlur={(e) => {
+                                const rawValue = e.target.value;
+                                const nextValue = rawValue === '' ? undefined : Number(rawValue);
+                                void commitSeparatedValue(selected.id, item, Number.isFinite(nextValue as number) ? nextValue : undefined);
+                              }}
+                              readOnly={isBlocked}
+                              disabled={isBlocked}
+                            />
+                          </div>
                         </div>
                       )}
 

@@ -98,6 +98,31 @@ type LabelRenderContext = {
   pageIndex: number;
 };
 
+function usesMeasuredUom(uom?: string | null) {
+  const normalized = String(uom ?? '').trim().toUpperCase();
+  return normalized === 'KG' || normalized === 'M';
+}
+
+function requestedValue(item: Order['items'][number]) {
+  const qtyRequested = Number(item.qtyRequested ?? 0);
+  if (qtyRequested > 0) return qtyRequested;
+  return Number(item.requestedWeight ?? 0);
+}
+
+function separatedValue(item: Order['items'][number]) {
+  const qtySeparated = Number(item.qtySeparated ?? 0);
+  if (qtySeparated > 0) return qtySeparated;
+  if (usesMeasuredUom(item.uom)) return Number(item.separatedWeight ?? 0);
+  return qtySeparated;
+}
+
+function producedValue(item: Order['items'][number]) {
+  const producedQty = Number(item.producedQty ?? 0);
+  if (producedQty > 0) return producedQty;
+  if (usesMeasuredUom(item.uom)) return Number(item.producedWeight ?? 0);
+  return producedQty;
+}
+
 async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRenderContext) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -116,7 +141,7 @@ async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRende
     ...baseItem,
     conditions: (baseItem.conditions && Array.isArray(baseItem.conditions)) ? baseItem.conditions : []
   };
-  const peso = Math.max(item.qtySeparated, item.qtyRequested);
+  const separado = Math.max(separatedValue(item), requestedValue(item));
   const volume = `${pageIndex + 1}/${Math.max(1, order.volumeCount)}`;
 
   pdf.setDrawColor(0);
@@ -142,7 +167,7 @@ async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRende
     ['Tipo', item.materialName],
     ['Desc', item.description ?? item.materialName],
     ['Cor', item.color],
-    ['Peso', `${peso} ${item.uom}`],
+    ['Separado', `${separado} ${item.uom}`],
     ['Pac.', volume],
     ['Separador', pickerName ?? '-'],
   ];
@@ -185,7 +210,7 @@ async function renderExitLabel({ pdf, order, pickerName, pageIndex }: LabelRende
     pdf.text('Itens', detailX, itemsLabelY);
     const itemsDetailY = itemsLabelY + 5;
     if (itemsDetailY < bottomLimit - 2) {
-      const qty = Math.max(item.qtySeparated, item.qtyRequested);
+      const qty = Math.max(separatedValue(item), requestedValue(item));
       pdf.setFontSize(9);
       const itemText = `${item.materialName} | ${item.color} | ${qty} ${item.uom}`;
       pdf.text(itemText.slice(0, 45), detailX, itemsDetailY);
@@ -252,16 +277,11 @@ async function renderProductionLabel({ pdf, order, pageIndex }: LabelRenderConte
 
   // Detalhes da Produção e Quantidades
   pdf.setFontSize(6.5);
-  pdf.text(`Solicitado: ${item.qtyRequested} ${item.uom}`, detailX, currentY);
+  pdf.text(`Solicitado: ${requestedValue(item)} ${item.uom}`, detailX, currentY);
   currentY += 3;
 
-  if (item.producedQty !== undefined) {
-    pdf.text(`Produzido: ${item.producedQty} ${item.uom}`, detailX, currentY);
-    currentY += 3;
-  }
-
-  if (item.producedWeight !== undefined) {
-    pdf.text(`Peso: ${item.producedWeight} KG`, detailX, currentY);
+  if (producedValue(item) > 0) {
+    pdf.text(`Produzido: ${producedValue(item)} ${item.uom}`, detailX, currentY);
     currentY += 3;
   }
 

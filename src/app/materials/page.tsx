@@ -546,6 +546,62 @@ export default function MaterialsPage() {
                         >
                           {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </Button>
+                        {isExpanded && (
+                          <div className="mt-4 rounded-2xl border border-border bg-background p-4 shadow-inner">
+                            <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{category.name}</p>
+                                <p className="text-sm text-muted-foreground">Edite os itens dessa pré-condição.</p>
+                              </div>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input
+                                  value={newConditionInput[category.id] ?? ''}
+                                  onChange={(event) =>
+                                    setNewConditionInput((prev) => ({ ...prev, [category.id]: event.target.value }))
+                                  }
+                                  placeholder="Adicionar item"
+                                  className="text-sm"
+                                  disabled={isUsingFallbackData}
+                                />
+                                <Button
+                                  size="sm"
+                                  disabled={isUsingFallbackData}
+                                  onClick={() => handleAddCondition(category.id, newConditionInput[category.id] ?? '')}
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            </div>
+                            {isUsingFallbackData && (
+                              <p className="mb-3 text-xs text-muted-foreground">
+                                Edição bloqueada enquanto as pré-condições estiverem apenas nos dados locais.
+                              </p>
+                            )}
+                            <div className="space-y-2">
+                              {values.length === 0 ? (
+                                <p className="text-sm italic text-muted-foreground">Nenhum item cadastrado</p>
+                              ) : (
+                                values.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex items-center justify-between rounded-md border border-border/70 bg-muted/30 px-2 py-1 text-[12px] text-muted-foreground"
+                                  >
+                                    <span>{item.value}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRemoveCondition(category.id, item.id)}
+                                      aria-label={`Remover ${item.value}`}
+                                      disabled={isUsingFallbackData}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
