@@ -1,0 +1,279 @@
+- generic [active] [ref=e1]:
+  - main [ref=e68]:
+    - generic [ref=e69]:
+      - heading "Relatório" [level=1] [ref=e70]
+      - generic [ref=e72]:
+        - img [ref=e73]
+        - textbox "Buscar pedidos, materiais ou tarefas" [ref=e76]
+      - button "Notificacoes" [ref=e77] [cursor=pointer]:
+        - img
+      - generic [ref=e78]:
+        - status "Ping OK" [ref=e343]:
+          - img [ref=e344]
+          - generic [ref=e348]: 1634ms
+          - generic [ref=e82]: Ping OK
+        - 'status "Banco de dados: Conectado" [ref=e349]':
+          - img [ref=e84]
+          - generic [ref=e350]: 1873ms
+          - generic [ref=e88]: Conectado
+        - 'status "Tempo Real: Conectado" [ref=e351]':
+          - img [ref=e352]
+          - generic [ref=e354]: 1908ms
+          - generic [ref=e92]: "Tempo Real: Conectado"
+      - button "Ativar modo escuro" [ref=e93] [cursor=pointer]:
+        - img
+      - link "Falar conosco no WhatsApp" [ref=e94] [cursor=pointer]:
+        - /url: https://wa.me/5519990029187?text=Ol%C3%A1!%20Vim%20pelo%20site%20do%20Invent%C3%A1rio%20%C3%81gil%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20o%20piloto.
+        - img [ref=e95]
+      - button "André" [ref=e97] [cursor=pointer]:
+        - img "André" [ref=e99]
+    - generic [ref=e101]:
+      - link "Painel" [ref=e102] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e104]
+        - generic [ref=e109]: Painel
+      - link "1 Pedidos" [ref=e355] [cursor=pointer]:
+        - /url: /orders
+        - generic [ref=e111]:
+          - img [ref=e112]
+          - generic [ref=e356]: "1"
+        - generic [ref=e116]: Pedidos
+      - link "Produção" [ref=e117] [cursor=pointer]:
+        - /url: /production
+        - img [ref=e119]
+        - generic [ref=e121]: Produção
+      - link "Picking" [ref=e122] [cursor=pointer]:
+        - /url: /picking
+        - img [ref=e124]
+        - generic [ref=e129]: Picking
+      - button "Menu" [ref=e130] [cursor=pointer]:
+        - img [ref=e132]
+        - generic [ref=e133]: Menu
+    - main [ref=e134]:
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - heading "Analise do relatorio" [level=3] [ref=e139]
+            - paragraph [ref=e140]: Painel consolidado com os indicadores possiveis a partir das informacoes atuais de pedidos finalizados.
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - paragraph [ref=e144]: Pedidos finalizados
+              - paragraph [ref=e145]: "2432"
+            - generic [ref=e146]:
+              - paragraph [ref=e147]: Itens analisados
+              - paragraph [ref=e148]: "2423"
+            - generic [ref=e149]:
+              - paragraph [ref=e150]: Materiais base
+              - paragraph [ref=e151]: "4"
+            - generic [ref=e152]:
+              - paragraph [ref=e153]: Valor medio por pedido
+              - paragraph [ref=e154]: 26,309
+            - generic [ref=e155]:
+              - paragraph [ref=e156]: Divergencia item x separado
+              - paragraph [ref=e157]: 0,29%
+            - generic [ref=e158]:
+              - paragraph [ref=e159]: Fill rate separado
+              - paragraph [ref=e160]: 94,71%
+            - generic [ref=e161]:
+              - paragraph [ref=e162]: Total KG
+              - paragraph [ref=e163]: 63.984,038
+            - generic [ref=e164]:
+              - paragraph [ref=e165]: Total M
+              - paragraph [ref=e166]: "0"
+            - generic [ref=e167]:
+              - paragraph [ref=e168]: Total PC
+              - paragraph [ref=e169]: "0"
+            - generic [ref=e170]:
+              - paragraph [ref=e171]: Outras unidades
+              - paragraph [ref=e172]: "0"
+            - generic [ref=e173]:
+              - paragraph [ref=e174]: Itens divergentes
+              - paragraph [ref=e175]: "7"
+            - generic [ref=e176]:
+              - paragraph [ref=e177]: Itens medios/pedido
+              - paragraph [ref=e178]: 0,996
+        - generic [ref=e179]:
+          - generic [ref=e180]:
+            - generic [ref=e181]:
+              - heading "Grafico ABC (Top materiais)" [level=3] [ref=e182]
+              - paragraph [ref=e183]: Volume dos principais materiais com classe da curva ABC.
+            - generic [ref=e357]:
+              - generic [ref=e358]:
+                - generic [ref=e359]
+                - paragraph [ref=e364]: 43,52% | Classe A
+              - generic [ref=e365]:
+                - generic [ref=e366]
+                - paragraph [ref=e371]: 26,56% | Classe A
+              - generic [ref=e372]:
+                - generic [ref=e373]
+                - paragraph [ref=e378]: 25,05% | Classe C
+              - generic [ref=e379]:
+                - generic [ref=e380]
+                - paragraph [ref=e385]: 4,87% | Classe C
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - heading "Grafico por unidade (UM)" [level=3] [ref=e190]
+              - paragraph [ref=e191]: Comparativo visual do volume acumulado por unidade de medida.
+            - generic [ref=e193]:
+              - generic [ref=e195]:
+                - paragraph [ref=e196]: KG
+                - paragraph [ref=e197]: 63.984,038
+              - generic [ref=e200]:
+                - paragraph [ref=e201]: M
+                - paragraph [ref=e202]: "0"
+              - generic [ref=e205]:
+                - paragraph [ref=e206]: PC
+                - paragraph [ref=e207]: "0"
+              - generic [ref=e210]:
+                - paragraph [ref=e211]: OUTRAS
+                - paragraph [ref=e212]: "0"
+        - generic [ref=e214]:
+          - generic [ref=e215]:
+            - generic [ref=e216]:
+              - heading "Grafico de operadores" [level=3] [ref=e217]
+              - paragraph [ref=e218]: Top operadores por volume processado, com taxa de divergencia.
+            - generic [ref=e387]:
+              - generic [ref=e388]:
+                - generic [ref=e389]
+                - paragraph [ref=e394]: 2279 pedidos | Divergencia 0%
+              - generic [ref=e395]:
+                - generic [ref=e396]
+                - paragraph [ref=e401]: 12 pedidos | Divergencia 41,67%
+              - generic [ref=e402]:
+                - generic [ref=e403]
+                - paragraph [ref=e408]: 37 pedidos | Divergencia 0%
+              - generic [ref=e409]:
+                - generic [ref=e410]
+                - paragraph [ref=e415]: 2 pedidos | Divergencia 100%
+              - generic [ref=e416]:
+                - generic [ref=e417]
+                - paragraph [ref=e422]: 74 pedidos | Divergencia 0%
+              - generic [ref=e423]:
+                - generic [ref=e424]
+                - paragraph [ref=e429]: 22 pedidos | Divergencia 0%
+              - generic [ref=e430]:
+                - generic [ref=e431]
+                - paragraph [ref=e436]: 4 pedidos | Divergencia 0%
+              - generic [ref=e437]:
+                - generic [ref=e438]
+                - paragraph [ref=e443]: 2 pedidos | Divergencia 0%
+          - generic [ref=e223]:
+            - generic [ref=e224]:
+              - heading "Grafico de clientes" [level=3] [ref=e225]
+              - paragraph [ref=e226]: Top clientes por volume total nos pedidos finalizados.
+            - generic [ref=e444]:
+              - generic [ref=e445]:
+                - generic [ref=e446]
+                - paragraph [ref=e451]: 158 pedidos | Media 123,833
+              - generic [ref=e452]:
+                - generic [ref=e453]
+                - paragraph [ref=e458]: 7 pedidos | Media 720
+              - generic [ref=e459]:
+                - generic [ref=e460]
+                - paragraph [ref=e465]: 205 pedidos | Media 18,287
+              - generic [ref=e466]:
+                - generic [ref=e467]
+                - paragraph [ref=e472]: 177 pedidos | Media 19,933
+              - generic [ref=e473]:
+                - generic [ref=e474]
+                - paragraph [ref=e479]: 171 pedidos | Media 19,849
+              - generic [ref=e480]:
+                - generic [ref=e481]
+                - paragraph [ref=e486]: 149 pedidos | Media 19,958
+              - generic [ref=e487]:
+                - generic [ref=e488]
+                - paragraph [ref=e493]: 89 pedidos | Media 32,619
+              - generic [ref=e494]:
+                - generic [ref=e495]
+                - paragraph [ref=e500]: 71 pedidos | Media 23,378
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - generic [ref=e233]:
+              - heading "Sinais executivos" [level=3] [ref=e234]
+              - paragraph [ref=e235]: Leitura direta de risco operacional para decisao estrategica.
+            - generic [ref=e237]:
+              - generic [ref=e238]:
+                - generic [ref=e239]
+                - paragraph [ref=e242]: 7 itens divergentes no periodo
+              - generic [ref=e243]:
+                - generic [ref=e244]
+                - paragraph [ref=e247]: Percentual separado sobre solicitado
+              - generic [ref=e248]:
+                - generic [ref=e249]
+                - paragraph [ref=e252]: Participacao dos 3 materiais mais relevantes
+              - generic [ref=e253]:
+                - generic [ref=e254]
+                - paragraph [ref=e257]: Participacao do principal operador no volume
+          - generic [ref=e258]:
+            - generic [ref=e259]:
+              - heading "Concentracao do negocio" [level=3] [ref=e260]
+              - paragraph [ref=e261]: Dependencia de materiais, operador e cliente no volume consolidado.
+            - generic [ref=e263]:
+              - generic [ref=e265]:
+                - generic [ref=e266]: Top 1 material
+                - generic [ref=e267]: 43,52%
+              - generic [ref=e270]:
+                - generic [ref=e271]: Top 3 materiais
+                - generic [ref=e272]: 95,13%
+              - generic [ref=e275]:
+                - generic [ref=e276]: Classe A acumulada
+                - generic [ref=e277]: 70,08%
+              - generic [ref=e280]:
+                - generic [ref=e281]: Principal operador
+                - generic [ref=e282]: 85,7%
+              - generic [ref=e285]:
+                - generic [ref=e286]: Principal cliente
+                - generic [ref=e287]: 30,58%
+        - generic [ref=e289]:
+          - generic [ref=e290]:
+            - heading "Consolidado por material base" [level=3] [ref=e291]
+            - paragraph [ref=e292]: Visao principal para materiais repetidos, separando por unidade e volume acumulado.
+          - generic [ref=e293]:
+            - generic [ref=e294]:
+              - textbox "Buscar material base" [ref=e295]
+              - combobox [ref=e296] [cursor=pointer]:
+                - generic: Todas unidades
+                - img [ref=e297]
+            - table [ref=e301]:
+              - rowgroup [ref=e302]:
+                - row "Material base Itens Pedidos Variacoes KG M PC Total geral" [ref=e303]
+              - rowgroup [ref=e312]:
+                - row "Fio 562 562 12 27.846,286 0 0 27.846,286" [ref=e506]
+                - row "Corda Náutica 878 878 114 16.995,926 0 0 16.995,926" [ref=e516]
+                - row "Trico Náutico 588 588 82 16.024,826 0 0 16.024,826" [ref=e526]
+                - row "Fibra Sintética 395 395 70 3.117 0 0 3.117" [ref=e536]
+        - generic [ref=e318]:
+          - generic [ref=e320]:
+            - generic [ref=e321]:
+              - heading "Variacoes do material" [level=3] [ref=e322]
+              - paragraph [ref=e323]: Quebra por descricao + cor + unidade para enxergar materiais iguais com variaveis diferentes.
+            - combobox [ref=e325] [cursor=pointer]:
+              - generic: Primeiro material do filtro
+              - img [ref=e326]
+          - generic [ref=e546]:
+            - generic [ref=e547]:
+              - generic [ref=e548]: Fio
+              - generic [ref=e549]: 12 variacoes
+              - generic [ref=e550]: "Descricoes: 2"
+              - generic [ref=e551]: "Cores: 16"
+            - table [ref=e554]:
+              - rowgroup [ref=e555]:
+                - row "Descricao Cor UM Ocorrencias Quantidade" [ref=e556]
+              - rowgroup [ref=e562]:
+                - row "Fios para acabamento e costura Azul CVC KG 132 19.225,597 KG" [ref=e563]
+                - row "Fios para acabamento e costura Rami KG 147 2.847,323 KG" [ref=e569]
+                - row "Fios para acabamento e costura Preto KG 87 1.971,03 KG" [ref=e575]
+                - row "Fios para acabamento e costura Verde Militar KG 55 1.002,13 KG" [ref=e581]
+                - row "Fios para acabamento e costura Areia KG 50 974,155 KG" [ref=e587]
+                - row "Fios para acabamento e costura Verde pinho KG 44 877,33 KG" [ref=e593]
+                - row "Fios para acabamento e costura Chumbo KG 20 406,85 KG" [ref=e599]
+                - row "Fios para acabamento e costura Terracota KG 11 219,21 KG" [ref=e605]
+                - row "Fios para acabamento e costura Marrom KG 10 203,471 KG" [ref=e611]
+                - row "Fios para acabamento e costura Vinho-Bordô KG 3 54,79 KG" [ref=e617]
+                - row "Fios para acabamento e costura Prata KG 2 44,28 KG" [ref=e623]
+                - row "14 mm Prata KG 1 20,12 KG" [ref=e629]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e61] [cursor=pointer]:
+    - img [ref=e62]
+  - alert [ref=e65]

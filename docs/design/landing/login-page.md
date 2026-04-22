@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e8]:
+        - img "Black Tower X logo" [ref=e10]
+        - generic [ref=e11]
+      - generic [ref=e13]:
+        - heading "Gestão inteligente da sua Cadeia de Suprimentos." [level=1] [ref=e14]
+        - paragraph [ref=e15]: Plataforma corporativa ágil, eficiente e escalável para o controle moderno do seu inventário.
+        - generic [ref=e16]
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - link "Início" [ref=e30] [cursor=pointer]:
+          - /url: /
+        - button "Modo escuro" [ref=e32] [cursor=pointer]
+      - generic [ref=e34]:
+        - generic [ref=e35]
+        - paragraph [ref=e55]: © 2026 Black Tower X. Todos os direitos reservados.
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e61] [cursor=pointer]:
+    - img [ref=e62]
+  - alert [ref=e65]

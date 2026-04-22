@@ -108,6 +108,13 @@ type ChartDatum = {
   note?: string;
 };
 
+type ExecutiveSignal = {
+  title: string;
+  value: string;
+  context: string;
+  tone: 'good' | 'warning' | 'critical';
+};
+
 function normalizeKey(value?: string | null) {
   return String(value ?? '')
     .normalize('NFD')
@@ -159,6 +166,25 @@ function resolveCurveClass(cumulativePercent: number): 'A' | 'B' | 'C' {
   if (cumulativePercent <= 80) return 'A';
   if (cumulativePercent <= 95) return 'B';
   return 'C';
+}
+
+function signalToneClasses(tone: ExecutiveSignal['tone']) {
+  if (tone === 'good') {
+    return {
+      card: 'border-emerald-300/60 bg-emerald-50/40',
+      badge: 'bg-emerald-600 text-white',
+    };
+  }
+  if (tone === 'warning') {
+    return {
+      card: 'border-amber-300/70 bg-amber-50/40',
+      badge: 'bg-amber-500 text-black',
+    };
+  }
+  return {
+    card: 'border-rose-300/70 bg-rose-50/40',
+    badge: 'bg-rose-600 text-white',
+  };
 }
 
 function HorizontalBars({
@@ -492,6 +518,64 @@ export default function ReportAnalysisPage() {
     [totals]
   );
 
+  const concentrationMetrics = React.useMemo(() => {
+    const top1 = abcRows[0]?.sharePercent ?? 0;
+    const top3 = abcRows.slice(0, 3).reduce((acc, row) => acc + row.sharePercent, 0);
+    const classA = abcRows
+      .filter((row) => row.curveClass === 'A')
+      .reduce((acc, row) => acc + row.sharePercent, 0);
+    const topOperatorShare = safeDivide((operatorRows[0]?.totalValue ?? 0) * 100, indicators.totalValue);
+    const topClientShare = safeDivide((clientRows[0]?.totalValue ?? 0) * 100, indicators.totalValue);
+
+    return { top1, top3, classA, topOperatorShare, topClientShare };
+  }, [abcRows, operatorRows, clientRows, indicators.totalValue]);
+
+  const executiveSignals = React.useMemo<ExecutiveSignal[]>(() => {
+    const divergenceTone: ExecutiveSignal['tone'] =
+      indicators.divergenceRate > 18 ? 'critical' : indicators.divergenceRate > 8 ? 'warning' : 'good';
+    const fillTone: ExecutiveSignal['tone'] =
+      indicators.fillRate < 90 ? 'critical' : indicators.fillRate < 97 ? 'warning' : 'good';
+    const concentrationTone: ExecutiveSignal['tone'] =
+      concentrationMetrics.top3 > 75
+        ? 'critical'
+        : concentrationMetrics.top3 > 55
+          ? 'warning'
+          : 'good';
+    const operatorTone: ExecutiveSignal['tone'] =
+      concentrationMetrics.topOperatorShare > 45
+        ? 'critical'
+        : concentrationMetrics.topOperatorShare > 30
+          ? 'warning'
+          : 'good';
+
+    return [
+      {
+        title: 'Qualidade da separacao',
+        value: formatPercent(indicators.divergenceRate),
+        context: `${indicators.divergentItems} itens divergentes no periodo`,
+        tone: divergenceTone,
+      },
+      {
+        title: 'Nivel de atendimento',
+        value: formatPercent(indicators.fillRate),
+        context: 'Percentual separado sobre solicitado',
+        tone: fillTone,
+      },
+      {
+        title: 'Risco de concentracao de portifolio',
+        value: formatPercent(concentrationMetrics.top3),
+        context: 'Participacao dos 3 materiais mais relevantes',
+        tone: concentrationTone,
+      },
+      {
+        title: 'Dependencia de operador',
+        value: formatPercent(concentrationMetrics.topOperatorShare),
+        context: 'Participacao do principal operador no volume',
+        tone: operatorTone,
+      },
+    ];
+  }, [concentrationMetrics, indicators.divergenceRate, indicators.divergentItems, indicators.fillRate]);
+
   const filteredRows = React.useMemo(() => {
     const normalizedSearch = normalizeKey(search);
     return rows.filter((row) => {
@@ -517,12 +601,144 @@ export default function ReportAnalysisPage() {
   }, [filteredRows, selectedMaterialKey]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* EXECUTIVE SUMMARY */}
+      <Card className="border-2 border-amber-300/60 bg-gradient-to-br from-amber-50/60 to-transparent">
+        <CardHeader>
+          <CardTitle className="font-headline text-lg">Sinais para Decisão</CardTitle>
+          <CardDescription>
+            Indicadores críticos de risco operacional e oportunidade estratégica.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {executiveSignals.length === 0 ? (
+            <EmptyState
+              title="Sem sinais executivos"
+              description="Finalize pedidos para montar os sinais de decisao."
+              className="min-h-[160px]"
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {executiveSignals.map((signal) => {
+                const classes = signalToneClasses(signal.tone);
+                const iconMap: Record<string, string> = {
+                  'Qualidade da separacao': '✓',
+                  'Nivel de atendimento': '📦',
+                  'Risco de concentracao de portifolio': '⚠️',
+                  'Dependencia de operador': '👤',
+                };
+                return (
+                  <div
+                    key={signal.title}
+                    className={`rounded-xl border-2 p-4 space-y-2 ${classes.card}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{iconMap[signal.title] || '📊'}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{signal.title}</p>
+                        <Badge className={`${classes.badge} text-lg px-3 py-1 mt-1`}>
+                          {signal.value}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{signal.context}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CONCENTRATION & RISK */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Analise do relatorio</CardTitle>
+          <CardTitle className="font-headline">Concentração do Negócio</CardTitle>
           <CardDescription>
-            Painel consolidado com os indicadores possiveis a partir das informacoes atuais de pedidos finalizados.
+            Dependencia de materiais, operador e cliente no volume consolidado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">Top 1 Material</span>
+                <span className="font-semibold text-emerald-600">{formatPercent(concentrationMetrics.top1)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+                  style={{ width: `${Math.min(100, concentrationMetrics.top1)}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">Top 3 Materiais</span>
+                <span className="font-semibold text-cyan-600">{formatPercent(concentrationMetrics.top3)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400"
+                  style={{ width: `${Math.min(100, concentrationMetrics.top3)}%` }}
+                />
+              </div>
+              {concentrationMetrics.top3 > 75 && (
+                <p className="mt-1 text-xs text-rose-600 font-medium">⚠️ Crítico: alta concentração</p>
+              )}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Classe A Acumulada</span>
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700" title="Curva ABC: materiais que representam ~80% do valor acumulado">?</span>
+                </div>
+                <span className="font-semibold text-violet-600">{formatPercent(concentrationMetrics.classA)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400"
+                  style={{ width: `${Math.min(100, concentrationMetrics.classA)}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">Principal Operador</span>
+                <span className="font-semibold text-amber-600">{formatPercent(concentrationMetrics.topOperatorShare)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400"
+                  style={{ width: `${Math.min(100, concentrationMetrics.topOperatorShare)}%` }}
+                />
+              </div>
+              {concentrationMetrics.topOperatorShare > 45 && (
+                <p className="mt-1 text-xs text-rose-600 font-medium">⚠️ Crítico: dependência muito alta</p>
+              )}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">Principal Cliente</span>
+                <span className="font-semibold text-fuchsia-600">{formatPercent(concentrationMetrics.topClientShare)}</span>
+              </div>
+              <div className="h-3 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-fuchsia-400"
+                  style={{ width: `${Math.min(100, concentrationMetrics.topClientShare)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* OPERATIONAL METRICS */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">Métricas Operacionais</CardTitle>
+          <CardDescription>
+            Painel consolidado com os indicadores técnicos a partir das informacoes atuais de pedidos finalizados.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -655,164 +871,20 @@ export default function ReportAnalysisPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline">Curva ABC de materiais</CardTitle>
-            <CardDescription>
-              Classificacao por participacao acumulada no volume total.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead className="text-right">Participacao</TableHead>
-                    <TableHead className="text-right">Acumulado</TableHead>
-                    <TableHead className="text-right">Classe</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {abcRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="border-none">
-                        <EmptyState
-                          title="Sem dados para curva ABC"
-                          description="Finalize pedidos para gerar classificacao."
-                          className="min-h-[140px]"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    abcRows.slice(0, 12).map((row) => (
-                      <TableRow key={`${row.materialName}-${row.cumulativePercent}`}>
-                        <TableCell>{row.materialName}</TableCell>
-                        <TableCell className="text-right">{formatPercent(row.sharePercent)}</TableCell>
-                        <TableCell className="text-right">{formatPercent(row.cumulativePercent)}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge
-                            variant={
-                              row.curveClass === 'A'
-                                ? 'default'
-                                : row.curveClass === 'B'
-                                  ? 'secondary'
-                                  : 'outline'
-                            }
-                          >
-                            {row.curveClass}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+      {/* TECHNICAL DETAILS */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Detalhes Técnicos</h2>
+          <p className="text-sm text-muted-foreground">Análise granular de materiais, variações e dimensões operacionais.</p>
+        </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline">Operadores</CardTitle>
+            <CardTitle className="font-headline">Consolidado por Material Base</CardTitle>
             <CardDescription>
-              Volume processado e taxa de divergencia por operador.
+              Visão principal para materiais repetidos, separando por unidade e volume acumulado.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Operador</TableHead>
-                    <TableHead className="text-right">Pedidos</TableHead>
-                    <TableHead className="text-right">Itens</TableHead>
-                    <TableHead className="text-right">Volume</TableHead>
-                    <TableHead className="text-right">Divergencia</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {operatorRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="border-none">
-                        <EmptyState
-                          title="Sem dados de operadores"
-                          description="Os operadores aparecem quando ha auditoria no pedido."
-                          className="min-h-[140px]"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    operatorRows.slice(0, 12).map((row) => (
-                      <TableRow key={row.operator}>
-                        <TableCell>{row.operator}</TableCell>
-                        <TableCell className="text-right">{row.orderCount}</TableCell>
-                        <TableCell className="text-right">{row.itemCount}</TableCell>
-                        <TableCell className="text-right">{formatNumber(row.totalValue)}</TableCell>
-                        <TableCell className="text-right">{formatPercent(row.divergenceRate)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Clientes</CardTitle>
-          <CardDescription>
-            Ranking de clientes por volume, com media por pedido.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Pedidos</TableHead>
-                  <TableHead className="text-right">Volume total</TableHead>
-                  <TableHead className="text-right">Media por pedido</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="border-none">
-                      <EmptyState
-                        title="Sem dados de clientes"
-                        description="Nenhum pedido finalizado encontrado para analise."
-                        className="min-h-[140px]"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  clientRows.slice(0, 12).map((row) => (
-                    <TableRow key={row.clientName}>
-                      <TableCell>{row.clientName}</TableCell>
-                      <TableCell className="text-right">{row.orderCount}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.totalValue)}</TableCell>
-                      <TableCell className="text-right">{formatNumber(row.avgOrderValue)}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">Consolidado por material base</CardTitle>
-          <CardDescription>
-            Visao principal para materiais repetidos, separando por unidade e volume acumulado.
-          </CardDescription>
-        </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,2fr)_220px]">
             <Input
@@ -888,14 +960,14 @@ export default function ReportAnalysisPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-4">
             <div>
-              <CardTitle className="font-headline">Variacoes do material</CardTitle>
+              <CardTitle className="font-headline">Variações do Material</CardTitle>
               <CardDescription>
-                Quebra por descricao + cor + unidade para enxergar materiais iguais com variaveis diferentes.
+                Quebra por descrição + cor + unidade para enxergar materiais iguais com variáveis diferentes.
               </CardDescription>
             </div>
-            <div className="w-full md:w-[320px]">
+            <div className="w-full sm:w-[320px]">
               <Select value={selectedMaterialKey} onValueChange={setSelectedMaterialKey}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar material" />
@@ -920,33 +992,35 @@ export default function ReportAnalysisPage() {
               className="min-h-[140px]"
             />
           ) : (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{selectedMaterial.materialName}</Badge>
-                <Badge variant="secondary">{selectedMaterial.variants.length} variacoes</Badge>
-                <Badge variant="outline">Descricoes: {selectedMaterial.descriptionCount}</Badge>
-                <Badge variant="outline">Cores: {selectedMaterial.colorCount}</Badge>
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/40 p-3 space-y-2">
+                <p className="text-sm font-semibold text-foreground">{selectedMaterial.materialName}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">{selectedMaterial.variants.length} variações</Badge>
+                  <Badge variant="outline">{selectedMaterial.descriptionCount} desc.</Badge>
+                  <Badge variant="outline">{selectedMaterial.colorCount} cores</Badge>
+                </div>
               </div>
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="text-sm">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Descricao</TableHead>
+                      <TableHead>Descrição</TableHead>
                       <TableHead>Cor</TableHead>
                       <TableHead>UM</TableHead>
-                      <TableHead className="text-right">Ocorrencias</TableHead>
+                      <TableHead className="text-right">Ocorrências</TableHead>
                       <TableHead className="text-right">Quantidade</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedMaterial.variants.map((variant) => (
                       <TableRow key={variant.key}>
-                        <TableCell>{variant.description}</TableCell>
-                        <TableCell>{variant.color}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{variant.description}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{variant.color}</TableCell>
                         <TableCell>{variant.uom}</TableCell>
-                        <TableCell className="text-right">{variant.occurrences}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatNumber(variant.totalValue)} {variant.uom}
+                        <TableCell className="text-right font-medium">{variant.occurrences}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatNumber(variant.totalValue)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -957,6 +1031,7 @@ export default function ReportAnalysisPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

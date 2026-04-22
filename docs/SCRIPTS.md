@@ -18,6 +18,7 @@ Estes scripts são fundamentais para rodar o projeto pela primeira vez ou após 
 - `seed-operators.js`: Cria os usuários/operadores padrão no sistema.
 - `seed-stock.js`: Inicializa os saldos de estoque para os materiais.
 - `import-cadastros.js`: Script legado para importação em massa de cadastros.
+- `import-legacy-variations.js` e `import-legacy-excel-history.js`: importam dados legados a partir de arquivos em `data/raw/export_app` (cadastros e relatórios exportados).
 
 ## 🏭 Produção & MRP
 
